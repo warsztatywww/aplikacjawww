@@ -1,5 +1,6 @@
 from crispy_forms.helper import FormHelper
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
 from django_select2.forms import Select2MultipleWidget, Select2Widget
@@ -126,6 +127,12 @@ class WorkshopForm(ModelForm):
 
 class WorkshopPageForm(ModelForm):
     qualification_problems = FileField(required=False, widget=FileInput())
+
+    def clean_qualification_problems(self):
+        file = self.cleaned_data['qualification_problems']
+        if file.content_type != 'application/pdf':
+            raise ValidationError('Zadania kwalifikacyjne muszą być w formacie PDF')
+        return file
 
     class Meta:
         model = Workshop
