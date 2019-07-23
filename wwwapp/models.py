@@ -325,7 +325,8 @@ class Workshop(models.Model):
             raise ValidationError('Maksymalna liczba punktów musi być ustawiona jeśli próg kwalifikacji jest ustawiony')
 
     class Meta:
-        permissions = (('see_all_workshops', 'Can see all workshops'),)
+        permissions = (('see_all_workshops', 'Can see all workshops'),
+                       ('edit_all_workshops', 'Can edit all workshops'))
 
     def __str__(self):
         return str(self.type.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title

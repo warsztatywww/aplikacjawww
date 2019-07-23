@@ -210,15 +210,13 @@ def my_profile_edit_view(request):
     return render(request, 'profileedit.html', context)
 
 
+@login_required()
 def workshop_view(request, name=None):
     new = (name is None)
     if new:
         workshop = None
         title = 'Nowe warsztaty'
-        if not request.user.is_authenticated:
-            return redirect('login')
-        else:
-            has_perm_to_edit = True
+        has_perm_to_edit = True
     else:
         workshop = get_object_or_404(Workshop, name=name)
         title = workshop.title
@@ -227,7 +225,7 @@ def workshop_view(request, name=None):
     # Workshop proposals are only visible to admins
     has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
     if not has_perm_to_edit and not has_perm_to_see_all:
-        return redirect('login')
+        return HttpResponseForbidden()
 
     if has_perm_to_edit:
         if request.method == 'POST':
@@ -259,7 +257,8 @@ def workshop_view(request, name=None):
 
 def can_edit_workshop(workshop, user):
     if user.is_authenticated:
-        return workshop.lecturer.filter(user=user).exists()
+        return workshop.lecturer.filter(user=user).exists() \
+               or user.has_perm('wwwapp.edit_all_workshops')
     else:
         return False
 
