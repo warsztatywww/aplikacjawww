@@ -1,6 +1,6 @@
 from .settings_common import *
 
-SECRET_KEY = os.environ['OPENSHIFT_SECRET_TOKEN']
+SECRET_KEY = None  # set in local_settings
 
 DEBUG = False
 ALLOWED_HOSTS = ['warsztatywww.pl']
@@ -9,9 +9,9 @@ ALLOWED_HOSTS = ['warsztatywww.pl']
 
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ['GMAIL_ADDRESS']
+EMAIL_HOST_USER = None  # set in local_settings
 EMAIL_USE_TLS = True
-EMAIL_HOST_PASSWORD = os.environ['GMAIL_PASSWORD']
+EMAIL_HOST_PASSWORD = None  # set in local_settings
 
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
@@ -19,17 +19,20 @@ EMAIL_HOST_PASSWORD = os.environ['GMAIL_PASSWORD']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.environ['OPENSHIFT_APP_NAME'],
-        'USER': os.environ['OPENSHIFT_POSTGRESQL_DB_USERNAME'],
-        'PASSWORD': os.environ['OPENSHIFT_POSTGRESQL_DB_PASSWORD'],
-        'HOST': os.environ['OPENSHIFT_POSTGRESQL_DB_HOST'],
-        'PORT': os.environ['OPENSHIFT_POSTGRESQL_DB_PORT'],
+        'NAME': 'aplikacjawww',
+        'USER': 'app',
     }
 }
-
-MEDIA_ROOT = os.path.join(os.environ.get('OPENSHIFT_DATA_DIR', ''), 'media')
 
 GOOGLE_ANALYTICS_KEY = 'UA-12926426-8'
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+MEDIA_ROOT = None  # set in local_settings
+
+try:
+    from .local_settings import *
+except ModuleNotFoundError:
+    import warnings
+    warnings.warn("Missing local_settings.py file")
