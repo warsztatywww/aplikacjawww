@@ -11,12 +11,11 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 ADMINS = (('Sebastian Jaszczur', 'sebastian.jaszczur+aplikacjawww@gmail.com'),
           ('Marcin Wrochna', 'mwrochna+django@gmail.com'),
           ('Michał Zieliński', 'michal@zielinscy.org.pl'),
+          ('Artur Puzio', 'wwwdjango@puzio.waw.pl'),
+          ('Krzysztof Haładyn', 'krzys_h@interia.pl'),
           )
 
-MANAGERS = (('Sebastian Jaszczur', 'sebastian.jaszczur+aplikacjawww@gmail.com'),
-            ('Marcin Wrochna', 'mwrochna+django@gmail.com'),
-            ('Michał Zieliński', 'michal@zielinscy.org.pl'),
-            )
+MANAGERS = ADMINS
 
 # Application definition
 
