@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fwarsztatywww%2Faplikacjawww.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fwarsztatywww%2Faplikacjawww?ref=badge_shield)
+
 Aplikacja WWW
 =============
 
@@ -22,3 +24,7 @@ For the INTERNETy resources authentication a /resource\_auth endpoint is provide
 
 ### Online version:
 App currently available at https://warsztatywww.pl/
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fwarsztatywww%2Faplikacjawww.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fwarsztatywww%2Faplikacjawww?ref=badge_large)
