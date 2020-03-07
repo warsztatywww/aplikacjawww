@@ -4,8 +4,8 @@ const gen_datatables_config = (overwrites) => {
     if ($(node).hasClass('noVis')) {
       return false;
     }
-    const tableID = $(node).closest('table').attr('id');
-    return tableID === undefined? false : $(tableID).DataTable().column(idx).visible();
+    const table = $(node).closest('table');
+    return table.length === 0 ? false : table.DataTable().column(idx).visible();
   };
   return Object.assign({
     dom: 'Bfrtipl',
