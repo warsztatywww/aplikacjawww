@@ -1,19 +1,8 @@
 from django import template
 from django.utils.html import mark_safe
-from wwwapp.models import WorkshopUserProfile
 
 
 register = template.Library()
-
-
-@register.filter
-def person_status(value):
-    if value == WorkshopUserProfile.STATUS_ACCEPTED:
-        return mark_safe('<span class="qualified">Zakwalifikowany</span>')
-    elif value == WorkshopUserProfile.STATUS_REJECTED:
-        return mark_safe('<span class="not-qualified">Odrzucony</span>')
-    else:
-        return ''
 
 
 @register.filter
