@@ -10,7 +10,7 @@
       {% for entry in workshops %}
         <h2>{{ entry.year }}</h2>
         <div class="table-responsive">
-          <table id="workshop-table" class="table workshop-table" style="width:100%!important;" data-order='[[ 10, "desc" ]]'>
+          <table class="table workshop-table" style="width:100%!important;" data-order='[[ 10, "desc" ]]'>
             <thead>
             <tr>
               <th data-visible="true" data-searchable="false" data-orderable="false"></th>
@@ -110,11 +110,11 @@
 {% block script %}
   <script>
   $(document).ready( function () {
-    const table = $('#workshop-table').DataTable(
-      Object.assign(
-        gen_datatables_default_config('#workshop-table'),
-        {"paging": false,}
-      ));
+    const table = $('.workshop-table').DataTable(gen_datatables_config(
+      {
+        dom: 'Bfrtil',
+        paging: false,
+      });
   });
 
   $(function () {

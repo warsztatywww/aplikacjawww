@@ -86,7 +86,7 @@
 {% block script %}
   <script>
     $(document).ready(() => {
-      const table = $('#lecturers-table').DataTable(gen_datatables_default_config('#lecturers-table'));
+      const table = $('#lecturers-table').DataTable(gen_datatables_config({}));
     });
   </script>
 {% endblock %}

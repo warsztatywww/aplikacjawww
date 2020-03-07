@@ -72,7 +72,7 @@
                   {{ person.has_letter | qualified_mark }}
                 </td>
                 <td>
-                  {{ person.status }}
+                  {{ person.status | person_status }}
                 </td>
                 <td>
                   {{ person.comments }}
@@ -107,7 +107,7 @@
 {% block script %}
   <script>
     $(document).ready(() => {
-      const table = $('#participants-table').DataTable(gen_datatables_default_config('#participants-table'));
+      const table = $('#participants-table').DataTable(gen_datatables_config({}));
     });
   </script>
 {% endblock %}
