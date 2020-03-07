@@ -1,6 +1,8 @@
 const gen_datatables_config = (overwrites) => {
   const column_selector = (idx, data, node) => {
     // https://datatables.net/forums/discussion/42192/exporting-data-with-buttons-and-responsive-extensions-controlled-by-column-visibility
+    // When the colvis/responsive plugin hides a column this might be done in one of 2 ways:
+    // By adding the noVis class or by physically detaching the DOM element from the table
     if ($(node).hasClass('noVis')) {
       return false;
     }
