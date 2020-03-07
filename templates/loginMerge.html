@@ -10,20 +10,20 @@
         </div>
         <div class="panel-body form-signin">
           {% for provider in match.providers %}
-            <a class="button zocial {{ provider.name | lower }}" href="{% url 'scopedallaccess-login' provider.name %}">
-              Zaloguj z {{ provider.name | title }}
+            <a class="button zocial {{ provider.name | lower }}" href="{% url 'social:begin' provider %}?next=/accounts/verified/{{new_provider}}%3Fpartial_token={{partial_token}}">
+              Zaloguj z {{ provider | title }}
             </a>
           {% endfor %}
         </div>
       </div>
     {% endfor %}
-    Twoje połączenie z {{ new_provider.name | title }} zostanie zapamiętane i od tej pory obie metody logowania będą działać.
+    Twoje połączenie z {{ new_provider | title }} zostanie zapamiętane i od tej pory obie metody logowania będą działać.
 
     {% if allow_account_creation %}
       <br/>
       To nie Twoje konto?
-      <a class="button zocial {{ new_provider.name | lower }}" href="{% url 'scopedallaccess-createUserFromAccess' %}">
-          Kontynuuj (tworząc nowe konto połączone z {{ new_provider.name | title }})
+      <a class="button zocial {{ new_provider | lower }}" href="/accounts/verified/{{new_provider}}/?partial_token={{partial_token}}">
+          Kontynuuj (tworząc nowe konto połączone z {{ new_provider | title }})
       </a>
     {% endif %}
   </div>
