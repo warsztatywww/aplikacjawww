@@ -25,7 +25,7 @@ const gen_datatables_config = (overwrites) => {
             return data;
           } else {
             const percent = $("<div/>").html(data).text();
-            if(type === 'export') {
+            if(type.startsWith('export')) {
               return percent;
             } else {
               // type is one of ['order', 'sort', 'type']
@@ -46,8 +46,13 @@ const gen_datatables_config = (overwrites) => {
       {
         targets: 'datatables-yes-no',
         render: (data, type, row) => {
-          if(type === 'export') {
-            return data.split("> ").pop();
+          if(type.startsWith('export')) {
+            if(type === 'export_pdf' || type === 'export_excel')
+              // Only strip the question mark when exporting to pdf or excel
+              // TODO: fix question mark display in pdf
+              return data.split("> ").pop();
+            else
+              return data;
           } else
             return data;
         }
@@ -62,28 +67,28 @@ const gen_datatables_config = (overwrites) => {
         extend: 'copy',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export'
+          orthogonal: 'export_copy'
         }
       },
       {
         extend: 'excel',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export'
+          orthogonal: 'export_excel'
         }
       },
       {
         extend: 'pdf',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export'
+          orthogonal: 'export_pdf'
         },
        },
        {
         extend: 'print',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export'
+          orthogonal: 'export_print'
         }
        },
     ],
