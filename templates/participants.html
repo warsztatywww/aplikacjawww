@@ -58,14 +58,9 @@
                   {{ person.matura_exam_year | question_mark_on_none_value }}
                 </td>
                 <td>
-                  {
-                    "comments": [
-                      {% for info in person.infos %}
-                      "{{ info | escape }}"{% if not forloop.last %},{% endif %}
-                      {% endfor %}
-                    ],
-                    "points": "{{ person.points | floatformat }}"
-                  }
+                  <a tabindex="0" data-html="true" role="button" data-trigger="focus" data-toggle="popover" data-placement="bottom" title="Komentarze" data-content="<ul>{% for info in person.infos %} <li> {{ info }} </li> {% endfor %}</ul>">
+                    {{ person.points | floatformat }}%
+                  </a>
                 </td>
                 <td>
                   {{ person.workshop_count }}
@@ -112,105 +107,7 @@
 {% block script %}
   <script>
     $(document).ready(() => {
-      const column_selector = (idx, data, node) => {
-        // https://datatables.net/forums/discussion/42192/exporting-data-with-buttons-and-responsive-extensions-controlled-by-column-visibility
-        return $('#participants-table').DataTable().column( idx ).visible();
-      };
-      const table = $('#participants-table').DataTable({
-        dom: 'Bfrtipl',
-        responsive: true,
-        colReorder: true,
-        deferRender: true,
-        createdRow: (row) => {
-          $(row).find('[data-toggle="popover"]').popover();
-        },
-        columnDefs: [
-          {
-            targets: 'datatables-points',
-            render: (data, type, row) => {
-                data = JSON.parse(data);
-                data.comments = data.comments.map(el => `<li>${el}</li>`);
-                if(type === 'display') {
-                  return `<a tabindex="0" data-html="true" role="button" data-trigger="focus" data-toggle="popover" data-placement="bottom" title="Komentarze" data-content="<ul>${data.comments}</ul>">${data.points}%</a>`;
-                } else if(type === 'export') {
-                  return data.points + "%";
-                } else {
-                  return parseFloat(data.points);
-                }
-              }
-          },
-          {
-            targets: 'datatables-status',
-            render: (data, type, row) => {
-              const isExport = type === 'export';
-              if(isExport || type === 'display') {
-                if(data == 'Z')
-                  return isExport ? 'Zakwalifikowany' : '<span style="color:green">Zakwalifikowany</span>';
-                else if(data == "None")
-                  return '';
-                else if(data == 'O')
-                  return isExport ? 'Odrzucony' : '<span style="color:red">Odrzucony</span>' ;
-                else
-                  return data;
-              } else
-                return data;
-            }
-          },
-          {
-            targets: 'datatables-yes-no',
-            render: (data, type, row) => {
-              if(type === 'export') {
-                return data.split("> ").pop();
-              } else
-                return data;
-            }
-          }
-        ],
-        buttons: [
-            {
-                extend: 'colvis',
-                columns: ':gt(0)'
-            },
-            {
-                extend: 'copy',
-                exportOptions: {
-                    columns: column_selector,
-                    orthogonal: 'export'
-                }
-            },
-            {
-                extend: 'excel',
-                exportOptions: {
-                    columns: column_selector,
-                    orthogonal: 'export'
-                }
-            },
-            {
-                extend: 'pdf',
-                exportOptions: {
-                    columns: column_selector,
-                    orthogonal: 'export'
-                }
-           },
-           {
-                extend: 'print',
-                exportOptions: {
-                    columns: column_selector,
-                    orthogonal: 'export'
-                }
-           },
-        ],
-        "language": {
-          "url": "{% static 'datatables/Polish.json' %}",
-        },
-        "fnRowCallback" : function(nRow, aData, iDisplayIndex){
-          $("td:first", nRow).html(iDisplayIndex +1);
-          return nRow;
-        },
-        "pageLength": 50,
-        "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-      });
-    }
-    );
+      const table = $('#participants-table').DataTable(gen_datatables_default_config('#participants-table'));
+    });
   </script>
 {% endblock %}

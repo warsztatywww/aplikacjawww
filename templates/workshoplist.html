@@ -10,7 +10,7 @@
       {% for entry in workshops %}
         <h2>{{ entry.year }}</h2>
         <div class="table-responsive">
-          <table class="table workshop-table" style="width:100%!important;" data-order='[[ 10, "desc" ]]'>
+          <table id="workshop-table" class="table workshop-table" style="width:100%!important;" data-order='[[ 10, "desc" ]]'>
             <thead>
             <tr>
               <th data-visible="true" data-searchable="false" data-orderable="false"></th>
@@ -20,9 +20,9 @@
               <th data-visible="true" data-searchable="true"  data-orderable="true">Rodzaj</th>
               <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zakwalifikowanych">L.zak.</th>
               <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zapisanych">L.zap.</th>
-              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Próg kwalifikacji ustawiony?">Próg?</th>
-              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Zadania opublikowane?">Zadania?</th>
-              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Strona opublikowana?">Strona?</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Próg kwalifikacji ustawiony?" class="datatables-yes-no">Próg?</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Zadania opublikowane?" class="datatables-yes-no">Zadania?</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Strona opublikowana?" class="datatables-yes-no">Strona?</th>
               <th data-visible="true" data-searchable="false" data-orderable="true">Status</th>
             </tr>
             </thead>
@@ -110,49 +110,11 @@
 {% block script %}
   <script>
   $(document).ready( function () {
-    const table = $('.workshop-table').DataTable({
-      dom: 'Bfrti',
-      responsive: true,
-      colReorder: true,
-      buttons: [
-        {
-          extend: 'colvis',
-          columns: ':gt(0)'
-        },
-        {
-          extend: 'copy',
-          exportOptions: {
-            columns: ':visible'
-          }
-        },
-        {
-          extend: 'excel',
-          exportOptions: {
-            columns: ':visible'
-          }
-        },
-        {
-          extend: 'pdf',
-          exportOptions: {
-            columns: ':visible'
-          }
-        },
-        {
-          extend: 'print',
-          exportOptions: {
-            columns: ':visible'
-          }
-        },
-      ],
-      "language": {
-        "url": "{% static 'datatables/Polish.json' %}",
-      },
-      "fnRowCallback" : function(nRow, aData, iDisplayIndex){
-        $("td:first", nRow).html(iDisplayIndex +1);
-        return nRow;
-      },
-      "paging": false,
-    });
+    const table = $('#workshop-table').DataTable(
+      Object.assign(
+        gen_datatables_default_config('#workshop-table'),
+        {"paging": false,}
+      ));
   });
 
   $(function () {
