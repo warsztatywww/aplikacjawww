@@ -77,6 +77,12 @@ class UserProfile(models.Model):
         except WorkshopUserProfile.DoesNotExist:
             return None
 
+    def workshop_profile_for(self, year: int):
+        try:
+            return self.workshop_profile.filter(year=year).get()
+        except WorkshopUserProfile.DoesNotExist:
+            return None
+
     def __str__(self):
         return "{0.first_name} {0.last_name}".format(self.user)
 

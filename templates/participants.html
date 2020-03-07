@@ -73,9 +73,9 @@
                 </td>
                 <td>
                   {% if person.status == 'Z' %}
-                    <span class="qualified">Zakwalifikowany</span>
+                    <span class="qualified"> {{ person.status_display }} </span>
                   {% elif person.status == 'O' %}
-                    <span class="not-qualified">Odrzucony</span>
+                    <span class="not-qualified"> {{ person.status_display }} </span>
                   {% endif %}
                 </td>
                 <td>
