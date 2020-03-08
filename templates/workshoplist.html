@@ -100,7 +100,7 @@
                     {% elif workshop.status == 'O' %}
                       <span class="not-qualified"> {{ workshop.get_status_display }} </span>
                     {% else %}
-                      Brak
+                      {{ workshop.get_status_display|default_if_none:"Brak" }}
                     {% endif %}
                   </td>
                 </tr>
