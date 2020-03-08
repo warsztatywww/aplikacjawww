@@ -72,10 +72,8 @@ class UserProfile(models.Model):
         return self.status_for(settings.CURRENT_YEAR)
 
     def status_for(self, year):
-        try:
-            return self.workshop_profile.filter(year=year).get().status
-        except WorkshopUserProfile.DoesNotExist:
-            return None
+        profile = self.workshop_profile_for(year)
+        return profile.status if profile else None
 
     def workshop_profile_for(self, year: int):
         try:
