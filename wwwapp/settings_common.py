@@ -95,23 +95,29 @@ LOGIN_URL = '/login/'
 
 LOGIN_REDIRECT_URL = '/login/'
 
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'social_core.backends.google.GoogleOAuth2',
-    'social_core.backends.facebook.FacebookOAuth2',
-)
+auth_backends = ['django.contrib.auth.backends.ModelBackend']
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_KEY']
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET']
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid', 'profile', 'email']
+if {'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET'} <= os.environ.keys():
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_KEY']
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET']
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid', 'profile', 'email']
+    auth_backends.append('social_core.backends.google.GoogleOAuth2')
+else:
+    print("\033[93mWARNING: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY or SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not provided. Login via Google will be disabled!\033[0m")
 
-SOCIAL_AUTH_FACEBOOK_KEY = os.environ['SOCIAL_AUTH_FACEBOOK_KEY']
-SOCIAL_AUTH_FACEBOOK_SECRET = os.environ['SOCIAL_AUTH_FACEBOOK_SECRET']
-SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile', 'email']
-SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
-  'locale': 'pl_PL',
-  'fields': 'id, name, email',
-}
+if {'SOCIAL_AUTH_FACEBOOK_KEY', 'SOCIAL_AUTH_FACEBOOK_SECRET'} <= os.environ.keys():
+    SOCIAL_AUTH_FACEBOOK_KEY = os.environ['SOCIAL_AUTH_FACEBOOK_KEY']
+    SOCIAL_AUTH_FACEBOOK_SECRET = os.environ['SOCIAL_AUTH_FACEBOOK_SECRET']
+    SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile', 'email']
+    SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
+        'locale': 'pl_PL',
+        'fields': 'id, name, email',
+    }
+    auth_backends.append('social_core.backends.facebook.FacebookOAuth2')
+else:
+    print("\033[93mWARNING: SOCIAL_AUTH_FACEBOOK_KEY or SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not provided. Login via Facebook will be disabled!\033[0m")
+
+AUTHENTICATION_BACKENDS = tuple(auth_backends)
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
