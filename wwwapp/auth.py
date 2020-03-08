@@ -1,6 +1,5 @@
 import logging
 
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -14,7 +13,12 @@ from .views import get_context
 
 
 def login_view(request):
-    session_clear = ['partial_pipeline_token', 'merge_confirmation_token', 'merge_confirmation_backend', 'merge_confirmation_new_account']
+    session_clear = [ 'partial_pipeline_token',
+                      'merge_confirmation_token',
+                      'merge_confirmation_backend',
+                      'merge_confirmation_new_account',
+                      'merge_confirmation_next',
+                    ]
     for key in session_clear:
         # This shouldn't be necessary but it's here "just in case"
         request.session.pop(key, None)
@@ -65,9 +69,6 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
         else:
             context['email'] = None
 
-        if context['allow_account_creation'] and request.GET.get('new_account'):
-            return
-
         last_name = details.get('last_name')
         first_name = details.get('first_name')
         if not match_users and last_name:
@@ -96,6 +97,9 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
             strategy.session_set('merge_confirmation_token', current_partial.token)
             if context['allow_account_creation']:
                 strategy.session_set('merge_confirmation_new_account', True)
+            next_url = strategy.session_get('next')
+            if next_url:
+                strategy.session_set('merge_confirmation_next', next_url)
 
             return render(request, 'loginMerge.html', context)
 
@@ -105,7 +109,7 @@ def finish_merge_verification(request):
         # Under no circumstances should partial_pipeline_token be set before as when the user logs into a different
         # provider python-social-auth will nuke the partial from the DB and the pipeline won't resume
         request.session['partial_pipeline_token'] = request.session['merge_confirmation_token']
-        request.session['next'] = '/'
+        request.session['next'] = request.session.get('merge_confirmation_next', '/')
         return redirect(reverse('social:complete', args=(request.session['merge_confirmation_backend'],)))
     else:
         return redirect('/')
