@@ -9,6 +9,21 @@ const gen_datatables_config = (overwrites) => {
     const table = $(node).closest('table');
     return table.length === 0 ? false : table.DataTable().column(idx).visible();
   };
+
+  function strip_tags(data, row, column, node)
+  {
+    return $("<div/>").html(data).text();
+  }
+
+  function strip_tags_and_checkmark(data, row, column, node)
+  {
+    // TODO: fix checkmark rendering so that this is not required
+    data = data.replace('<span class="qualified">✔</span>', '');
+    data = data.replace('<span class="not-qualified">✘</span>', '');
+    data = data.replace('<span class="maybe-qualified">?</span>', '');
+    return strip_tags(data, row, column, node);
+  }
+
   return Object.assign({
     dom: 'Bfrtipl',
     responsive: true,
@@ -17,47 +32,6 @@ const gen_datatables_config = (overwrites) => {
     createdRow: (row) => {
       $(row).find('[data-toggle="popover"]').popover();
     },
-    columnDefs: [
-      {
-        targets: 'datatables-points',
-        render: (data, type, row) => {
-          if(type === 'display') {
-            return data;
-          } else {
-            const percent = $("<div/>").html(data).text();
-            if(type.startsWith('export')) {
-              return percent;
-            } else {
-              // type is one of ['order', 'sort', 'type']
-              return parseFloat(percent.replace('%', ''));
-            }
-          }
-        }
-      },
-      {
-        targets: 'datatables-status',
-        render: (data, type, row) => {
-          if(type === 'display')
-            return data;
-          else
-            return $("<div/>").html(data).text();
-        }
-      },
-      {
-        targets: 'datatables-yes-no',
-        render: (data, type, row) => {
-          if(type.startsWith('export')) {
-            if(type === 'export_pdf' || type === 'export_excel')
-              // Only strip the question mark when exporting to pdf or excel
-              // TODO: fix question mark display in pdf
-              return data.split("> ").pop();
-            else
-              return data;
-          } else
-            return data;
-        }
-      }
-    ],
     buttons: [
       {
         extend: 'colvis',
@@ -67,28 +41,28 @@ const gen_datatables_config = (overwrites) => {
         extend: 'copy',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export_copy'
+          format: { body: strip_tags }
         }
       },
       {
         extend: 'excel',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export_excel'
+          format: { body: strip_tags_and_checkmark }
         }
       },
       {
         extend: 'pdf',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export_pdf'
+          format: { body: strip_tags_and_checkmark }
         },
        },
        {
         extend: 'print',
         exportOptions: {
           columns: column_selector,
-          orthogonal: 'export_print'
+          format: { body: strip_tags }
         }
        },
     ],
