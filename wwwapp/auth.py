@@ -89,7 +89,6 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
                          'email': matchUser.email,
                          'providers': []}
                 for matchAccess in UserSocialAuth.objects.filter(user=matchUser.id).all():
-                    print(matchAccess)
                     match['providers'].append(matchAccess.provider)
                 context['matches'].append(match)
 

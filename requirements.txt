@@ -16,3 +16,4 @@ mypy
 django-stubs
 social-auth-app-django
 psycopg2
+mock
