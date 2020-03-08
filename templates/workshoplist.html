@@ -99,6 +99,8 @@
                       <span class="qualified"> {{ workshop.get_status_display }} </span>
                     {% elif workshop.status == 'O' %}
                       <span class="not-qualified"> {{ workshop.get_status_display }} </span>
+                    {% elif workshop.status == 'X' %}
+                      <span class="maybe-qualified"> {{ workshop.get_status_display }} </span>
                     {% else %}
                       {{ workshop.get_status_display|default_if_none:"Brak" }}
                     {% endif %}
