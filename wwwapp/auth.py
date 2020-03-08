@@ -14,8 +14,10 @@ from .views import get_context
 
 
 def login_view(request):
-    if 'partial_pipeline_token' in request.session:
-        del request.session['partial_pipeline_token']
+    session_clear = ['partial_pipeline_token', 'merge_confirmation_token', 'merge_confirmation_backend', 'merge_confirmation_new_account']
+    for key in session_clear:
+        # This shouldn't be necessary but it's here "just in case"
+        request.session.pop(key, None)
 
     if request.user.is_authenticated:
         # This should never happen if the login flow worked correctly but I'm leaving this here just in case there are any broken users in the database already
@@ -43,11 +45,15 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
                 'is_new': False,
             }
 
+        if strategy.session_get('merge_confirmation_new_account'):
+            # The user asked for a new account and we are allowed to create a new account
+            strategy.session_pop('merge_confirmation_new_account')
+            return
+
         new_backend = current_partial.backend
         context = get_context(request)
         context['allow_account_creation'] = True
         context['new_provider'] = new_backend
-        context['partial_token'] = current_partial.token
         match_users = []
 
         email = details.get('email')
@@ -91,16 +97,24 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
                     print(matchAccess)
                     match['providers'].append(matchAccess.provider)
                 context['matches'].append(match)
+
+            strategy.session_set('merge_confirmation_backend', new_backend)
+            strategy.session_set('merge_confirmation_token', current_partial.token)
+            if context['allow_account_creation']:
+                strategy.session_set('merge_confirmation_new_account', True)
+
             return render(request, 'loginMerge.html', context)
 
 
-def resume_partial(request, provider):
-    request.session['partial_pipeline_token'] = request.GET.get('partial_token')
-    request.session['next'] = '/'
-    if request.user.is_authenticated:
-        return redirect(reverse('social:complete', args=(provider,)))
+def finish_merge_verification(request):
+    if {'merge_confirmation_backend', 'merge_confirmation_token'} <= request.session.keys():
+        # Under no circumstances should partial_pipeline_token be set before as when the user logs into a different
+        # provider python-social-auth will nuke the partial from the DB and the pipeline won't resume
+        request.session['partial_pipeline_token'] = request.session['merge_confirmation_token']
+        request.session['next'] = '/'
+        return redirect(reverse('social:complete', args=(request.session['merge_confirmation_backend'],)))
     else:
-        return redirect(reverse('social:complete', args=(provider,)) + "?new_account=1")
+        return redirect('/')
 
 # Register a receiver called whenever a User object is saved.
 # Add all created Users to group allUsers.

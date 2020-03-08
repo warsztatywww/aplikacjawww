@@ -6,7 +6,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 from django.views.generic import RedirectView, TemplateView
 
 from . import settings, views, mail_views
-from .auth import login_view, resume_partial
+from .auth import login_view, finish_merge_verification
 
 urlpatterns = [
     url(
@@ -20,8 +20,8 @@ urlpatterns = [
     url(r'^logout/$', logout_then_login, name='logout'),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^login/$', login_view, name='login'),
-    url('', include('social_django.urls', namespace='social')),
-    url(r'^accounts/verified/(?P<provider>(\w|-)+)/$', resume_partial, name='resume_partial'),
+    url(r'^accounts/', include('social_django.urls', namespace='social')),
+    url(r'^accounts/verified/$', finish_merge_verification, name='finish_merge_verification'),
     url(r'^profile/(?P<user_id>[0-9]+)/$', views.profile_view, name='profile'),
     url(r'^profile/$', views.my_profile_view, name='myProfile'),
     url(r'^article/(?P<name>[a-zA-Z0-9\-_]+)/$', views.article_view, name='article'),
