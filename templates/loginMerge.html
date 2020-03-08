@@ -10,7 +10,7 @@
         </div>
         <div class="panel-body form-signin">
           {% for provider in match.providers %}
-            <a class="button zocial {{ provider.name | lower }}" href="{% url 'social:begin' provider %}?next=/accounts/verified/{{new_provider}}%3Fpartial_token={{partial_token}}">
+            <a class="button zocial {{ provider.name | lower }}" href="{% url 'social:begin' provider %}?next={% url 'finish_merge_verification' %}">
               Zaloguj z {{ provider | title }}
             </a>
           {% endfor %}
@@ -22,7 +22,7 @@
     {% if allow_account_creation %}
       <br/>
       To nie Twoje konto?
-      <a class="button zocial {{ new_provider | lower }}" href="/accounts/verified/{{new_provider}}/?partial_token={{partial_token}}">
+      <a class="button zocial {{ new_provider | lower }}" href="{% url 'finish_merge_verification' %}">
           Kontynuuj (tworząc nowe konto połączone z {{ new_provider | title }})
       </a>
     {% endif %}
