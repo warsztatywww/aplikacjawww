@@ -60,13 +60,7 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
         if email:
             context['email'] = email
             match_users = list(strategy.storage.user.get_users_by_email(email))
-            if len(match_users) == 1 and response.get('email_verified'):
-                # Don't perform additional validation when the mail was validated by google
-                return {
-                    'user': match_users[0],
-                    'is_new': False,
-                }
-            elif match_users:
+            if match_users:
                 context['allow_account_creation'] = False
         else:
             context['email'] = None
