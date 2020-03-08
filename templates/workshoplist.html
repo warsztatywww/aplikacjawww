@@ -95,7 +95,13 @@
                     {% endif %}
                   </td>
                   <td>
-                    <p>{{ workshop.get_status_display | default_if_none:"Brak" }}</p>
+                    {% if workshop.status == 'Z' %}
+                      <span class="qualified"> {{ workshop.get_status_display }} </span>
+                    {% elif workshop.status == 'O' %}
+                      <span class="not-qualified"> {{ workshop.get_status_display }} </span>
+                    {% else %}
+                      Brak
+                    {% endif %}
                   </td>
                 </tr>
               {% endfor %}
