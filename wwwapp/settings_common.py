@@ -100,6 +100,7 @@ auth_backends = ['django.contrib.auth.backends.ModelBackend']
 if {'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET'} <= os.environ.keys():
     SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_KEY']
     SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET']
+    SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
     SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid', 'profile', 'email']
     auth_backends.append('social_core.backends.google.GoogleOAuth2')
 else:

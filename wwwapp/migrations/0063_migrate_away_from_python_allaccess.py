@@ -3,34 +3,71 @@
 from __future__ import unicode_literals
 
 from django.db import migrations
-from allaccess.models import AccountAccess
-from social_django.models import UserSocialAuth
+from django.conf import settings
 
 # After the migration is applied in production just comment out code depending on the allaccess library
 def forwards_func(apps, schema_editor):
+    AccountAccess = apps.get_model('allaccess', 'AccountAccess')
+    Provider = apps.get_model('allaccess', 'Provider')
+    UserSocialAuth = apps.get_model('social_django', 'UserSocialAuth')
+
     for access in AccountAccess.objects.all():
         if access.provider.name == 'facebook':
             UserSocialAuth(provider='facebook', uid=access.identifier, user=access.user, extra_data=access.access_token).save()
+            access.delete()
         elif access.provider.name == 'google':
-            UserSocialAuth(provider='google-oauth2', uid=access.user.email, user=access.user, extra_data=access.access_token).save()
+            UserSocialAuth(provider='google-oauth2', uid=access.identifier, user=access.user, extra_data=access.access_token).save()
+            access.delete()
+        else:
+            raise RuntimeError(f"Got unknown provider: {access.provider.name}! Aborting migration!")
+    Provider.objects.all().delete()
 
 def reverse_func(apps, schema_editor):
-    raise RuntimeError("Migration not reversible")
+    AccountAccess = apps.get_model('allaccess', 'AccountAccess')
+    Provider = apps.get_model('allaccess', 'Provider')
+    UserSocialAuth = apps.get_model('social_django', 'UserSocialAuth')
+
+    if not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY or not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET:
+        raise RuntimeError("No Google OAUTH2 tokens provided. Aborting rollback!")
+    if not settings.SOCIAL_AUTH_FACEBOOK_KEY or not settings.SOCIAL_AUTH_FACEBOOK_SECRET:
+        raise RuntimeError("No Facebook OAUTH2 tokens provided. Aborting rollback!")
+
+    legacy_google_provider = Provider(
+        name="google",
+        authorization_url="https://accounts.google.com/o/oauth2/auth",
+        access_token_url="https://accounts.google.com/o/oauth2/token",
+        profile_url="https://www.googleapis.com/plus/v1/people/me",
+        consumer_key=settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
+        consumer_secret=settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET)
+    legacy_google_provider.save()
+
+    legacy_facebook_provider = Provider(
+        name="facebook",
+        authorization_url="https://www.facebook.com/v6.0/dialog/oauth",
+        access_token_url="https://graph.facebook.com/v6.0/oauth/access_token",
+        profile_url="https://graph.facebook.com/v6.0/me?fields=id,first_name,last_name,email",
+        consumer_key=settings.SOCIAL_AUTH_FACEBOOK_KEY,
+        consumer_secret=settings.SOCIAL_AUTH_FACEBOOK_SECRET)
+    legacy_facebook_provider.save()
+
+    for social_user in UserSocialAuth.objects.all():
+        if social_user.provider == "facebook":
+            AccountAccess(identifier=social_user.uid, user=social_user.user, provider=legacy_facebook_provider, access_token=social_user.extra_data).save()
+            social_user.delete()
+        elif social_user.provider == "google-oauth2":
+            AccountAccess(identifier=social_user.uid, user=social_user.user, provider=legacy_google_provider, access_token=social_user.extra_data).save()
+            social_user.delete()
+        else:
+            raise RuntimeError(f"Got unknown provider: {social_user.provider}! Aborting rollback!")
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ('wwwapp', '0062_auto_20200816_1023'),
+        ('allaccess', '0002_auto_20150511_1853'),
+        ('social_django', '0008_partial_timestamp'),
     ]
 
     operations = [
         migrations.RunPython(forwards_func, reverse_func),
-        migrations.RunSQL('''
-        drop table if exists allaccess_provider;
-        drop table if exists allaccess_accountaccess;
-        delete from auth_permission where content_type_id in (select id from django_content_type where app_label = '{app_label}');
-        delete from django_admin_log where content_type_id in (select id from django_content_type where app_label = '{app_label}');
-        delete from django_content_type where app_label = '{app_label}';
-        delete from django_migrations where app='{app_label}';
-        '''.format(app_label='allaccess'))
     ]
