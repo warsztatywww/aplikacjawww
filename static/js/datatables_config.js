@@ -12,7 +12,12 @@ const gen_datatables_config = (overwrites) => {
 
   function strip_tags(data, row, column, node)
   {
-    return $("<div/>").html(data).text();
+    return $.trim($("<div/>").html(data).text().replace(/( *\n *)+/g, '\n').replace(/ +/g, ' '));
+  }
+
+  function strip_tags_and_newlines(data, row, column, node)
+  {
+    return strip_tags(data, row, column, node).replace('\n', ', ');
   }
 
   function strip_tags_and_checkmark(data, row, column, node)
@@ -41,7 +46,7 @@ const gen_datatables_config = (overwrites) => {
         extend: 'copy',
         exportOptions: {
           columns: column_selector,
-          format: { body: strip_tags }
+          format: { body: strip_tags_and_newlines }
         }
       },
       {
