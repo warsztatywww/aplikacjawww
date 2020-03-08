@@ -199,6 +199,7 @@ def workshop_view(request, name=None):
         workshop = None
         title = 'Nowe warsztaty'
         if not request.user.is_authenticated:
+            request.session['next'] = request.path
             return redirect('login')
         else:
             has_perm_to_edit = True
@@ -210,6 +211,7 @@ def workshop_view(request, name=None):
     # Workshop proposals are only visible to admins
     has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
     if not has_perm_to_edit and not has_perm_to_see_all:
+        request.session['next'] = request.path
         return redirect('login')
 
     if has_perm_to_edit:
@@ -458,6 +460,7 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
 
 def register_to_workshop_view(request):
     if not request.user.is_authenticated:
+        request.session['next'] = request.path
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
     if 'workshop_name' not in request.POST:
@@ -482,6 +485,7 @@ def register_to_workshop_view(request):
 
 def unregister_from_workshop_view(request):
     if not request.user.is_authenticated:
+        request.session['next'] = request.path
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
     if 'workshop_name' not in request.POST:
