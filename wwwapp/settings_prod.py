@@ -3,7 +3,7 @@ from .settings_common import *
 SECRET_KEY = os.environ['OPENSHIFT_SECRET_TOKEN']
 
 DEBUG = False
-ALLOWED_HOSTS = ['warsztatywww.pl', 'www.warsztatywww.pl']
+ALLOWED_HOSTS = ['warsztatywww.pl']
 
 # E-mail settings
 
