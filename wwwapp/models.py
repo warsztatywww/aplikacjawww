@@ -19,6 +19,7 @@ class UserProfile(models.Model):
     gender = models.CharField(max_length=10, choices=[('M', 'Mężczyzna'), ('F', 'Kobieta'),],
                               null=True, default=None, blank=True)
     school = models.CharField(max_length=100, default="", blank=True)
+    affiliation = models.CharField(max_length=100, default="", blank=True)
     matura_exam_year = models.PositiveSmallIntegerField(null=True, default=None, blank=True)
     how_do_you_know_about = models.CharField(max_length=1000, default="", blank=True)
     profile_page = models.TextField(max_length=100000, blank=True, default="")

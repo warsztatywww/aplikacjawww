@@ -17,6 +17,8 @@
               <th data-visible="false" data-searchable="false" data-orderable="true">Pełnoletni</th>
               <th data-visible="true"  data-searchable="true"  data-orderable="true">Email</th>
               <th data-visible="true"  data-searchable="true"  data-orderable="false">Warsztaty</th>
+              <th data-visible="false" data-searchable="true"  data-orderable="true">Szkoła/uniwersytet</th>
+              <th data-visible="false" data-searchable="true"  data-orderable="true">Affiliation</th>
               <th data-visible="true"  data-searchable="true"  data-orderable="false">Komentarz</th>
               <th data-visible="false" data-searchable="false" data-orderable="false">Pesel</th>
               <th data-visible="false" data-searchable="true"  data-orderable="false">Adres</th>
@@ -52,6 +54,12 @@
                     </a>
                     <br>
                   {% endfor %}
+                </td>
+                <td>
+                  {{ person.school }}
+                </td>
+                <td>
+                  {{ person.affiliation }}
                 </td>
                 <td>
                   {{ person.comments }}

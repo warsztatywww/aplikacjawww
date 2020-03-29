@@ -107,10 +107,11 @@ class UserProfileForm(ModelForm):
     
     class Meta:
         model = UserProfile
-        fields = ['gender', 'school', 'matura_exam_year', 'how_do_you_know_about']
+        fields = ['gender', 'school', 'affiliation', 'matura_exam_year', 'how_do_you_know_about']
         labels = {
             'gender': 'Płeć',
             'school': 'Szkoła lub uniwersytet',
+            'affiliation': 'Affiliation',
             'matura_exam_year': 'Rok zdania matury',
             'how_do_you_know_about': 'Skąd wiesz o WWW?',
         }
