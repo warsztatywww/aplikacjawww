@@ -176,6 +176,8 @@ $(function () {
                 $(this).attr('src', url);
         });
     }
-    fixBrokenUnresponsiveFacebook();
+    setTimeout(function() {
+        fixBrokenUnresponsiveFacebook();
+    }, 10);
     $(window).resize(fixBrokenUnresponsiveFacebook);
 });
