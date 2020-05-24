@@ -50,6 +50,7 @@ urlpatterns = [
     url(r'^([0-9]+)/participants/$', views.participants_view, name='year_participants'),
     url(r'^lecturers/$', RedirectView.as_view(url='/%d/lecturers/' % settings.CURRENT_YEAR, permanent=False), name='lecturers'),
     url(r'^([0-9]+)/lecturers/$', views.lecturers_view, name='year_lecturers'),
+    url(r'^people/$', views.participants_view, name='all_people'),
     url(r'^emails/$', views.emails_view, name='emails'),
     url(r'^filterEmails/(?:(?P<year>[0-9]+)/(?P<filter_id>[a-zA-Z0-9\-_]+)/)?$', mail_views.filtered_emails_view, name='filter_emails'),
     url(r'^template_for_workshop_page/$', views.template_for_workshop_page_view, name='template_for_workshop_page'),
