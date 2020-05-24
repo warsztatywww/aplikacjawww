@@ -365,16 +365,20 @@ def save_points_view(request):
 
 @login_required()
 @permission_required('wwwapp.see_all_workshops', raise_exception=True)
-def participants_view(request, year):
-    year = int(year)
+def participants_view(request, year=None):
+    participants = WorkshopParticipant.objects.all().prefetch_related('workshop', 'participant', 'participant__user')
+    workshops = Workshop.objects.prefetch_related('lecturer', 'lecturer__user')
 
-    participants = WorkshopParticipant.objects.all().filter(workshop__type__year=year)\
-                                                    .prefetch_related('workshop', 'participant', 'participant__user')
-    workshops = Workshop.objects.filter(type__year=year).prefetch_related('lecturer', 'lecturer__user')
     lecturers_ids = set()
-    for workshop in workshops:
-        for l in workshop.lecturer.all():
-            lecturers_ids.add(l.user.id)
+
+    if year is not None:
+        year = int(year)
+        participants = participants.filter(workshop__type__year=year)
+        workshops = workshops.filter(type__year=year)
+
+        for workshop in workshops:
+            for l in workshop.lecturer.all():
+                lecturers_ids.add(l.user.id)
 
     people = {}
 
@@ -436,8 +440,9 @@ def participants_view(request, year):
     people = list(people.values())
 
     context = get_context(request)
-    context['title'] = 'Uczestnicy'
+    context['title'] = ('Uczestnicy: %d' % year) if year is not None else 'Wszyscy ludzie'
     context['people'] = people
+    context['is_all_people'] = year is None
 
     return render(request, 'participants.html', context)
 
@@ -478,7 +483,7 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     people_list = list(people.values())
 
     context = get_context(request)
-    context['title'] = 'Prowadzący'
+    context['title'] = 'Prowadzący: %d' % year
     context['people'] = people_list
 
     return render(request, 'lecturers.html', context)

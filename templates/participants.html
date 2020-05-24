@@ -7,29 +7,31 @@
 {% block content %}
   <div class="container">
     <article class="col-sm-12 maincontent">
-      <h1>Wszyscy uczestnicy</h1>
+      <h1>{{ title }}</h1>
       <div class="table-responsive">
-        <table id="participants-table" class="table" style="width:100%!important;" data-order='[[ 11, "desc" ], [ 1, "asc" ]]'>
+        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people %}[[ 1, "asc" ]]{% else %}[[ 11, "desc" ], [ 1, "asc" ]]{% endif %}'>
           <thead>
             <tr>
               <th data-visible="true"  data-searchable="false" data-orderable="false"></th>
               <th data-visible="true"  data-searchable="true"  data-orderable="true">Imię i nazwisko</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Data Urodzenia</th>
-              <th data-visible="true"  data-searchable="false" data-orderable="true">Pełnoletni</th>
-              <th data-visible="false" data-searchable="true"  data-orderable="true">Email</th>
+              <th data-visible="{% if is_all_people %}false{% else %}true{% endif %}" data-searchable="false" data-orderable="true">Pełnoletni</th>
+              <th data-visible="{% if is_all_people %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="true">Email</th>
               <th data-visible="false" data-searchable="true"  data-orderable="true">Szkoła</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Rok Matury</th>
+              {% if not is_all_people %}
               <th data-visible="true"  data-searchable="false" data-orderable="true">Punkty</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Suma ilości warsztatów</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Ilość Zakwalifikowanych Warsztatów</th>
               <th data-visible="true"  data-searchable="false" data-orderable="true">List motywacyjny</th>
               <th data-visible="true"  data-searchable="false" data-orderable="true">Status</th>
+              {% endif %}
               <th data-visible="true"  data-searchable="false" data-orderable="true">Poprzednie edycje</th>
               <th data-visible="false" data-searchable="false" data-orderable="false">Skąd wiesz o WWW?</th>
               <th data-visible="false" data-searchable="false" data-orderable="false">Komentarz</th>
               <th data-visible="false" data-searchable="true"  data-orderable="false">Pesel</th>
               <th data-visible="false" data-searchable="true"  data-orderable="false">Adres</th>
-              <th data-visible="false" data-searchable="true"  data-orderable="false">Numer telefonu</th>
+              <th data-visible="{% if is_all_people %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="false">Numer telefonu</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Rozmiar Koszulki</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Data Przyjazdu</th>
               <th data-visible="false" data-searchable="false" data-orderable="true">Data Wyjazdu</th>
@@ -60,6 +62,7 @@
                 <td>
                   {{ person.matura_exam_year | question_mark_on_none_value }}
                 </td>
+                {% if not is_all_people %}
                 <td data-order="{{ person.points | unlocalize }}">
                   <a tabindex="0" data-html="true" role="button" data-trigger="focus" data-toggle="popover" data-placement="bottom" title="Komentarze" data-content="<ul>{% for info in person.infos %} <li> {{ info }} </li> {% endfor %}</ul>">
                     {{ person.points | floatformat }}%
@@ -83,6 +86,7 @@
                     {{ person.status_display|default_if_none:"Brak" }}
                   {% endif %}
                 </td>
+                {% endif %}
                 <td data-order="{% for participation in person.participation_data reversed %}{{ participation.year }}:{% if participation.workshops %}2{% elif participation.status == 'Z' %}1{% else %}0{% endif %} {% endfor %}">
                     {% include '_pastParticipation.html' with participation_data=person.participation_data only %}
                 </td>

@@ -94,6 +94,7 @@
                 <ul class="dropdown-menu">
                   <li><a href="{% url 'participants' %}">Uczestnicy</a></li>
                   <li><a href="{% url 'lecturers' %}">Prowadzący</a></li>
+                  <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>
                   <li><a href="{% url 'filter_emails' %}">Adresy email</a></li>
                   {% if request.user.is_staff %}
                     <li role="separator" class="divider"></li>
