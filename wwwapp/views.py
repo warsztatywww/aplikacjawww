@@ -402,6 +402,7 @@ def participants_view(request, year):
                 'school': participant.participant.school,
                 'points': 0.0,
                 'infos': [],
+                'how_do_you_know_about': participant.participant.how_do_you_know_about,
                 'comments': participant.participant.user_info.comments,
                 'start_date': participant.participant.user_info.start_date,
                 'end_date': participant.participant.user_info.end_date,
