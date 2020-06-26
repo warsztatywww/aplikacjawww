@@ -114,7 +114,10 @@ if __name__ == "__main__":
     users = {u['uid']: User(u, idx) for idx, u in enumerate(data['users'])}
     workshops = {ws['wid']: Workshop(ws, idx, users) for idx, ws in enumerate(data['workshops'])}
     for participation in data['participation']:
-        add_participation(workshops[participation['wid']], users[participation['uid']])
+        try:
+            add_participation(workshops[participation['wid']], users[participation['uid']])
+        except KeyError:
+            pass
 
     ctx = Context(block_num=8,
                   slot_num=4,
