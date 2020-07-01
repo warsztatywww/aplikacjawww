@@ -6,6 +6,9 @@ import json
 import sys
 import time
 
+BLOCK_NUM = 8
+EMPTY_MUL = 5
+
 if len(sys.argv) != 2:
     print "Usage {file} data.json".format(file=sys.argv[0])
     sys.exit(1)
@@ -15,7 +18,7 @@ with open(sys.argv[1]) as f:
     data = json.load(f)
 
 workshops = {ws['wid']:ws for ws in data['workshops']}
-workshops_per_block = len(workshops) / 6
+workshops_per_block = len(workshops) / BLOCK_NUM
 
 points_not_allowed = 10**3
 points_wrong_workshops_per_block = 10**4
@@ -28,12 +31,8 @@ for uid in users.keys():
     users[uid]['blocks'] = set()
     del users[uid]['start']
     del users[uid]['end']
-    users[uid]['blocks'].add(0)
-    users[uid]['blocks'].add(1)
-    users[uid]['blocks'].add(2)
-    users[uid]['blocks'].add(3)
-    users[uid]['blocks'].add(4)
-    users[uid]['blocks'].add(5)
+    for i in range(BLOCK_NUM):
+        users[uid]['blocks'].add(i)
 
 wid_list = list(workshops.keys())
 
@@ -49,24 +48,24 @@ for ws in workshops.values():
 class Plan(object):
     def __init__(self, tab=None):
         if tab is None:
-            self.blocks = [set() for i in xrange(6)]
+            self.blocks = [set() for i in xrange(BLOCK_NUM)]
             self.workshops = dict()
         else:
-            self.blocks = [set() for i in xrange(6)]
-            for i in xrange(6):
+            self.blocks = [set() for i in xrange(BLOCK_NUM)]
+            for i in xrange(BLOCK_NUM):
                 for wid in tab[i]:
                     self.add(i, wid)
     
     def tab(self):
         tab = []
-        for i in xrange(6):
+        for i in xrange(BLOCK_NUM):
             tab.append([])
             for wid in self.blocks[i]:
                 tab[i].append(wid)
         return tab
     
     def add(self, block, wid):
-        assert 0 <= block <= 5
+        assert 0 <= block <= BLOCK_NUM-1
         assert wid in workshops
         assert wid not in self.workshops
         self.blocks[block].add(wid)
@@ -84,11 +83,11 @@ class Plan(object):
         else:
             random_wid = wid
         if block is None:
-            random_block = random.randint(0, 5)
+            random_block = random.randint(0, BLOCK_NUM-1)
         else:
             random_block = block
         while random_block == self.workshops[random_wid]:
-            random_block = random.randint(0, 5)
+            random_block = random.randint(0, BLOCK_NUM-1)
         
         self.blocks[self.workshops[random_wid]].remove(random_wid)
         del self.workshops[random_wid]
@@ -106,7 +105,7 @@ class Plan(object):
     def make_random_plan():
         plan = Plan()
         for wid in workshops.keys():
-            plan.add(random.randint(0, 5), wid)
+            plan.add(random.randint(0, BLOCK_NUM-1), wid)
         return plan
     
     def describe(self):
@@ -123,7 +122,7 @@ class Plan(object):
         
         collision_sum = 0
         collision_user_sum = 0
-        for block in xrange(6):
+        for block in xrange(BLOCK_NUM):
             print "BLOCK", block
             for wid in self.blocks[block]:
                 participants_willing_to = 0
@@ -173,7 +172,7 @@ class Plan(object):
                     points -= 10**6
 
         for wid in all_wids:
-            for disallowed_block in workshops[wid]['disallowed_blocks']:
+            for disallowed_block in workshops[wid]['forbidden_blocks']:
                 if wid in self.blocks[disallowed_block]:
                     if verbose:
                         print "DISALLOWED BLOCK"
@@ -203,7 +202,7 @@ class Plan(object):
             empty_blocks = min(len(users[uid]['blocks']), len(users[uid]['part'])) - len(user_blocks)
             assert empty_blocks >= 0
             #print empty_blocks, users[uid]['name']
-            points -= empty_blocks**empty_blocks if empty_blocks>0 else 0
+            points -= (empty_blocks**empty_blocks)*EMPTY_MUL if empty_blocks>0 else 0
             if empty_blocks > 0:
                 if verbose:
                     print empty_blocks, "EMPTY BLOCKS for", users[uid]['name']
@@ -235,7 +234,7 @@ def improve(plan, points):
             if it_wid >= len(wid_list):
                 it_wid = 0
             block += 1
-            if block >= 6:
+            if block >= BLOCK_NUM:
                 block = 0
         else:
             plan2.mutate_by_exchange()
