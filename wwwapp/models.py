@@ -1,6 +1,6 @@
 import os
 import urllib.parse
-from datetime import date
+import datetime
 from typing import Dict, Set
 
 from django.conf import settings
@@ -14,7 +14,6 @@ from django.dispatch.dispatcher import receiver
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    user_info = models.OneToOneField('UserInfo', on_delete=models.CASCADE)
 
     gender = models.CharField(max_length=10, choices=[('M', 'Mężczyzna'), ('F', 'Kobieta'),],
                               null=True, default=None, blank=True)
@@ -105,10 +104,10 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.get_or_create(user=instance)
 
 
-@receiver(pre_save, sender=UserProfile)
-def create_user_info(instance, raw, using, update_fields, **kwargs):
-    if not hasattr(instance, 'user_info'):
-        instance.user_info = UserInfo.objects.create()
+@receiver(post_save, sender=UserProfile)
+def create_user_info(sender, instance, created, **kwargs):
+    if created:
+        UserInfo.objects.get_or_create(user_profile=instance)
 
 
 class WorkshopUserProfile(models.Model):
@@ -154,7 +153,7 @@ class PESELField(models.CharField):
             raise ValidationError('Data urodzenia zawarta w numerze PESEL nie istnieje.')
 
     @staticmethod
-    def _extract_date(pesel: str) -> date or None:
+    def _extract_date(pesel: str) -> datetime.date or None:
         """
         Takes PESEL (string that starts with at least 6 digits) and returns
         birth date associated with it.
@@ -167,7 +166,7 @@ class PESELField(models.CharField):
         count, month = divmod(month, 20)
         year += years_from_month[count]
         try:
-            return date(year, month, day)
+            return datetime.date(year, month, day)
         except ValueError:
             return None
 
@@ -185,6 +184,8 @@ POSSIBLE_TSHIRT_SIZES = [
 
 class UserInfo(models.Model):
     """Info needed for camp, not for qualification."""
+    user_profile = models.OneToOneField('UserProfile', on_delete=models.CASCADE, related_name='user_info', editable=False)
+
     pesel = PESELField(max_length=11, blank=True, default="")
     address = models.TextField(max_length=1000, blank=True, default="")
     phone = models.CharField(max_length=50, blank=True, default="")
@@ -197,7 +198,7 @@ class UserInfo(models.Model):
     class Meta:
         permissions = (('see_user_info', 'Can see user info'),)
 
-    def get_birth_date(self) -> date or None:
+    def get_birth_date(self) -> datetime.date or None:
         """
         Retrieves the birth date from the provided PESEL number.
         Returns a date class instance or None if the PESEL is malformed or not present.
@@ -205,6 +206,9 @@ class UserInfo(models.Model):
         if not self.pesel or len(self.pesel) < 6:
             return None
         return PESELField._extract_date(self.pesel)
+
+    def __str__(self):
+        return "{0}".format(self.user_profile)
 
 
 class ArticleContentHistory(models.Model):
@@ -309,10 +313,14 @@ class Workshop(models.Model):
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
 
+    def is_workshop_editable(self) -> bool:
+        return not hasattr(self, 'type') or self.type.year == settings.CURRENT_YEAR
+
+    def is_qualification_editable(self) -> bool:
+        return self.is_workshop_editable() and datetime.datetime.now().date() < settings.WORKSHOPS_START_DATE
+
     def clean(self):
         super(Workshop, self).clean()
-        if self.type.year != settings.CURRENT_YEAR:
-            raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
         if self.max_points is None and self.qualification_threshold is not None:
             raise ValidationError('Maksymalna liczba punktów musi być ustawiona jeśli próg kwalifikacji jest ustawiony')
 
