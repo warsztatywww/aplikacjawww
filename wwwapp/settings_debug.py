@@ -28,3 +28,17 @@ DATABASES = {
 MEDIA_ROOT = os.path.join(BASE_DIR, *MEDIA_URL.strip("/").split("/"))
 
 GOOGLE_ANALYTICS_KEY = None
+
+if {'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET'} <= os.environ.keys():
+    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_KEY']
+    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET']
+    auth_backends.append('social_core.backends.google.GoogleOAuth2')
+else:
+    logger.warning("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY or SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not provided. Login via Google will be disabled!")
+
+if {'SOCIAL_AUTH_FACEBOOK_KEY', 'SOCIAL_AUTH_FACEBOOK_SECRET'} <= os.environ.keys():
+    SOCIAL_AUTH_FACEBOOK_KEY = os.environ['SOCIAL_AUTH_FACEBOOK_KEY']
+    SOCIAL_AUTH_FACEBOOK_SECRET = os.environ['SOCIAL_AUTH_FACEBOOK_SECRET']
+    auth_backends.append('social_core.backends.facebook.FacebookOAuth2')
+else:
+    logger.warning("SOCIAL_AUTH_FACEBOOK_KEY or SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not provided. Login via Facebook will be disabled!")
