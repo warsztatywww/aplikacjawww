@@ -5,32 +5,34 @@ from __future__ import unicode_literals
 from django.db import migrations
 from django.conf import settings
 
-# After the migration is applied in production just comment out code depending on the allaccess library
+
 def forwards_func(apps, schema_editor):
-    AccountAccess = apps.get_model('allaccess', 'AccountAccess')
-    Provider = apps.get_model('allaccess', 'Provider')
-    UserSocialAuth = apps.get_model('social_django', 'UserSocialAuth')
+    try:
+        AccountAccess = apps.get_model('allaccess', 'AccountAccess')
+        Provider = apps.get_model('allaccess', 'Provider')
+        UserSocialAuth = apps.get_model('social_django', 'UserSocialAuth')
+    except LookupError:
+        # The old app isn't installed.
+        return
 
     for access in AccountAccess.objects.all():
         if access.provider.name == 'facebook':
             UserSocialAuth(provider='facebook', uid=access.identifier, user=access.user, extra_data=access.access_token).save()
-            access.delete()
         elif access.provider.name == 'google':
             UserSocialAuth(provider='google-oauth2', uid=access.identifier, user=access.user, extra_data=access.access_token).save()
-            access.delete()
         else:
             raise RuntimeError(f"Got unknown provider: {access.provider.name}! Aborting migration!")
+    AccountAccess.objects.all().delete()
     Provider.objects.all().delete()
 
-def reverse_func(apps, schema_editor):
-    AccountAccess = apps.get_model('allaccess', 'AccountAccess')
-    Provider = apps.get_model('allaccess', 'Provider')
-    UserSocialAuth = apps.get_model('social_django', 'UserSocialAuth')
 
-    if not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY or not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET:
-        raise RuntimeError("No Google OAUTH2 tokens provided. Aborting rollback!")
-    if not settings.SOCIAL_AUTH_FACEBOOK_KEY or not settings.SOCIAL_AUTH_FACEBOOK_SECRET:
-        raise RuntimeError("No Facebook OAUTH2 tokens provided. Aborting rollback!")
+def reverse_func(apps, schema_editor):
+    try:
+        AccountAccess = apps.get_model('allaccess', 'AccountAccess')
+        Provider = apps.get_model('allaccess', 'Provider')
+        UserSocialAuth = apps.get_model('social_django', 'UserSocialAuth')
+    except LookupError:
+        return
 
     legacy_google_provider = Provider(
         name="google",
@@ -53,18 +55,16 @@ def reverse_func(apps, schema_editor):
     for social_user in UserSocialAuth.objects.all():
         if social_user.provider == "facebook":
             AccountAccess(identifier=social_user.uid, user=social_user.user, provider=legacy_facebook_provider, access_token=social_user.extra_data).save()
-            social_user.delete()
         elif social_user.provider == "google-oauth2":
             AccountAccess(identifier=social_user.uid, user=social_user.user, provider=legacy_google_provider, access_token=social_user.extra_data).save()
-            social_user.delete()
         else:
             raise RuntimeError(f"Got unknown provider: {social_user.provider}! Aborting rollback!")
+    UserSocialAuth.objects.all().delete()
+
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('wwwapp', '0062_auto_20200816_1023'),
-        ('allaccess', '0002_auto_20150511_1853'),
         ('social_django', '0008_partial_timestamp'),
     ]
 
