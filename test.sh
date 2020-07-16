@@ -1,2 +1,2 @@
 #!/bin/sh
-./manage.py test
+./manage.py test wwwapp
