@@ -97,9 +97,7 @@ LOGIN_URL = '/login/'
 
 LOGIN_REDIRECT_URL = '/login/'
 
-auth_backends = ['django.contrib.auth.backends.ModelBackend']
-
-AUTHENTICATION_BACKENDS = tuple(auth_backends)
+AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend']
 
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
