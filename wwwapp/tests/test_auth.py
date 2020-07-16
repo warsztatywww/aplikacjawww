@@ -3,10 +3,14 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+
 @override_settings(SOCIAL_AUTH_FACEBOOK_KEY='1',
                    SOCIAL_AUTH_FACEBOOK_SECRET='2',
                    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY='3',
-                   SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET='4')
+                   SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET='4',
+                   AUTHENTICATION_BACKENDS=('django.contrib.auth.backends.ModelBackend',
+                                            'social_core.backends.google.GoogleOAuth2',
+                                            'social_core.backends.facebook.FacebookOAuth2',),)
 class AuthViews(TestCase):
     def setUp(self):
         self.supported_backends = ['facebook', 'google-oauth2']
@@ -14,13 +18,13 @@ class AuthViews(TestCase):
     def test_available_backends(self):
         for backend in self.supported_backends:
             response = self.client.get(reverse('social:begin', kwargs={'backend': backend}))
-            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.status_code, 302, msg=backend)
 
         not_supported_backends = ['linkedin', 'your_mom', 'furaffinity']
         for backend in not_supported_backends:
             url = reverse('social:begin', kwargs={'backend': backend})
             response = self.client.get(url)
-            self.assertEqual(response.status_code, 404)
+            self.assertEqual(response.status_code, 404, msg=backend)
 
     def login_page_anonymous(self):
         response = self.client.get(reverse('login'))
@@ -30,11 +34,11 @@ class AuthViews(TestCase):
         self.assertTrue("alt=\"Continue with Facebook\"" in content)
         self.assertTrue("alt=\"Sign in with Google\"" in content)
         for backend in self.supported_backends:
-            self.assertTrue("href=\"{}\"".format(reverse('social:begin', kwargs={'backend': backend})) in content)
+            self.assertTrue("href=\"{}\"".format(reverse('social:begin', kwargs={'backend': backend})) in content, msg=backend)
 
     def login_page_user(self, first_name, last_name):
         response = self.client.get(reverse('login'))
-        self.assertContains(response, '<h2 class="heading">Zalogowany jako {} {}</h2>'.format(first_name, last_name),
+        self.assertContains(response, 'Zalogowany jako {} {}'.format(first_name, last_name),
                             status_code=200)
 
     def test_login_page_anonymous(self):
@@ -111,16 +115,24 @@ class AuthViews(TestCase):
     def register_and_login(self, method, uid, first_name, second_name, email):
         start = len(User.objects.all())
         # Registration and relogin
-        for _ in range(3):
-            method(uid, first_name, second_name, email)
+        for i in range(3):
+            if i == 0:
+                user_id = method(uid, first_name, second_name, email).wsgi_request.user.id
+            else:
+                self.assertEquals(method(uid, first_name, second_name, email).wsgi_request.user.id, user_id)
             self.logout()
-            self.assertTrue(len(User.objects.all()) == start + 1)
+            self.assertEquals(len(User.objects.all()), start + 1)
 
         # Should still work when user changes his data completely in the provider
-        method(uid, first_name+'A', second_name+'A', email+'A', test_login=False)
-        self.login_page_user(first_name, second_name)
+        self.assertEquals(method(uid, first_name+'A', second_name+'A', email+'A', test_login=False).wsgi_request.user.id, user_id)
         self.logout()
-        self.assertTrue(len(User.objects.all()) == start + 1)
+        self.assertEquals(len(User.objects.all()), start + 1)
+
+        self.assertEquals(
+            method(uid, first_name, second_name, email).wsgi_request.user.id,
+            user_id)
+        self.logout()
+        self.assertEquals(len(User.objects.all()), start + 1)
 
     def test_login_and_merge_triggering(self):
         # Standalone login
