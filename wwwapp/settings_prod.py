@@ -33,8 +33,8 @@ GOOGLE_ANALYTICS_KEY = 'UA-12926426-8'
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_KEY']
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET']
-auth_backends.append('social_core.backends.google.GoogleOAuth2')
+AUTHENTICATION_BACKENDS.append('social_core.backends.google.GoogleOAuth2')
 
 SOCIAL_AUTH_FACEBOOK_KEY = os.environ['SOCIAL_AUTH_FACEBOOK_KEY']
 SOCIAL_AUTH_FACEBOOK_SECRET = os.environ['SOCIAL_AUTH_FACEBOOK_SECRET']
-auth_backends.append('social_core.backends.facebook.FacebookOAuth2')
+AUTHENTICATION_BACKENDS.append('social_core.backends.facebook.FacebookOAuth2')
