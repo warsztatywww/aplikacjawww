@@ -99,10 +99,9 @@ class AuthViews(TestCase):
                     self.assertEqual(response.status_code, 200)
                     self.assertTemplateUsed(response, 'loginMerge.html')
                 else:
-                    self.assertEqual(response.status_code, 302)
-                    self.assertEqual(response.url, reverse('login'))
-
                     if test_login:
+                        self.assertEqual(response.status_code, 302)
+                        self.assertEqual(response.url, reverse('login'))
                         self.login_page_user(first_name, last_name)
                 return response
 
@@ -173,7 +172,55 @@ class AuthViews(TestCase):
         self.register_and_login(self.facebook_login, uid, "A", "google_surname_0", "random4")
         uid += 1
 
-        # The following things were tested manually a LOT:
-        # TODO: check redirects
-        # TODO: check if account merging works
-        # TODO: migrate -> create_accounts and merge some of them -> rollback migration -> migrate -> check if login still works
+    def google_merge_verification(self, uid, name, surname, email):
+        self.google_login(uid, name, surname, email, test_login=False)
+        resp = self.client.get(reverse('finish_merge_verification'))
+        self.assertEqual(resp.status_code, 302)
+
+        fake_responses = [mock.Mock(), mock.Mock()]
+        fake_responses[0].json.return_value = {'access_token': '123'}
+        fake_responses[1].json.return_value = {'sub': uid,
+                                               'name': name + " " + surname,
+                                               'email': email}
+        with mock.patch('social_core.backends.base.BaseAuth.request',
+                        side_effect=fake_responses):
+            url = reverse('social:complete',
+                          kwargs={'backend': 'google-oauth2'})
+            url += '?code=2&state=XXX'
+
+            session = self.client.session
+            session['google-oauth2_state'] = 'XXX'
+            session.save()
+
+            with mock.patch('django.contrib.sessions.backends.base.SessionBase'
+                            '.set_expiry', side_effect=[OverflowError, None]):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(response.url, reverse('login'))
+
+    def test_account_merging(self):
+        start = len(User.objects.all())
+
+        hacker_user_id = self.google_login(0,
+                                           "google_hacker_name",
+                                           "google_hacker_surname",
+                                           "google_hacker_email").wsgi_request.user.id
+        self.logout()
+        self.assertEquals(len(User.objects.all()), start + 1)
+
+        google_user_id = self.google_login(1,
+                                           "google_name",
+                                           "google_surname",
+                                           "google_email").wsgi_request.user.id
+        self.logout()
+        self.assertEquals(len(User.objects.all()), start + 2)
+
+        # here we check for attempted fraud. We should get merge with hacker_user_id
+        self.facebook_login(2, "google_name", "google_surname", "google_email", test_merge=True)
+        self.google_merge_verification(0, "google_name", "google_surname", "google_email")
+        self.assertEquals(self.client.get(reverse('login')).wsgi_request.user.id, hacker_user_id)
+
+    # The following things were tested manually a LOT:
+    # TODO: check redirects
+    # TODO: check if account merging works
+    # TODO: migrate -> create_accounts and merge some of them -> rollback migration -> migrate -> check if login still works
