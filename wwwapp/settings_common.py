@@ -99,27 +99,6 @@ LOGIN_REDIRECT_URL = '/login/'
 
 auth_backends = ['django.contrib.auth.backends.ModelBackend']
 
-if {'SOCIAL_AUTH_GOOGLE_OAUTH2_KEY', 'SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET'} <= os.environ.keys():
-    SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_KEY']
-    SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ['SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET']
-    SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
-    SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid', 'profile', 'email']
-    auth_backends.append('social_core.backends.google.GoogleOAuth2')
-else:
-    print("\033[93mWARNING: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY or SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not provided. Login via Google will be disabled!\033[0m")
-
-if {'SOCIAL_AUTH_FACEBOOK_KEY', 'SOCIAL_AUTH_FACEBOOK_SECRET'} <= os.environ.keys():
-    SOCIAL_AUTH_FACEBOOK_KEY = os.environ['SOCIAL_AUTH_FACEBOOK_KEY']
-    SOCIAL_AUTH_FACEBOOK_SECRET = os.environ['SOCIAL_AUTH_FACEBOOK_SECRET']
-    SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile', 'email']
-    SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
-        'locale': 'pl_PL',
-        'fields': 'id, name, email',
-    }
-    auth_backends.append('social_core.backends.facebook.FacebookOAuth2')
-else:
-    print("\033[93mWARNING: SOCIAL_AUTH_FACEBOOK_KEY or SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not provided. Login via Facebook will be disabled!\033[0m")
-
 AUTHENTICATION_BACKENDS = tuple(auth_backends)
 
 SOCIAL_AUTH_PIPELINE = (
@@ -132,8 +111,24 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.user.create_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
-    'social_core.pipeline.user.user_details',
+    # We do not want any fields to auto update
+    # 'social_core.pipeline.user.user_details',
 )
+
+SOCIAL_AUTH_USER_FIELDS = ['email', 'first_name', 'last_name', 'username']
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid', 'profile', 'email']
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
+
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['public_profile', 'email']
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
+    'locale': 'pl_PL',
+    'fields': 'id, name, first_name, last_name, email',
+}
+SOCIAL_AUTH_FACEBOOK_KEY = os.getenv('SOCIAL_AUTH_FACEBOOK_KEY')
+SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv('SOCIAL_AUTH_FACEBOOK_SECRET')
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
