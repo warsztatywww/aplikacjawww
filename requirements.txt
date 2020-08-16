@@ -13,8 +13,6 @@ Faker
 mypy
 django-stubs
 django-imagekit
-pyocclient
-xkcdpass
 social-auth-app-django
 psycopg2
 mock

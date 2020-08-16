@@ -4,8 +4,6 @@ import json
 import os
 import sys
 import mimetypes
-import unicodedata
-import requests
 from urllib.parse import urljoin
 
 import bleach
@@ -13,25 +11,21 @@ from dateutil.relativedelta import relativedelta
 from wsgiref.util import FileWrapper
 from typing import Dict
 
-from django.contrib.auth.views import redirect_to_login
 from django.db.models.query import Prefetch
-from xkcdpass import xkcd_password as xp
-import owncloud
-
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseServerError, HttpResponseNotFound
+from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django_bleach.utils import get_bleach_default_options
@@ -60,7 +54,6 @@ def get_context(request):
             try:
                 user_profile = UserProfile.objects.get(user=request.user)
                 context['resources'] = visible_resources.filter(year__in=user_profile.all_participation_years())
-                context['is_participating_this_year'] = user_profile.is_participating_in(Camp.objects.latest())
             except UserProfile.DoesNotExist:
                 context['resources'] = []
 
@@ -69,14 +62,6 @@ def get_context(request):
     context['current_year'] = Camp.objects.latest()
 
     return context
-
-
-def generate_nice_pass():
-    wordfile = xp.locate_wordfile()
-    mywords = xp.generate_wordlist(wordfile=wordfile, min_length=3,
-                                   max_length=6)
-    return "".join(
-        xp.generate_xkcdpassword(mywords, numwords=4).title().split(' '))
 
 
 def program_view(request, year=None):
@@ -858,48 +843,3 @@ def upload_file(request, type, name):
             destination.write(chunk)
 
     return JsonResponse({'location': urljoin(urljoin(settings.MEDIA_URL, target_dir), name)})
-
-
-@login_required()
-def cloud_access_view(request):
-    context = get_context(request)
-    userprofile = request.user.userprofile
-    is_lecturer = userprofile.is_lecturer_in(Camp.objects.latest())
-    is_participant = userprofile.is_participant_in(Camp.objects.latest())
-    if not (is_lecturer or is_participant):
-        return HttpResponseForbidden()
-
-    if userprofile.owncloud_user == "":
-        userprofile.owncloud_user = \
-            unicodedata.normalize("NFKD", request.user.first_name+request.user.last_name)\
-                .encode('ascii','ignore').decode('ascii')[:32]
-        userprofile.owncloud_password = generate_nice_pass()
-        c = owncloud.Client(settings.OWNCLOUD_HOST)
-        c.login(settings.OWNCLOUD_USER, settings.OWNCLOUD_PASS)
-        c.create_user(userprofile.owncloud_user, userprofile.owncloud_password)
-        if is_lecturer:
-            c.add_user_to_group(userprofile.owncloud_user, "WWW16Lecturers")
-        elif is_participant:
-            c.add_user_to_group(userprofile.owncloud_user, "WWW16Participants")
-        userprofile.save()
-
-    if userprofile.k8s_user == "":
-        userprofile.k8s_user = \
-            unicodedata.normalize("NFKD", request.user.first_name+request.user.last_name)\
-                .encode('ascii','ignore').decode('ascii').lower()[:32]
-        userprofile.k8s_password = generate_nice_pass()
-
-        response = requests.post(settings.K8S_AUTH_URL, json={"api_key": settings.K8S_AUTH_TOKEN, \
-                                                              "username": userprofile.k8s_user, \
-                                                              "password": userprofile.k8s_password})
-        if response.status_code != 200 or "ok" not in response.json():
-            return HttpResponseServerError("")
-        userprofile.save()
-
-    context['owncloud_host'] = settings.OWNCLOUD_HOST
-    context['owncloud_user'] = userprofile.owncloud_user
-    context['owncloud_password'] = userprofile.owncloud_password
-    context['k8s_domain'] = userprofile.k8s_user + "." + settings.K8S_DOMAIN
-    context['k8s_user'] = userprofile.k8s_user
-    context['k8s_password'] = userprofile.k8s_password
-    return render(request, 'cloud.html', context)
