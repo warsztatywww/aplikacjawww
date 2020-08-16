@@ -211,7 +211,7 @@ def my_profile_edit_view(request):
 
 
 @login_required()
-def workshop_view(request, name=None):
+def workshop_proposal_view(request, name=None):
     new = (name is None)
     if new:
         workshop = None
@@ -253,7 +253,7 @@ def workshop_view(request, name=None):
 
     context['form'] = form
 
-    return render(request, 'workshop.html', context)
+    return render(request, 'workshopproposal.html', context)
 
 
 def can_edit_workshop(workshop, user):
