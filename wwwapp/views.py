@@ -4,12 +4,17 @@ import json
 import os
 import sys
 import mimetypes
+import unicodedata
+import requests
 from urllib.parse import urljoin
 
 import bleach
 from dateutil.relativedelta import relativedelta
 from wsgiref.util import FileWrapper
 from typing import Dict
+from xkcdpass import xkcd_password as xp
+import owncloud
+
 
 from django.conf import settings
 from django.contrib import messages
@@ -19,11 +24,12 @@ from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest
+from django.http.response import HttpResponseBadRequest, HttpResponseServerError
 from django.shortcuts import render, redirect, get_object_or_404, \
     render_to_response
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django_bleach.utils import get_bleach_default_options
@@ -52,6 +58,7 @@ def get_context(request):
             try:
                 user_profile = UserProfile.objects.get(user=request.user)
                 context['resources'] = visible_resources.filter(year__in=user_profile.all_participation_years())
+                context['is_participating_this_year'] = user_profile.is_participating_in(settings.CURRENT_YEAR)
             except UserProfile.DoesNotExist:
                 context['resources'] = []
 
@@ -60,6 +67,14 @@ def get_context(request):
     context['current_year'] = settings.CURRENT_YEAR
 
     return context
+
+
+def generate_nice_pass():
+    wordfile = xp.locate_wordfile()
+    mywords = xp.generate_wordlist(wordfile=wordfile, min_length=3,
+                                   max_length=6)
+    return "".join(
+        xp.generate_xkcdpassword(mywords, numwords=4).title().split(' '))
 
 
 def program_view(request, year):
@@ -146,7 +161,7 @@ def profile_view(request, user_id):
 
 
 @login_required()
-def my_profile_view(request):
+def my_profile_edit_view(request):
     context = get_context(request)
     user_profile = UserProfile.objects.get(user=request.user)
 
@@ -190,10 +205,9 @@ def my_profile_view(request):
     context['user_profile_page_form'] = user_profile_page_form
     context['user_cover_letter_form'] = user_cover_letter_form
     context['user_info_page_form'] = user_info_page_form
-    context['is_editing_profile'] = True
     context['title'] = 'Mój profil'
 
-    return render(request, 'profile.html', context)
+    return render(request, 'profileedit.html', context)
 
 
 def workshop_view(request, name=None):
@@ -382,6 +396,12 @@ def participants_view(request, year=None):
 
             workshop_profile = participant.participant.workshop_profile_for(year)
 
+            participation_data = participant.participant.all_participation_data()
+            if not request.user.has_perm('wwwapp.see_all_workshops'):
+                # If the current user can't see non-public workshops, remove them from the list
+                for participation in participation_data:
+                    participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
+
             people[p_id] = {
                 'user': participant.participant.user,
                 'birth': birth,
@@ -396,9 +416,11 @@ def participants_view(request, year=None):
                 'has_letter': bool(cover_letter and len(cover_letter) > 50),
                 'status': workshop_profile.status if workshop_profile else None,
                 'status_display': workshop_profile.get_status_display if workshop_profile else None,
+                'participation_data': participation_data,
                 'school': participant.participant.school,
                 'points': 0.0,
                 'infos': [],
+                'how_do_you_know_about': participant.participant.how_do_you_know_about,
                 'comments': participant.participant.user_info.comments,
                 'start_date': participant.participant.user_info.start_date,
                 'end_date': participant.participant.user_info.end_date,
@@ -477,10 +499,7 @@ def register_to_workshop_view(request):
     workshop_name = request.POST['workshop_name']
     workshop = get_object_or_404(Workshop, name=workshop_name)
 
-    if workshop.type.year != settings.CURRENT_YEAR:
-        return JsonResponse({'error': 'Kwalifikacja na te warsztaty została dawno zakończona.'})
-
-    if datetime.datetime.now().date() >= settings.WORKSHOPS_START_DATE:
+    if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
 
     WorkshopParticipant(participant=UserProfile.objects.get(user=request.user), workshop=workshop).save()
@@ -503,10 +522,7 @@ def unregister_from_workshop_view(request):
     profile = UserProfile.objects.get(user=request.user)
     workshop_participant = WorkshopParticipant.objects.get(workshop=workshop, participant=profile)
 
-    if workshop.type.year != settings.CURRENT_YEAR:
-        return JsonResponse({'error': 'Kwalifikacja na te warsztaty została dawno zakończona.'})
-
-    if datetime.datetime.now().date() >= settings.WORKSHOPS_START_DATE:
+    if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
 
     if workshop_participant.qualification_result is not None or workshop_participant.comment:
@@ -790,3 +806,48 @@ def upload_file(request, type, name):
             destination.write(chunk)
 
     return JsonResponse({'location': urljoin(urljoin(settings.MEDIA_URL, target_dir), name)})
+
+
+@login_required()
+def cloud_access_view(request):
+    context = get_context(request)
+    userprofile = request.user.userprofile
+    is_lecturer = userprofile.is_lecturer_in(settings.CURRENT_YEAR)
+    is_participant = userprofile.is_participant_in(settings.CURRENT_YEAR)
+    if not (is_lecturer or is_participant):
+        return HttpResponseForbidden()
+
+    if userprofile.owncloud_user == "":
+        userprofile.owncloud_user = \
+            unicodedata.normalize("NFKD", request.user.first_name+request.user.last_name)\
+                .encode('ascii','ignore').decode('ascii')[:32]
+        userprofile.owncloud_password = generate_nice_pass()
+        c = owncloud.Client(settings.OWNCLOUD_HOST)
+        c.login(settings.OWNCLOUD_USER, settings.OWNCLOUD_PASS)
+        c.create_user(userprofile.owncloud_user, userprofile.owncloud_password)
+        if is_lecturer:
+            c.add_user_to_group(userprofile.owncloud_user, "WWW16Lecturers")
+        elif is_participant:
+            c.add_user_to_group(userprofile.owncloud_user, "WWW16Participants")
+        userprofile.save()
+
+    if userprofile.k8s_user == "":
+        userprofile.k8s_user = \
+            unicodedata.normalize("NFKD", request.user.first_name+request.user.last_name)\
+                .encode('ascii','ignore').decode('ascii').lower()[:32]
+        userprofile.k8s_password = generate_nice_pass()
+
+        response = requests.post(settings.K8S_AUTH_URL, json={"api_key": settings.K8S_AUTH_TOKEN, \
+                                                              "username": userprofile.k8s_user, \
+                                                              "password": userprofile.k8s_password})
+        if response.status_code != 200 or "ok" not in response.json():
+            return HttpResponseServerError("")
+        userprofile.save()
+
+    context['owncloud_host'] = settings.OWNCLOUD_HOST
+    context['owncloud_user'] = userprofile.owncloud_user
+    context['owncloud_password'] = userprofile.owncloud_password
+    context['k8s_domain'] = userprofile.k8s_user + "." + settings.K8S_DOMAIN
+    context['k8s_user'] = userprofile.k8s_user
+    context['k8s_password'] = userprofile.k8s_password
+    return render(request, 'cloud.html', context)

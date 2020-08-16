@@ -84,6 +84,10 @@
               </li>
             {% endif %}
 
+            {% if is_participating_this_year %}
+              <li><a href="{% url 'cloud_access' %}">Chmura</a></li>
+            {% endif %}
+
             {% if perms.wwwapp.see_all_users %}
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <b class="caret"></b></a>
@@ -129,7 +133,7 @@
               </ul>
             </li>
 
-            <li><a href="{% url 'myProfile' %}">Profil</a></li>
+            <li><a href="{% url 'edit_my_profile' %}">Profil</a></li>
 
             {% if user.is_authenticated %}
               <li><a class="btn" href="{% url 'login' %}">{{ user.first_name }} {{ user.last_name }}</a></li>

@@ -4,8 +4,9 @@ from django.contrib import admin
 from django.contrib.auth.views import logout_then_login
 from django.contrib.staticfiles.storage import staticfiles_storage
 from django.views.generic import RedirectView, TemplateView
+from django.conf import settings
 
-from . import settings, views, mail_views
+from . import views, mail_views
 from .auth import login_view, ScopedOAuthRedirect, ScopedOAuthCallback, \
     create_user_from_unmerged_access_view
 
@@ -26,7 +27,7 @@ urlpatterns = [
     url(r'^accounts/callback/(?P<provider>(\w|-)+)/$', ScopedOAuthCallback.as_view(), name='scopedallaccess-callback'),
     url(r'^accounts/createUserFromAccess/$', create_user_from_unmerged_access_view, name='scopedallaccess-createUserFromAccess'),
     url(r'^profile/(?P<user_id>[0-9]+)/$', views.profile_view, name='profile'),
-    url(r'^profile/$', views.my_profile_view, name='myProfile'),
+    url(r'^profile/$', views.my_profile_edit_view, name='edit_my_profile'),
     url(r'^article/(?P<name>[a-zA-Z0-9\-_]+)/$', views.article_view, name='article'),
     url(r'^article/(?P<name>[a-zA-Z0-9\-_]+)/edit/$', views.article_edit_view, name='article_edit'),
     url(r'^addArticle/$', views.article_edit_view, name='article_add'),
@@ -57,6 +58,7 @@ urlpatterns = [
     url(r'^([0-9]+)/program/$', views.program_view, name='year_program'),
     url(r'^resource_auth/$', views.resource_auth_view, name='resource_auth'),
     url(r'^robots\.txt/$', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
+    url(r'^cloud/$', views.cloud_access_view, name='cloud_access'),
     url(r'^$', views.index_view, name='index'),
 ]
 
