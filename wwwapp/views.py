@@ -161,7 +161,7 @@ def profile_view(request, user_id):
 
 
 @login_required()
-def my_profile_view(request):
+def my_profile_edit_view(request):
     context = get_context(request)
     user_profile = UserProfile.objects.get(user=request.user)
 
@@ -205,10 +205,9 @@ def my_profile_view(request):
     context['user_profile_page_form'] = user_profile_page_form
     context['user_cover_letter_form'] = user_cover_letter_form
     context['user_info_page_form'] = user_info_page_form
-    context['is_editing_profile'] = True
     context['title'] = 'Mój profil'
 
-    return render(request, 'profile.html', context)
+    return render(request, 'profileedit.html', context)
 
 
 def workshop_view(request, name=None):
