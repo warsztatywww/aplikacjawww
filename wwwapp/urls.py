@@ -53,7 +53,6 @@ urlpatterns = [
     path('<int:year>/program/', views.program_view, name='program'),
     path('resource_auth/', views.resource_auth_view, name='resource_auth'),
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
-    path('cloud/', views.cloud_access_view, name='cloud_access'),
     path('', views.index_view, name='index'),
 ]
 

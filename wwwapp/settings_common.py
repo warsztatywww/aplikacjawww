@@ -238,8 +238,4 @@ GALLERY_TITLE = 'Galeria WWW'
 GALLERY_FOOTER_INFO = 'Wakacyjne Warsztaty Wielodyscyplinarne'
 GALLERY_FOOTER_EMAIL = ''
 
-K8S_AUTH_URL = "https://auth-connector.wwwx.me/authorize"
-K8S_AUTH_TOKEN = ""
-K8S_DOMAIN = "wwwx.me"
-
 X_FRAME_OPTIONS = 'DENY'
