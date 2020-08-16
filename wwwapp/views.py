@@ -234,9 +234,10 @@ def workshop_view(request, name=None):
                 workshop = form.save(commit=False)
                 workshop.save()
                 form.save_m2m()
-                user_profile = UserProfile.objects.get(user=request.user)
-                workshop.lecturer.add(user_profile)
-                workshop.save()
+                if new:
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    workshop.lecturer.add(user_profile)
+                    workshop.save()
                 messages.info(request, 'Zapisano.')
                 return redirect('workshop', form.instance.name)
         else:
