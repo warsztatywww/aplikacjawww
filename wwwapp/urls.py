@@ -43,11 +43,11 @@ urlpatterns = [
     path('yourWorkshops/', views.your_workshops_view, name='yourWorkshops'),
     path('allWorkshops/', views.all_workshops_view, name='allWorkshops'),
     path('dataForPlan/', RedirectView.as_view(url='/%d/dataForPlan/' % settings.CURRENT_YEAR, permanent=False), name='dataForPlan'),
-    path('([0-9]+)/dataForPlan/', views.data_for_plan_view, name='year_dataForPlan'),
+    path('<int:year>/dataForPlan/', views.data_for_plan_view, name='year_dataForPlan'),
     path('participants/', RedirectView.as_view(url='/%d/participants/' % settings.CURRENT_YEAR, permanent=False), name='participants'),
-    path('([0-9]+)/participants/', views.participants_view, name='year_participants'),
+    path('<int:year>/participants/', views.participants_view, name='year_participants'),
     path('lecturers/', RedirectView.as_view(url='/%d/lecturers/' % settings.CURRENT_YEAR, permanent=False), name='lecturers'),
-    path('([0-9]+)/lecturers/', views.lecturers_view, name='year_lecturers'),
+    path('<int:year>/lecturers/', views.lecturers_view, name='year_lecturers'),
     path('people/', views.participants_view, name='all_people'),
     path('emails/', views.emails_view, name='emails'),
     path('filterEmails/', mail_views.filtered_emails_view, name='filter_emails'),
@@ -57,7 +57,6 @@ urlpatterns = [
     path('<int:year>/program/', views.program_view, name='year_program'),
     path('resource_auth/', views.resource_auth_view, name='resource_auth'),
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
-    path('cloud/', views.cloud_access_view, name='cloud_access'),
     path('', views.index_view, name='index'),
 ]
 
