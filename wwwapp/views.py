@@ -12,6 +12,8 @@ import bleach
 from dateutil.relativedelta import relativedelta
 from wsgiref.util import FileWrapper
 from typing import Dict
+
+from django.contrib.auth.views import redirect_to_login
 from xkcdpass import xkcd_password as xp
 import owncloud
 
@@ -217,8 +219,7 @@ def workshop_view(request, name=None):
         workshop = None
         title = 'Nowe warsztaty'
         if not request.user.is_authenticated:
-            request.session['next'] = request.path
-            return redirect('login')
+            return redirect_to_login(request.path)
         else:
             has_perm_to_edit = True
     else:
@@ -229,8 +230,7 @@ def workshop_view(request, name=None):
     # Workshop proposals are only visible to admins
     has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
     if not has_perm_to_edit and not has_perm_to_see_all:
-        request.session['next'] = request.path
-        return redirect('login')
+        return redirect_to_login(request.path)
 
     if has_perm_to_edit:
         if request.method == 'POST':
