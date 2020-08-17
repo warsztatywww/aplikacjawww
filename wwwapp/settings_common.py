@@ -44,6 +44,7 @@ MIDDLEWARE = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
 )
 
 ROOT_URLCONF = 'wwwapp.urls'
@@ -199,3 +200,5 @@ GALLERY_FOOTER_EMAIL = ''
 K8S_AUTH_URL = "https://auth-connector.wwwx.me/authorize"
 K8S_AUTH_TOKEN = ""
 K8S_DOMAIN = "wwwx.me"
+
+X_FRAME_OPTIONS = 'DENY'
