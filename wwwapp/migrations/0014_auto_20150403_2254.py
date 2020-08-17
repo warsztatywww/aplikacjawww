@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='workshop',
             name='type',
-            field=models.ForeignKey(default=None, to='wwwapp.WorkshopType', null=True),
+            field=models.ForeignKey(default=None, to='wwwapp.WorkshopType', null=True, on_delete=models.CASCADE),
             preserve_default=True,
         ),
     ]

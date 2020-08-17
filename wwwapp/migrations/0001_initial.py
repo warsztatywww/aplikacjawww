@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=40)),
                 ('content', models.TextField(max_length=100000, blank=True)),
                 ('on_menubar', models.BooleanField(default=False)),
-                ('modified_by', models.ForeignKey(default=None, to=settings.AUTH_USER_MODEL, null=True)),
+                ('modified_by', models.ForeignKey(default=None, to=settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -32,7 +32,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('version', models.IntegerField(editable=False)),
                 ('content', models.TextField()),
-                ('article', models.ForeignKey(to='wwwapp.Article')),
+                ('article', models.ForeignKey(to='wwwapp.Article', on_delete=models.CASCADE)),
             ],
             options={
             },
@@ -43,7 +43,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('gender', models.CharField(default=None, max_length=10, null=True, choices=[(b'M', b'Male'), (b'F', b'Female')])),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL, on_delete=models.CASCADE)),
             ],
             options={
             },

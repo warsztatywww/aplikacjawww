@@ -25,8 +25,7 @@ from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
 from django.http.response import HttpResponseBadRequest, HttpResponseServerError
-from django.shortcuts import render, redirect, get_object_or_404, \
-    render_to_response
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.views import View
@@ -507,7 +506,7 @@ def register_to_workshop_view(request):
     context = get_context(request)
     context['workshop'] = workshop
     context['registered'] = True
-    return JsonResponse({'content': render_to_response('_programworkshop.html', context).content.decode()})
+    return JsonResponse({'content': render(request, '_programworkshop.html', context).content.decode()})
 
 
 def unregister_from_workshop_view(request):
@@ -533,7 +532,7 @@ def unregister_from_workshop_view(request):
     context = get_context(request)
     context['workshop'] = workshop
     context['registered'] = False
-    return JsonResponse({'content': render_to_response('_programworkshop.html', context).content.decode()})
+    return JsonResponse({'content': render(request, '_programworkshop.html', context).content.decode()})
 
 
 @permission_required('wwwapp.export_workshop_registration')

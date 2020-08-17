@@ -19,7 +19,7 @@ urlpatterns = [
     ),
     url(r'^tinymce/', include('tinymce.urls')),
     url(r'^logout/$', logout_then_login, name='logout'),
-    url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', admin.site.urls),
     url(r'^gallery/', include('gallery.urls')),
     url(r'^login/$', login_view, name='login'),
     url(r'^accounts/', include('social_django.urls', namespace='social')),

@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofile',
             name='userinfo',
-            field=models.OneToOneField(null=True, to='wwwapp.UserInfo'),
+            field=models.OneToOneField(null=True, to='wwwapp.UserInfo', on_delete=models.CASCADE),
             preserve_default=True,
         ),
     ]
