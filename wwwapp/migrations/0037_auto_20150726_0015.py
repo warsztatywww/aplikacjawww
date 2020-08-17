@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userprofile',
             name='userinfo',
-            field=models.OneToOneField(default=None, to='wwwapp.UserInfo', null=True),
+            field=models.OneToOneField(default=None, to='wwwapp.UserInfo', null=True, on_delete=models.CASCADE),
             preserve_default=False,
         ),
     ]

@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='articlecontenthistory',
             name='modified_by',
-            field=models.ForeignKey(default=None, to=settings.AUTH_USER_MODEL, null=True),
+            field=models.ForeignKey(default=None, to=settings.AUTH_USER_MODEL, null=True, on_delete=models.CASCADE),
             preserve_default=True,
         ),
     ]

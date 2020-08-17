@@ -15,8 +15,8 @@ class Migration(migrations.Migration):
             name='WorkshopParticipant',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('participant', models.ForeignKey(to='wwwapp.UserProfile')),
-                ('workshop', models.ForeignKey(to='wwwapp.Workshop')),
+                ('participant', models.ForeignKey(to='wwwapp.UserProfile', on_delete=models.CASCADE)),
+                ('workshop', models.ForeignKey(to='wwwapp.Workshop', on_delete=models.CASCADE)),
             ],
             options={
             },
