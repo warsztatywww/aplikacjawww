@@ -24,9 +24,6 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # WARNING: allaccess app is deprecated and WILL be removed in the future
-    # DON'T add new providers or use this app until it will be fully removed
-    'allaccess',
     'social_django',
     'crispy_forms',
     'django_select2',
