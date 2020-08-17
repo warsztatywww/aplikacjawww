@@ -489,7 +489,6 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
 
 def register_to_workshop_view(request):
     if not request.user.is_authenticated:
-        request.session['next'] = request.path
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
     if 'workshop_name' not in request.POST:
@@ -511,7 +510,6 @@ def register_to_workshop_view(request):
 
 def unregister_from_workshop_view(request):
     if not request.user.is_authenticated:
-        request.session['next'] = request.path
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
     if 'workshop_name' not in request.POST:
