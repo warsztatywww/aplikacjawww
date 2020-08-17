@@ -210,15 +210,13 @@ def my_profile_edit_view(request):
     return render(request, 'profileedit.html', context)
 
 
-def workshop_view(request, name=None):
+@login_required()
+def workshop_proposal_view(request, name=None):
     new = (name is None)
     if new:
         workshop = None
         title = 'Nowe warsztaty'
-        if not request.user.is_authenticated:
-            return redirect('login')
-        else:
-            has_perm_to_edit = True
+        has_perm_to_edit = True
     else:
         workshop = get_object_or_404(Workshop, name=name)
         title = workshop.title
@@ -227,7 +225,7 @@ def workshop_view(request, name=None):
     # Workshop proposals are only visible to admins
     has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
     if not has_perm_to_edit and not has_perm_to_see_all:
-        return redirect('login')
+        return HttpResponseForbidden()
 
     if has_perm_to_edit:
         if request.method == 'POST':
@@ -236,9 +234,10 @@ def workshop_view(request, name=None):
                 workshop = form.save(commit=False)
                 workshop.save()
                 form.save_m2m()
-                user_profile = UserProfile.objects.get(user=request.user)
-                workshop.lecturer.add(user_profile)
-                workshop.save()
+                if new:
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    workshop.lecturer.add(user_profile)
+                    workshop.save()
                 messages.info(request, 'Zapisano.')
                 return redirect('workshop', form.instance.name)
         else:
@@ -254,12 +253,13 @@ def workshop_view(request, name=None):
 
     context['form'] = form
 
-    return render(request, 'workshop.html', context)
+    return render(request, 'workshopproposal.html', context)
 
 
 def can_edit_workshop(workshop, user):
     if user.is_authenticated:
-        return workshop.lecturer.filter(user=user).exists()
+        return workshop.lecturer.filter(user=user).exists() \
+               or user.has_perm('wwwapp.edit_all_workshops')
     else:
         return False
 
