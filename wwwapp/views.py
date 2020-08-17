@@ -12,6 +12,8 @@ import bleach
 from dateutil.relativedelta import relativedelta
 from wsgiref.util import FileWrapper
 from typing import Dict
+
+from django.contrib.auth.views import redirect_to_login
 from xkcdpass import xkcd_password as xp
 import owncloud
 
