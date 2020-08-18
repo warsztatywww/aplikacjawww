@@ -239,7 +239,7 @@ def workshop_proposal_view(request, name=None):
                     workshop.lecturer.add(user_profile)
                     workshop.save()
                 messages.info(request, 'Zapisano.')
-                return redirect('workshop', form.instance.name)
+                return redirect('workshop_proposal', form.instance.name)
         else:
             form = WorkshopForm(instance=workshop)
     else:
