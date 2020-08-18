@@ -10,11 +10,12 @@ def check_orphaned_userinfo(apps, schema_editor):
     UserProfile = apps.get_model("wwwapp", "UserProfile")
     UserInfo = apps.get_model("wwwapp", "UserInfo")
     db_alias = schema_editor.connection.alias
-
+    orphans=[]
     for user_info in UserInfo.objects.using(db_alias).all():
         if not UserProfile.objects.using(db_alias).filter(user_info__pk=user_info.pk).exists():
-            raise Exception(
-                'Orphaned UserInfo object found (pk=%d). Please verify and remove it manually first.' % user_info.pk)
+            orphans.append(user_info.pk)
+    if len(orphans)!=0:
+        raise Exception('Orphaned UserInfo object found (pk=%s). Please verify and remove it manually first.' % str(orphans))
 
 
 def forwards_func(apps, schema_editor):
