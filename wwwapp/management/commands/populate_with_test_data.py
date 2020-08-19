@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
 from wwwapp.models import UserProfile, UserInfo, Article, ArticleContentHistory, Workshop, WorkshopCategory, \
-    WorkshopType, WorkshopParticipant
+    WorkshopType, WorkshopParticipant, Camp
 from typing import Tuple, List, Union
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
@@ -47,22 +47,20 @@ class Command(BaseCommand):
         user.last_name = self.fake.last_name()
         user.save()
 
-        info = UserInfo(pesel=profile_data['ssn'],
-                        address=profile_data['address'],
-                        comments=self.fake.text(100))
-        info.save()
+        user.userprofile.gender = profile_data['sex']
+        user.userprofile.school = "TEST"
+        user.userprofile.matura_exam_year = self.fake.date_this_year().year
+        user.userprofile.how_do_you_know_about = self.fake.text()
+        user.userprofile.profile_page = self.fake.text()
+        user.userprofile.cover_letter = self.fake.text()
+        user.userprofile.save()
 
-        user_profile = UserProfile(user=user,
-                                   user_info=info,
-                                   gender=profile_data['sex'],
-                                   school="TEST",
-                                   matura_exam_year=self.fake.date_this_year().year,
-                                   how_do_you_know_about=self.fake.text(),
-                                   profile_page=self.fake.text(),
-                                   cover_letter=self.fake.text())
+        user.userprofile.user_info.pesel = pesel=profile_data['ssn']
+        user.userprofile.user_info.address=profile_data['address']
+        user.userprofile.user_info.comments=self.fake.text(100)
+        user.userprofile.user_info.save()
 
-        user_profile.save()
-        return user, user_profile
+        return user, user.userprofile
 
     """
     Returns a zero padded string representation of the given number
@@ -99,16 +97,16 @@ class Command(BaseCommand):
     """
     Creates and returns a random category
     """
-    def fake_category(self) -> WorkshopCategory:
-        c = WorkshopCategory(year=2019, name=self.fake.text(10))
+    def fake_category(self, year: Camp) -> WorkshopCategory:
+        c = WorkshopCategory(year=year, name=self.fake.text(10))
         c.save()
         return c
 
     """
     Creates and returns a random type
     """
-    def fake_type(self) -> WorkshopType:
-        c = WorkshopType(year=2019, name=self.fake.text(10))
+    def fake_type(self, year: Camp) -> WorkshopType:
+        c = WorkshopType(year=year, name=self.fake.text(10))
         c.save()
         return c
 
@@ -164,13 +162,15 @@ class Command(BaseCommand):
         for i in range(self.NUM_OF_ARTICLES):
             articles.append(self.fake_article(users, i))
 
+        year = Camp.objects.get()  # The year object for the current year is created by the initial migration
+
         types = []
         for i in range(self.NUM_OF_TYPES):
-            types.append(self.fake_type())
+            types.append(self.fake_type(year))
 
         categories = []
         for i in range(self.NUM_OF_CATEGORIES):
-            categories.append(self.fake_category())
+            categories.append(self.fake_category(year))
 
         lecturers = user_profiles[:self.NUM_OF_WORKSHOPS]
         participants = user_profiles[self.NUM_OF_WORKSHOPS:]

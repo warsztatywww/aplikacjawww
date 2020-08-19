@@ -5,7 +5,7 @@ from django.urls import reverse
 
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, UserInfo, \
-    WorkshopUserProfile, ResourceYearPermission
+    WorkshopUserProfile, ResourceYearPermission, Camp
 
 admin.site.unregister(User)
 
@@ -54,6 +54,8 @@ class WorkshopAdmin(admin.ModelAdmin):
 admin.site.register(Workshop, WorkshopAdmin)
 
 admin.site.register(UserInfo)
+
+admin.site.register(Camp)
 
 admin.site.register(Article)
 admin.site.register(ArticleContentHistory)
