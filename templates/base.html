@@ -3,6 +3,7 @@
   {% load staticfiles %}
   {% load compress %}
   {% load i18n %}
+  {% load wwwtags %}
 
   <head>
     <meta charset="utf-8">
@@ -151,7 +152,7 @@
     {% if messages %}
       <div class="container">
         {% for message in messages %}
-          <div class="alert{% if message.tags %} alert-{{ message.tags }}{% endif %}">
+          <div class="alert{% for tag in message.tags|split:" " %} alert-{{ tag }}{% endfor %}">
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>

@@ -51,6 +51,7 @@ MIDDLEWARE = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'wwwapp.auth.CustomSocialAuthExceptionMiddleware',
 )
 
 ROOT_URLCONF = 'wwwapp.urls'
@@ -96,6 +97,8 @@ BLEACH_STRIP_COMMENTS = False
 LOGIN_URL = '/login/'
 
 LOGIN_REDIRECT_URL = '/login/'
+
+LOGIN_ERROR_URL = '/login/'
 
 AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend',
                            'social_core.backends.google.GoogleOAuth2',
