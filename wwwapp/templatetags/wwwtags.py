@@ -26,3 +26,17 @@ def question_mark_on_empty_string(value):
     if value == '':
         return '?'
     return value
+
+
+@register.filter
+def provider_friendly_name(value):
+    return value.split("-")[0]
+
+
+@register.filter
+def provider_signin_text(value):
+    # Polska język trudna język
+    if value == "facebook":
+        # this is their official translation when you use the JS SDK with locale set to PL
+        return "Zaloguj się przez Facebooka"
+    return "Zaloguj się przez " + provider_friendly_name(value).title()
