@@ -19,6 +19,50 @@
       {% else %}
         {{ workshop.proposition_description | bleach }}
       {% endif %}
+      {% if workshop and perms.wwwapp.change_workshop_status %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          {% if workshop.status %}
+            {% if workshop.status == 'Z' %}
+            <span class="btn-group-sm" role="group">
+              <button type="submit" class="btn btn-default"
+                      name="qualify" value="cancel"
+                      onclick="return confirm('Czy na pewno chcesz odwołać warsztaty?');">
+                😞 Odwołaj warsztaty
+              </button>
+            </span>
+            {% elif workshop.status == 'X' %}
+            <span class="btn-group-sm" role="group">
+              <button type="submit" class="btn btn-default"
+                      name="qualify" value="accept"
+                      onclick="return confirm('Czy na pewno chcesz odwołać odwołanie warsztatów?');">
+                😊 Jednak będą
+              </button>
+            </span>
+            {% endif %}
+            <span class="btn-group-sm" role="group">
+              <button type="submit" class="btn btn-default"
+                      name="qualify" value="delete"
+                      onclick="return confirm('Czy na pewno chcesz usunąć status warsztatów?');">
+                Usuń status
+              </button>
+            </span>
+          {% else %}
+            <span class="btn-group-sm" role="group">
+            <button type="submit" class="btn btn-default"
+                    name="qualify" value="accept"
+                    onclick="return confirm('Czy na pewno chcesz zaakceptować?');">
+              ✔ Zaakceptuj
+            </button>
+            <button type="submit" class="btn btn-default"
+                    name="qualify" value="reject"
+                    onclick="return confirm('Czy na pewno chcesz odrzucić?');">
+              ✘ Odrzuć
+            </button>
+            </span>
+          {% endif %}
+        </form>
+      {% endif %}
     </article>
   </div>
 {% endblock %}
