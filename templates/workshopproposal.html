@@ -17,7 +17,11 @@
           </form>
         </div>
       {% else %}
-        {{ workshop.proposition_description | bleach }}
+        {% if new %}
+          Zgłoszenia warsztatów nie są obecnie aktywne
+        {% else %}
+          {{ workshop.proposition_description | bleach }}
+        {% endif %}
       {% endif %}
     </article>
   </div>

@@ -11,7 +11,7 @@ from tinymce.widgets import TinyMCE
 from django.conf import settings
 
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, UserInfo, WorkshopUserProfile, WorkshopParticipant
+    WorkshopType, UserInfo, WorkshopUserProfile, WorkshopParticipant, Camp
 
 
 class UserProfilePageForm(ModelForm):
@@ -54,12 +54,17 @@ class UserInfoPageForm(ModelForm):
         self.helper.label_class = 'col-lg-3'
         self.helper.field_class = 'col-lg-9'
 
+        current_year = Camp.objects.latest()  # TODO: UserInfo should probably be bound to a particular year
+        self.fields['start_date'].widget = DateInput(attrs={'data-default-date': current_year.start_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
+        self.fields['end_date'].widget = DateInput(attrs={'data-default-date': current_year.end_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
+
     def clean_start_date(self):
         if self.cleaned_data['start_date']:
-            if self.cleaned_data['start_date'] < settings.WORKSHOPS_START_DATE:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(settings.WORKSHOPS_START_DATE))
-            if self.cleaned_data['start_date'] > settings.WORKSHOPS_END_DATE:
-                raise ValidationError('Warsztaty kończą się ' + str(settings.WORKSHOPS_END_DATE))
+            current_year = Camp.objects.latest()
+            if self.cleaned_data['start_date'] < current_year.start_date:
+                raise ValidationError('Warsztaty rozpoczynają się ' + str(current_year.start_date))
+            if self.cleaned_data['start_date'] > current_year.end_date:
+                raise ValidationError('Warsztaty kończą się ' + str(current_year.end_date))
             if 'end_date' in self.cleaned_data and self.cleaned_data['end_date']:
                 if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                     raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
@@ -67,10 +72,11 @@ class UserInfoPageForm(ModelForm):
 
     def clean_end_date(self):
         if self.cleaned_data['end_date']:
-            if self.cleaned_data['end_date'] < settings.WORKSHOPS_START_DATE:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(settings.WORKSHOPS_START_DATE))
-            if self.cleaned_data['end_date'] > settings.WORKSHOPS_END_DATE:
-                raise ValidationError('Warsztaty kończą się ' + str(settings.WORKSHOPS_END_DATE))
+            current_year = Camp.objects.latest()
+            if self.cleaned_data['end_date'] < current_year.start_date:
+                raise ValidationError('Warsztaty rozpoczynają się ' + str(current_year.start_date))
+            if self.cleaned_data['end_date'] > current_year.end_date:
+                raise ValidationError('Warsztaty kończą się ' + str(current_year.end_date))
             if 'start_date' in self.cleaned_data and self.cleaned_data['start_date']:
                 if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                     raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
@@ -87,10 +93,6 @@ class UserInfoPageForm(ModelForm):
             'end_date': 'Data wyjazdu :-(',
             'tshirt_size': 'Rozmiar koszulki',
             'comments': 'Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)',
-        }
-        widgets = {
-            'start_date': DateInput(attrs={'data-default-date': settings.WORKSHOPS_START_DATE, 'data-start-date': settings.WORKSHOPS_START_DATE, 'data-end-date': settings.WORKSHOPS_END_DATE}),
-            'end_date': DateInput(attrs={'data-default-date': settings.WORKSHOPS_END_DATE, 'data-start-date': settings.WORKSHOPS_START_DATE, 'data-end-date': settings.WORKSHOPS_END_DATE})
         }
 
 
@@ -163,11 +165,11 @@ class ArticleForm(ModelForm):
 
 
 class WorkshopForm(ModelForm):
-    category = ModelMultipleChoiceField(label="Kategorie", queryset=WorkshopCategory.objects.filter(year=settings.CURRENT_YEAR),
+    category = ModelMultipleChoiceField(label="Kategorie", queryset=WorkshopCategory.objects.all(),
                                         widget=Select2MultipleWidget(attrs={'width': '200px'}))
 
     category.help_text = ""  # this removes annoying message ' Hold down "Control", or "Command" (..) '
-    type = ModelChoiceField(label="Rodzaj zajęć", queryset=WorkshopType.objects.filter(year=settings.CURRENT_YEAR),
+    type = ModelChoiceField(label="Rodzaj zajęć", queryset=WorkshopType.objects.all(),
                             widget=Select2Widget(attrs={'width': '200px'}))
 
     def __init__(self, *args, **kwargs):
@@ -177,9 +179,9 @@ class WorkshopForm(ModelForm):
         self.helper.disable_csrf = True
         self.helper.include_media = False
 
-        year = self.instance.type.year if hasattr(self.instance, 'type') else settings.CURRENT_YEAR
-        self.fields['category'].queryset = WorkshopCategory.objects.filter(year=year)
-        self.fields['type'].queryset = WorkshopType.objects.filter(year=year)
+        year = self.instance.type.year if hasattr(self.instance, 'type') else Camp.objects.latest()
+        self.fields['category'].queryset = year.workshopcategory_set.all()
+        self.fields['type'].queryset = year.workshoptype_set.all()
 
         if self.instance.status:
             self.fields['proposition_description'].disabled = True

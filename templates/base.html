@@ -71,7 +71,7 @@
           <ul class="nav navbar-nav pull-right">
             <li><a href="{% url 'index' %}">Strona główna</a></li>
 
-            <li><a href="{% url 'program' %}">Program</a></li>
+            <li><a href="{% url 'program' current_year.pk %}">Program</a></li>
 
             {% if resources %}
               <li class="dropdown">
@@ -88,8 +88,8 @@
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <b class="caret"></b></a>
                 <ul class="dropdown-menu">
-                  <li><a href="{% url 'participants' %}">Uczestnicy</a></li>
-                  <li><a href="{% url 'lecturers' %}">Prowadzący</a></li>
+                  <li><a href="{% url 'participants' current_year.pk %}">Uczestnicy</a></li>
+                  <li><a href="{% url 'lecturers' current_year.pk %}">Prowadzący</a></li>
                   <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>
                   <li><a href="{% url 'filter_emails' %}">Adresy email</a></li>
                   {% if request.user.is_staff %}
@@ -97,7 +97,7 @@
                     <li><a href="{% url 'admin:index' %}">Django admin</a></li>
                   {% endif %}
                   {% if perms.wwwapp.export_workshop_registration %}
-                    <li><a href="{% url 'dataForPlan' %}">Dane do planu</a></li>
+                    <li><a href="{% url 'dataForPlan' current_year.pk %}">Dane do planu</a></li>
                   {% endif %}
                 </ul>
               </li>
