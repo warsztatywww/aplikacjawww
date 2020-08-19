@@ -15,7 +15,7 @@
         <label for="year"><h2 class="heading">Wybierz rok i metodę filtrowania: </h2></label>
         <select id="year" class="form-control" name="selected_year">
           {% for year in years %}
-          <option value="{{ year }}" {% if year == chosen_year %} selected {% endif %}>{{ year }}</option>
+          <option value="{{ year.pk }}" {% if year == chosen_year %} selected {% endif %}>{{ year }}</option>
           {% endfor %}
         </select>
         <br/><br/>

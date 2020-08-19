@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 
-from .models import Workshop, WorkshopUserProfile
+from .models import Workshop, WorkshopUserProfile, Camp
 from .views import get_context
 
 _registered_filters = dict()
@@ -73,8 +73,12 @@ def _all_refused(year):
 
 @login_required()
 @permission_required('wwwapp.see_all_users', raise_exception=True)
-def filtered_emails_view(request, year='0', filter_id=''):
-    year = int(year or settings.CURRENT_YEAR)
+def filtered_emails_view(request, year=None, filter_id=''):
+    if year is None:
+        year = Camp.objects.latest()
+    else:
+        year = get_object_or_404(Camp, pk=year)
+
     context = get_context(request)
     context['title'] = 'Filtrowane emaile użytkowników'
     context['filtered_users'] = None
@@ -89,6 +93,6 @@ def filtered_emails_view(request, year='0', filter_id=''):
     context['filter_methods'] = [
         (filter_id, _registered_filters[filter_id][1]) for filter_id in _registered_filters.keys()
     ]
-    context['years'] = list(range(2015, settings.CURRENT_YEAR + 1))
+    context['years'] = Camp.objects.all()
 
     return render(request, 'filteredEmails.html', context)
