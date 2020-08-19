@@ -114,9 +114,11 @@ class WorkshopUserProfile(models.Model):
     # for each year
     STATUS_ACCEPTED = 'Z'
     STATUS_REJECTED = 'O'
+    STATUS_CANCELLED = 'X'
     STATUS_CHOICES = [
         (STATUS_ACCEPTED, 'Zaakceptowany'),
-        (STATUS_REJECTED, 'Odrzucony')
+        (STATUS_REJECTED, 'Odrzucony'),
+        (STATUS_CANCELLED, 'Odwołany')
     ]
     user_profile = models.ForeignKey('UserProfile', null=True, related_name='workshop_profile', on_delete=models.CASCADE)
 
