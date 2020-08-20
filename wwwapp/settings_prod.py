@@ -14,7 +14,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_PASSWORD = os.environ['GMAIL_PASSWORD']
 
 # Database
-# https://docs.djangoproject.com/en/1.11/ref/settings/#databases
+# https://docs.djangoproject.com/en/3.1/ref/settings/#databases
 
 DATABASES = {
     'default': {

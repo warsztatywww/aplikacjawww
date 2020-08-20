@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('year', models.IntegerField()),
                 ('status', models.CharField(default=None, max_length=10, null=True, blank=True, choices=[(b'Z', 'Zaakceptowany'), (b'O', 'Odrzucony')])),
-                ('user_profile', models.ForeignKey(related_name='workshop_profile', to='wwwapp.UserProfile', null=True)),
+                ('user_profile', models.ForeignKey(related_name='workshop_profile', to='wwwapp.UserProfile', null=True, on_delete=models.CASCADE)),
             ],
             options={
             },

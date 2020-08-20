@@ -118,20 +118,20 @@ class AuthViews(TestCase):
             if i == 0:
                 user_id = method(uid, first_name, second_name, email).wsgi_request.user.id
             else:
-                self.assertEquals(method(uid, first_name, second_name, email).wsgi_request.user.id, user_id)
+                self.assertEqual(method(uid, first_name, second_name, email).wsgi_request.user.id, user_id)
             self.logout()
-            self.assertEquals(len(User.objects.all()), start + 1)
+            self.assertEqual(len(User.objects.all()), start + 1)
 
         # Should still work when user changes his data completely in the provider
-        self.assertEquals(method(uid, first_name+'A', second_name+'A', email+'A', test_login=False).wsgi_request.user.id, user_id)
+        self.assertEqual(method(uid, first_name+'A', second_name+'A', email+'A', test_login=False).wsgi_request.user.id, user_id)
         self.logout()
-        self.assertEquals(len(User.objects.all()), start + 1)
+        self.assertEqual(len(User.objects.all()), start + 1)
 
-        self.assertEquals(
+        self.assertEqual(
             method(uid, first_name, second_name, email).wsgi_request.user.id,
             user_id)
         self.logout()
-        self.assertEquals(len(User.objects.all()), start + 1)
+        self.assertEqual(len(User.objects.all()), start + 1)
 
     def test_login_and_merge_triggering(self):
         # Standalone login
@@ -206,19 +206,19 @@ class AuthViews(TestCase):
                                            "google_hacker_surname",
                                            "google_hacker_email").wsgi_request.user.id
         self.logout()
-        self.assertEquals(len(User.objects.all()), start + 1)
+        self.assertEqual(len(User.objects.all()), start + 1)
 
         google_user_id = self.google_login(1,
                                            "google_name",
                                            "google_surname",
                                            "google_email").wsgi_request.user.id
         self.logout()
-        self.assertEquals(len(User.objects.all()), start + 2)
+        self.assertEqual(len(User.objects.all()), start + 2)
 
         # here we check for attempted fraud. We should get merge with hacker_user_id
         self.facebook_login(2, "google_name", "google_surname", "google_email", test_merge=True)
         self.google_merge_verification(0, "google_name", "google_surname", "google_email")
-        self.assertEquals(self.client.get(reverse('login')).wsgi_request.user.id, hacker_user_id)
+        self.assertEqual(self.client.get(reverse('login')).wsgi_request.user.id, hacker_user_id)
 
     # The following things were tested manually a LOT:
     # TODO: check redirects
