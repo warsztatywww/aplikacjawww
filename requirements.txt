@@ -18,3 +18,4 @@ xkcdpass
 social-auth-app-django
 psycopg2
 mock
+freezegun
