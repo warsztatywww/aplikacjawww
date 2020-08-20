@@ -279,7 +279,8 @@ class ArticleContentHistory(models.Model):
         time = '?'
         if self.time:
             time = self.time.strftime('%y-%m-%d %H:%M')
-        return '{} (v{} by {} at {})'.format(self.article.name, self.version, self.modified_by, time)
+        return '{} (v{} by {} at {})'.format(
+            self.article.name if self.article else '<removed article>', self.version, self.modified_by, time)
 
     class Meta:
         unique_together = ('version', 'article',)
