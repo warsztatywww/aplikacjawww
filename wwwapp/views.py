@@ -230,8 +230,26 @@ def workshop_proposal_view(request, name=None):
     if not has_perm_to_edit and not has_perm_to_see_all:
         return HttpResponseForbidden()
 
+    if request.method == 'POST' and 'qualify' in request.POST:
+        if not request.user.has_perm('wwwapp.change_workshop_status'):
+            return HttpResponseForbidden()
+        if request.POST['qualify'] == 'accept':
+            workshop.status = Workshop.STATUS_ACCEPTED
+            workshop.save()
+        elif request.POST['qualify'] == 'reject':
+            workshop.status = Workshop.STATUS_REJECTED
+            workshop.save()
+        elif request.POST['qualify'] == 'cancel':
+            workshop.status = Workshop.STATUS_CANCELLED
+            workshop.save()
+        elif request.POST['qualify'] == 'delete':
+            workshop.status = None
+            workshop.save()
+        else:
+            raise SuspiciousOperation("Invalid argument")
+
     if has_perm_to_edit:
-        if request.method == 'POST':
+        if request.method == 'POST' and 'qualify' not in request.POST:
             form = WorkshopForm(request.POST, instance=workshop)
             if form.is_valid():
                 workshop = form.save(commit=False)

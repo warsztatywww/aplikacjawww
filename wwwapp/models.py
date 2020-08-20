@@ -334,7 +334,8 @@ class Workshop(models.Model):
 
     class Meta:
         permissions = (('see_all_workshops', 'Can see all workshops'),
-                       ('edit_all_workshops', 'Can edit all workshops'))
+                       ('edit_all_workshops', 'Can edit all workshops'),
+                       ('change_workshop_status', 'Can change workshop status'))
 
     def __str__(self):
         return str(self.type.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title
