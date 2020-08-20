@@ -65,12 +65,13 @@ SELECT2_BOOTSTRAP = True
 BLEACH_ALLOWED_TAGS = [
     'p', 'b', 'i', 'u', 'em', 'strong', 'a', 'pre', 'div', 'strong', 'sup', 'sub', 'ol', 'ul', 'li', 'address',
     'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'table', 'tbody', 'tr', 'td', 'hr', 'img',
+    'br',
 ]
 
 # Which HTML attributes are allowed
 BLEACH_ALLOWED_ATTRIBUTES = [
     'href', 'title', 'style', 'alt', 'src', 'dir', 'class', 'border', 'cellpadding', 'cellspacing', 'id',
-    'name', 'align', 'width', 'height',
+    'name', 'align', 'width', 'height', 'target', 'rel',
 ]
 
 # Which CSS properties are allowed in 'style' attributes (assuming
@@ -82,6 +83,7 @@ BLEACH_ALLOWED_STYLES = [
     'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
     'text-align', 'title', 'page-break-after', 'display', 'color', 'background-color',
     'font-size', 'line-height', 'border-collapse', 'border-spacing', 'empty-cells', 'border',
+    'list-style-type',
 ]
 
 # Strip unknown tags if True, replace with HTML escaped characters if
@@ -205,6 +207,8 @@ TINYMCE_DEFAULT_CONFIG = {
     'relative_urls': False,
     'remove_script_host': True,
     'link_list': '/articleNameList/',
+    'valid_elements': '@[%s],%s' % ('|'.join(BLEACH_ALLOWED_ATTRIBUTES), ','.join(BLEACH_ALLOWED_TAGS)),
+    'valid_styles': {'*': ','.join(BLEACH_ALLOWED_STYLES)},
 }
 TINYMCE_DEFAULT_CONFIG_WITH_IMAGES = {  # Additional settings for editors where image upload is allowed
     'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount imagetools textpattern quickbars emoticons',
