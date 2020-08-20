@@ -1,72 +1,67 @@
-{% extends "base.html" %}
+{% extends "workshopbase.html" %}
 {% load bleach_tags %}
 {% load crispy_forms_tags %}
 
-{% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
-      <h1>
-          {{ title }}
-          {% if workshop and perms.wwwapp.change_workshop_status %}
-            <form method="post" class="inline">
-              {% csrf_token %}
-              {% if workshop.status %}
-                {% if workshop.status == 'Z' %}
-                <span class="btn-group-sm" role="group">
-                  <button type="submit" class="btn btn-default"
-                          name="qualify" value="cancel"
-                          onclick="return confirm('Czy na pewno chcesz odwołać warsztaty?');">
-                    😞 Odwołaj warsztaty
-                  </button>
-                </span>
-                {% elif workshop.status == 'X' %}
-                <span class="btn-group-sm" role="group">
-                  <button type="submit" class="btn btn-default"
-                          name="qualify" value="accept"
-                          onclick="return confirm('Czy na pewno chcesz odwołać odwołanie warsztatów?');">
-                    😊 Jednak będą
-                  </button>
-                </span>
-                {% endif %}
-                <span class="btn-group-sm" role="group">
-                  <button type="submit" class="btn btn-default"
-                          name="qualify" value="delete"
-                          onclick="return confirm('Czy na pewno chcesz usunąć status warsztatów?');">
-                    Usuń status
-                  </button>
-                </span>
-              {% else %}
-                <span class="btn-group-sm" role="group">
-                <button type="submit" class="btn btn-default"
-                        name="qualify" value="accept"
-                        onclick="return confirm('Czy na pewno chcesz zaakceptować?');">
-                  ✔ Zaakceptuj
-                </button>
-                <button type="submit" class="btn btn-default"
-                        name="qualify" value="reject"
-                        onclick="return confirm('Czy na pewno chcesz odrzucić?');">
-                  ✘ Odrzuć
-                </button>
-                </span>
-              {% endif %}
-            </form>
-          {% endif %}
-      </h1>
-      {% include '_workshopeditheader.html' %}
-
-      {% if has_perm_to_edit %}
-        <div role="tabpanel">
-          <form action="" method="post">
-            {% csrf_token %}
-            {% crispy form %}
-            <button class="btn btn-default">Zapisz</button>
-          </form>
-        </div>
+{% block workshop_page_title %}
+  {{ block.super }}
+  {% if workshop and perms.wwwapp.change_workshop_status %}
+    <form method="post" class="inline">
+      {% csrf_token %}
+      {% if workshop.status %}
+        {% if workshop.status == 'Z' %}
+        <span class="btn-group-sm" role="group">
+          <button type="submit" class="btn btn-default"
+                  name="qualify" value="cancel"
+                  onclick="return confirm('Czy na pewno chcesz odwołać warsztaty?');">
+            😞 Odwołaj warsztaty
+          </button>
+        </span>
+        {% elif workshop.status == 'X' %}
+        <span class="btn-group-sm" role="group">
+          <button type="submit" class="btn btn-default"
+                  name="qualify" value="accept"
+                  onclick="return confirm('Czy na pewno chcesz odwołać odwołanie warsztatów?');">
+            😊 Jednak będą
+          </button>
+        </span>
+        {% endif %}
+        <span class="btn-group-sm" role="group">
+          <button type="submit" class="btn btn-default"
+                  name="qualify" value="delete"
+                  onclick="return confirm('Czy na pewno chcesz usunąć status warsztatów?');">
+            Usuń status
+          </button>
+        </span>
       {% else %}
-        {{ workshop.proposition_description | bleach }}
+        <span class="btn-group-sm" role="group">
+        <button type="submit" class="btn btn-default"
+                name="qualify" value="accept"
+                onclick="return confirm('Czy na pewno chcesz zaakceptować?');">
+          ✔ Zaakceptuj
+        </button>
+        <button type="submit" class="btn btn-default"
+                name="qualify" value="reject"
+                onclick="return confirm('Czy na pewno chcesz odrzucić?');">
+          ✘ Odrzuć
+        </button>
+        </span>
       {% endif %}
-    </article>
-  </div>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block workshop_page_content %}
+  {% if has_perm_to_edit %}
+    <div role="tabpanel">
+      <form action="" method="post">
+        {% csrf_token %}
+        {% crispy form %}
+        <button class="btn btn-default">Zapisz</button>
+      </form>
+    </div>
+  {% else %}
+    {{ workshop.proposition_description | bleach }}
+  {% endif %}
 {% endblock %}
 
 {% block script %}

@@ -1,20 +1,13 @@
-{% extends "base.html" %}
+{% extends "workshopbase.html" %}
 {% load crispy_forms_tags %}
 
-{% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
-      <h1>{{ workshop.title }}</h1>
-      {% include '_workshopeditheader.html' %}
-
-      <div role="tabpanel" style="margin: 1em 0;">
-        <form action="" method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          {% crispy form %}
-          <button class="btn btn-default">Zapisz</button>
-        </form>
-      </div>
-    </article>
+{% block workshop_page_content %}
+  <div role="tabpanel">
+    <form action="" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% crispy form %}
+      <button class="btn btn-default">Zapisz</button>
+    </form>
   </div>
 {% endblock %}
 
