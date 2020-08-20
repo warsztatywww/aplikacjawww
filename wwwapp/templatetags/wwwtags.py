@@ -1,5 +1,5 @@
 from django import template
-from django.utils.html import mark_safe
+from django.utils.safestring import mark_safe
 
 register = template.Library()
 
@@ -31,3 +31,17 @@ def question_mark_on_empty_string(value):
 @register.filter
 def split(value, key):
     return value.split(key)
+
+
+@register.filter
+def provider_friendly_name(value):
+    return value.split("-")[0]
+
+
+@register.filter
+def provider_signin_text(value):
+    # Polska język trudna język
+    if value == "facebook":
+        # this is their official translation when you use the JS SDK with locale set to PL
+        return "Zaloguj się przez Facebooka"
+    return "Zaloguj się przez " + provider_friendly_name(value).title()

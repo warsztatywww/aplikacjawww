@@ -31,8 +31,8 @@ class AuthViews(TestCase):
         content = response.content.decode('utf-8')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Wybierz metodę logowania:")
-        self.assertTrue("alt=\"Continue with Facebook\"" in content)
-        self.assertTrue("alt=\"Sign in with Google\"" in content)
+        self.assertTrue("Zaloguj się przez Facebooka" in content)
+        self.assertTrue("Zaloguj się przez Google" in content)
         for backend in self.supported_backends:
             self.assertTrue("href=\"{}\"".format(reverse('social:begin', kwargs={'backend': backend})) in content, msg=backend)
 

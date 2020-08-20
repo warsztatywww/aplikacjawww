@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load wwwtags %}
 
 {% block content %}
   <div class="container signin-container">
@@ -10,17 +10,22 @@
       </div>
     {% else %}
       <h2 class="heading">Wybierz metodę logowania: </h2>
-      <div class="form-signin">
-        <div class="form-signin-button">
-          <a href="{% url "social:begin" "facebook" %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="btn" role="button">
-            <img alt="Continue with Facebook" title="Continue with Facebook" src="{% static 'images/login_buttons/facebook/continue_with.png' %}" style="padding: 0.25em;">
-          </a>
+      <div class="row">
+        <div class="col-md-6" style="padding-bottom: 2em;">
+          {% include "_socialButton.html" with provider="facebook" next=request.GET.next only %}
         </div>
-        <div class="form-signin-button">
-          <a href="{% url "social:begin" "google-oauth2" %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="btn" role="button">
-            <img alt="Sign in with Google" title="Sign in with Google" src="{% static 'images/login_buttons/google/btn_google_signin_dark_normal_web@2x.png' %}">
-          </a>
+        <div class="col-md-6" style="padding-bottom: 2em;">
+          {% include "_socialButton.html" with provider="google-oauth2" next=request.GET.next only %}
         </div>
+        {% if debug %}
+        <div class="col-md-6" style="padding-bottom: 2em;">
+          <a href="{% url 'admin:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="btn btn-default" role="button" style="display: block; box-sizing: border-box; height: 46px; padding: 11px;">
+            <div style="height: 24px; line-height: 24px; vertical-align: middle;">
+              <span style="display: inline-block; vertical-align: middle; padding-left: 42px; padding-right: 42px;">{{ "Django" | provider_signin_text }}</span>
+            </div>
+            </a>
+        </div>
+        {% endif %}
       </div>
     {% endif %}
   </div>

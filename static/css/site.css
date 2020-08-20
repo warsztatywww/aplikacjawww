@@ -38,25 +38,15 @@
     margin: 1em;
 }
 
-.form-signin {
-    display: flex;
-    flex-direction: column;
-    justify-items: center;
-    align-content: center;
-    text-align: center;
-}
+.btn-facebook { text-shadow: none; background:transparent; color:#1877F2; -webkit-box-shadow:inset 0px 0px 0px 3px #1877F2; -moz-box-shadow:inset 0px 0px 0px 3px #1877F2; box-shadow:inset 0px 0px 0px 3px #1877F2; }
+.btn-facebook:hover,
+.btn-facebook:focus,
+.btn-facebook:active { color:#09499b; -webkit-box-shadow:inset 0px 0px 0px 3px #09499b; -moz-box-shadow:inset 0px 0px 0px 3px #09499b; box-shadow:inset 0px 0px 0px 3px #09499b; background: transparent; }
 
-.form-signin .form-signin-button {
-    margin: 0.25em;
-}
-
-.form-signin .btn {
-    padding: 0;
-}
-
-.form-signin img {
-    width: 20em;
-}
+.btn-google { text-shadow: none; background:transparent; color:#dd4b39; -webkit-box-shadow:inset 0px 0px 0px 3px #dd4b39; -moz-box-shadow:inset 0px 0px 0px 3px #dd4b39; box-shadow:inset 0px 0px 0px 3px #dd4b39; }
+.btn-google:hover,
+.btn-google:focus,
+.btn-google:active { color:#96271a; -webkit-box-shadow:inset 0px 0px 0px 3px #96271a; -moz-box-shadow:inset 0px 0px 0px 3px #96271a; box-shadow:inset 0px 0px 0px 3px #96271a; background: transparent; }
 
 /* Program */
 
