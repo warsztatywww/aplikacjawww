@@ -207,6 +207,8 @@ TINYMCE_DEFAULT_CONFIG = {
     'relative_urls': False,
     'remove_script_host': True,
     'link_list': '/articleNameList/',
+    'valid_elements': '@[%s],%s' % ('|'.join(BLEACH_ALLOWED_ATTRIBUTES), ','.join(BLEACH_ALLOWED_TAGS)),
+    'valid_styles': {'*': ','.join(BLEACH_ALLOWED_STYLES)},
 }
 TINYMCE_DEFAULT_CONFIG_WITH_IMAGES = {  # Additional settings for editors where image upload is allowed
     'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount imagetools textpattern quickbars emoticons',
