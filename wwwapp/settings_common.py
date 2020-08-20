@@ -65,12 +65,13 @@ SELECT2_BOOTSTRAP = True
 BLEACH_ALLOWED_TAGS = [
     'p', 'b', 'i', 'u', 'em', 'strong', 'a', 'pre', 'div', 'strong', 'sup', 'sub', 'ol', 'ul', 'li', 'address',
     'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'table', 'tbody', 'tr', 'td', 'hr', 'img',
+    'br',
 ]
 
 # Which HTML attributes are allowed
 BLEACH_ALLOWED_ATTRIBUTES = [
     'href', 'title', 'style', 'alt', 'src', 'dir', 'class', 'border', 'cellpadding', 'cellspacing', 'id',
-    'name', 'align', 'width', 'height',
+    'name', 'align', 'width', 'height', 'target', 'rel',
 ]
 
 # Which CSS properties are allowed in 'style' attributes (assuming
@@ -82,6 +83,7 @@ BLEACH_ALLOWED_STYLES = [
     'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
     'text-align', 'title', 'page-break-after', 'display', 'color', 'background-color',
     'font-size', 'line-height', 'border-collapse', 'border-spacing', 'empty-cells', 'border',
+    'list-style-type',
 ]
 
 # Strip unknown tags if True, replace with HTML escaped characters if
