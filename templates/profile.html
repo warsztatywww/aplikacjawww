@@ -14,9 +14,26 @@
                 <td>
                   {% include '_pastParticipation.html' with participation_data=participation_data only %}
                   {% if perms.wwwapp.change_workshop_user_profile %}
-                    {% if has_workshop_profile %}
-                      <form method="post" class="inline">
-                        {% csrf_token %}
+                    <form method="post" class="inline">
+                      {% csrf_token %}
+                      {% if workshop_profile %}
+                        {% if workshop_profile.status == 'Z' %}
+                        <span class="btn-group-xs" role="group">
+                          <button type="submit" class="btn btn-default"
+                                  name="qualify" value="cancel"
+                                  onclick="return confirm('Czy na pewno chcesz odwołać przyjazd?');">
+                            😞 Odwołaj przyjazd
+                          </button>
+                        </span>
+                        {% elif workshop_profile.status == 'X' %}
+                        <span class="btn-group-xs" role="group">
+                          <button type="submit" class="btn btn-default"
+                                  name="qualify" value="accept"
+                                  onclick="return confirm('Czy na pewno chcesz odwołać odwołanie przyjazdu?');">
+                            😊 Jednak przyjedzie
+                          </button>
+                        </span>
+                        {% endif %}
                         <span class="btn-group-xs" role="group">
                           <button type="submit" class="btn btn-default"
                                   name="qualify" value="delete"
@@ -24,25 +41,22 @@
                             Usuń kwalifikację
                           </button>
                         </span>
-                      </form>
-                    {% else %}
-                      <form method="post" class="inline">
-                        {% csrf_token %}
+                      {% else %}
                         <span class="btn-group-xs" role="group">
-                          <button type="submit" class="btn btn-default"
-                                  name="qualify" value="accept"
-                                  onclick="return confirm('Czy na pewno chcesz zakwalifikować?');">
-                            ✔ Zakwalifikuj
-                          </button>
-                          <button type="submit" class="btn btn-default"
-                                  name="qualify" value="reject"
-                                  onclick="return confirm('Czy na pewno chcesz odrzucić?');">
-                            ✘ Odrzuć
-                          </button>
-                        </span>
-                      </form>
-                    {% endif %}
-                    {% endif %}
+                        <button type="submit" class="btn btn-default"
+                                name="qualify" value="accept"
+                                onclick="return confirm('Czy na pewno chcesz zakwalifikować?');">
+                          ✔ Zakwalifikuj
+                        </button>
+                        <button type="submit" class="btn btn-default"
+                                name="qualify" value="reject"
+                                onclick="return confirm('Czy na pewno chcesz odrzucić?');">
+                          ✘ Odrzuć
+                        </button>
+                      </span>
+                      {% endif %}
+                    </form>
+                  {% endif %}
                 </td>
               </tr>
               <tr>

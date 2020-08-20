@@ -31,7 +31,7 @@ class UserProfile(models.Model):
         return self.is_participant_in(year) or self.is_lecturer_in(year)
 
     def is_participant_in(self, year):
-        return self.status_for(year) == 'Z'
+        return self.participant_status_for(year) == 'Z'
 
     def is_lecturer_in(self, year):
         return self.lecturer_workshops.filter(type__year=year, status='Z').exists()
@@ -48,10 +48,20 @@ class UserProfile(models.Model):
             profile = next(iter([x for x in participant_data if x.year == year]), None)
             workshops = [x for x in lecturer_data if x.type.year == year]
             status = None
+            # If the user was a participant, their participation status takes precedence
             if profile:
                 status = profile.status
+            # Otherwise, use the lecturer status
             if workshops and status != 'Z':
-                status = 'Z' if any([workshop.status == 'Z' for workshop in workshops]) else 'O'
+                # If there was at least one accepted workshop, the lecturer was accepted. Otherwise, if at least one
+                # workshop was cancelled, the participation of the lecturer was cancelled. Otherwise, the lecturer
+                # was rejected.
+                if any([workshop.status == 'Z' for workshop in workshops]):
+                    status = 'Z'
+                elif any([workshop.status == 'X' for workshop in workshops]):
+                    status = 'X'
+                else:
+                    status = 'O'
             data.append({'year': year, 'status': status, 'workshops': workshops})
         return data
 
@@ -75,12 +85,8 @@ class UserProfile(models.Model):
         :return: list of years (integers)
         """
         return set([workshop.type.year for workshop in self.lecturer_workshops.filter(status='Z')])
-    
-    @property
-    def status(self):
-        return self.status_for(settings.CURRENT_YEAR)
 
-    def status_for(self, year: int):
+    def participant_status_for(self, year: int):
         profile = self.workshop_profile_for(year)
         return profile.status if profile else None
 
@@ -114,9 +120,11 @@ class WorkshopUserProfile(models.Model):
     # for each year
     STATUS_ACCEPTED = 'Z'
     STATUS_REJECTED = 'O'
+    STATUS_CANCELLED = 'X'
     STATUS_CHOICES = [
         (STATUS_ACCEPTED, 'Zaakceptowany'),
-        (STATUS_REJECTED, 'Odrzucony')
+        (STATUS_REJECTED, 'Odrzucony'),
+        (STATUS_CANCELLED, 'Odwołany')
     ]
     user_profile = models.ForeignKey('UserProfile', null=True, related_name='workshop_profile', on_delete=models.CASCADE)
 

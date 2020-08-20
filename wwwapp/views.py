@@ -115,6 +115,32 @@ def profile_view(request, user_id):
     can_see_all_users = request.user.has_perm('wwwapp.see_all_users')
     can_see_all_workshops = request.user.has_perm('wwwapp.see_all_workshops')
 
+    can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
+    context['can_qualify'] = can_qualify
+    context['workshop_profile'] = WorkshopUserProfile.objects.filter(
+        user_profile=user.userprofile, year=settings.CURRENT_YEAR)
+
+    if request.method == 'POST':
+        if not can_qualify:
+            return HttpResponseForbidden()
+        (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
+            user_profile=user.userprofile, year=settings.CURRENT_YEAR)
+        if request.POST['qualify'] == 'accept':
+            edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
+            edition_profile.save()
+        elif request.POST['qualify'] == 'reject':
+            edition_profile.status = WorkshopUserProfile.STATUS_REJECTED
+            edition_profile.save()
+        elif request.POST['qualify'] == 'cancel':
+            edition_profile.status = WorkshopUserProfile.STATUS_CANCELLED
+            edition_profile.save()
+        elif request.POST['qualify'] == 'delete':
+            edition_profile.delete()
+            edition_profile = None
+        else:
+            raise SuspiciousOperation("Invalid argument")
+        context['workshop_profile'] = edition_profile
+
     context['title'] = "{0.first_name} {0.last_name}".format(user)
     context['profile_page'] = profile_page
     context['is_my_profile'] = is_my_profile
@@ -133,29 +159,6 @@ def profile_view(request, user_id):
     else:
         context['lecturer_workshops'] = profile.lecturer_workshops.filter(Q(status='Z') | Q(status='X')).order_by('type__year')
     context['can_see_all_workshops'] = can_see_all_workshops
-
-    can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
-    context['can_qualify'] = can_qualify
-    context['has_workshop_profile'] = WorkshopUserProfile.objects.filter(
-        user_profile=user.userprofile, year=settings.CURRENT_YEAR).exists()
-
-    if request.method == 'POST':
-        if not can_qualify:
-            return HttpResponseForbidden()
-        (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
-            user_profile=user.userprofile, year=settings.CURRENT_YEAR)
-        context['has_workshop_profile'] = True
-        if request.POST['qualify'] == 'accept':
-            edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
-            edition_profile.save()
-        elif request.POST['qualify'] == 'reject':
-            edition_profile.status = WorkshopUserProfile.STATUS_REJECTED
-            edition_profile.save()
-        elif request.POST['qualify'] == 'delete':
-            edition_profile.delete()
-            context['has_workshop_profile'] = False
-        else:
-            raise SuspiciousOperation("Invalid argument")
 
     return render(request, 'profile.html', context)
 

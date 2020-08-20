@@ -82,6 +82,8 @@
                     <span class="qualified"> {{ person.status_display }} </span>
                   {% elif person.status == 'O' %}
                     <span class="not-qualified"> {{ person.status_display }} </span>
+                  {% elif person.status == 'X' %}
+                    <span class="maybe-qualified"> {{ person.status_display }} </span>
                   {% else %}
                     {{ person.status_display|default_if_none:"Brak" }}
                   {% endif %}
