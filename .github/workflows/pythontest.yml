@@ -38,4 +38,4 @@ jobs:
     - name: Django migrations
       run: ./manage.py makemigrations --check --dry-run
     - name: Django test
-      run: ./manage.py test wwwapp
+      run: ./manage.py test wwwapp -v 2

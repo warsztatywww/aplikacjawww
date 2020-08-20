@@ -35,7 +35,7 @@ urlpatterns = [
     url(r'^workshop/(?P<name>[a-zA-Z0-9\-_]+)/priv/$', views.workshop_proposal_view, name='workshop_proposal'),
     url(r'^workshop/(?P<name>[a-zA-Z0-9\-_]+)/edit/$', views.workshop_page_edit_view, name='workshop_page_edit'),
     url(r'^workshop/(?P<name>[a-zA-Z0-9\-_]+)/participants/$', views.workshop_participants_view, name='workshop_participants'),
-    url(r'^savePoints/$', views.save_points_view),
+    url(r'^savePoints/$', views.save_points_view, name='save_points'),
     url(r'^register/$', views.register_to_workshop_view, name='register_to_workshop'),
     url(r'^unregister/$', views.unregister_from_workshop_view, name='unregister_from_workshop'),
     url(r'^qualProblems/(?P<workshop_name>[a-zA-Z0-9\-_]+)/$', views.qualification_problems_view, name='qualification_problems'),

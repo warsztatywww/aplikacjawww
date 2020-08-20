@@ -114,9 +114,11 @@ function handle_registration_change(workshop_name_txt, register) {
         success : function(json) {
             if (json.error) {
                 error(json.error);
-            } else if (json.redirect) {
+            }
+            if (json.redirect) {
                 window.location.href = json.redirect;
-            } else {
+            }
+            if (json.content) {
                 $("#" + workshop_name_txt).find(".button-div").replaceWith(json.content);
             }
         },
