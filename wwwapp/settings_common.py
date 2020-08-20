@@ -190,7 +190,7 @@ TINYMCE_JS_ROOT = os.path.join(STATIC_URL, "tinymce/js/tinymce")
 TINYMCE_INCLUDE_JQUERY = False
 TINYMCE_DEFAULT_CONFIG = {
     'theme': 'silver',
-    'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount textpattern emoticons',
+    'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount textpattern emoticons autosave',
     'removed_menuitems': 'newdocument',
     'toolbar': 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | link',
     'content_css': [
@@ -207,7 +207,7 @@ TINYMCE_DEFAULT_CONFIG = {
     'link_list': '/articleNameList/',
 }
 TINYMCE_DEFAULT_CONFIG_WITH_IMAGES = {  # Additional settings for editors where image upload is allowed
-    'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount imagetools textpattern quickbars emoticons',
+    'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount imagetools textpattern quickbars emoticons autosave',
     'toolbar': 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | image media link codesample',
     'paste_data_images': True,
     'file_picker_types': 'image',
