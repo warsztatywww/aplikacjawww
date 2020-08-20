@@ -24,7 +24,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseServerError
+from django.http.response import HttpResponseBadRequest, HttpResponseServerError, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404, \
     render_to_response
 from django.urls import reverse
@@ -283,6 +283,7 @@ def workshop_page_view(request, name):
     return render(request, 'workshoppage.html', context)
 
 
+@login_required()
 def workshop_page_edit_view(request, name):
     workshop = get_object_or_404(Workshop, name=name)
 
@@ -505,12 +506,16 @@ def register_to_workshop_view(request):
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
 
-    WorkshopParticipant(participant=UserProfile.objects.get(user=request.user), workshop=workshop).save()
+    _, created = WorkshopParticipant.objects.get_or_create(participant=UserProfile.objects.get(user=request.user), workshop=workshop)
 
     context = get_context(request)
     context['workshop'] = workshop
     context['registered'] = True
-    return JsonResponse({'content': render_to_response('_programworkshop.html', context).content.decode()})
+    content = render_to_response('_programworkshop.html', context).content.decode()
+    if created:
+        return JsonResponse({'content': content})
+    else:
+        return JsonResponse({'content': content, 'error': u'Już jesteś zapisany na te warsztaty'})
 
 
 def unregister_from_workshop_view(request):
@@ -523,20 +528,25 @@ def unregister_from_workshop_view(request):
     workshop_name = request.POST['workshop_name']
     workshop = get_object_or_404(Workshop, name=workshop_name)
     profile = UserProfile.objects.get(user=request.user)
-    workshop_participant = WorkshopParticipant.objects.get(workshop=workshop, participant=profile)
+    workshop_participant = WorkshopParticipant.objects.filter(workshop=workshop, participant=profile).first()
 
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
 
-    if workshop_participant.qualification_result is not None or workshop_participant.comment:
-        return JsonResponse({'error': u'Masz już wyniki z tej kwalifikacji - nie możesz się wycofać.'})
+    if workshop_participant:
+        if workshop_participant.qualification_result is not None or workshop_participant.comment:
+            return JsonResponse({'error': u'Masz już wyniki z tej kwalifikacji - nie możesz się wycofać.'})
 
-    workshop_participant.delete()
+        workshop_participant.delete()
 
     context = get_context(request)
     context['workshop'] = workshop
     context['registered'] = False
-    return JsonResponse({'content': render_to_response('_programworkshop.html', context).content.decode()})
+    content = render_to_response('_programworkshop.html', context).content.decode()
+    if workshop_participant:
+        return JsonResponse({'content': content})
+    else:
+        return JsonResponse({'content': content, 'error': u'Nie jesteś zapisany na te warsztaty'})
 
 
 @permission_required('wwwapp.export_workshop_registration')
@@ -602,6 +612,12 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
 
 def qualification_problems_view(request, workshop_name):
     workshop = get_object_or_404(Workshop, name=workshop_name)
+
+    if not workshop.is_publicly_visible():  # Accepted or cancelled
+        return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.qualification_problems:
+        return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
+
     filename = workshop.qualification_problems.path
 
     wrapper = FileWrapper(open(filename, "rb"))
