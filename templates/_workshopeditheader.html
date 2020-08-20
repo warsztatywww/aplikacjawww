@@ -1,4 +1,4 @@
-{% if workshop.is_publicly_visible %}
+{% if has_perm_to_view_details and workshop.is_publicly_visible %}
   <div>
     {% if has_perm_to_edit %}
       <a href="{% url 'workshop_proposal' workshop.name %}">Edycja zgłoszenia</a> |
@@ -10,3 +10,11 @@
     <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy i ocenianie</a>
   </div>
 {% endif %}
+
+<h3>Prowadzący: {% for lecturer in workshop.lecturer.all %}<a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</h3>
+
+{% if workshop.status == 'X' %}
+  <h3 style="color: red;">Te warsztaty są odwołane!</h3>
+{% endif %}
+
+<hr>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <div class="container">
+    <article class="col-sm-12 maincontent">
+      <h1>{{ workshop.title }}</h1>
+      {% include '_workshopeditheader.html' %}
+
+      <div role="tabpanel" style="margin: 1em 0;">
+        <form action="" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% crispy form %}
+          <button class="btn btn-default">Zapisz</button>
+        </form>
+      </div>
+    </article>
+  </div>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+
+  <script>
+  /* Fixes a bug in django-tinymce with TINYMCE_INCLUDE_JQUERY = False, see https://github.com/aljosa/django-tinymce/issues/234 */
+  var django = {jQuery: jQuery};
+  </script>
+  {{ form.media }}
+{% endblock %}

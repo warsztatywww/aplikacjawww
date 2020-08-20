@@ -335,12 +335,11 @@ def workshop_page_edit_view(request, name):
 
     context = get_context(request)
     context['workshop'] = workshop
+    context['form'] = form
     context['has_perm_to_edit'] = True
     context['has_perm_to_view_details'] = True
 
-    context['form'] = form
-
-    return render(request, 'workshoppage.html', context)
+    return render(request, 'workshoppageedit.html', context)
 
 
 @login_required()
