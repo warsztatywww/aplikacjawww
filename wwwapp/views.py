@@ -367,7 +367,7 @@ def save_points_view(request):
 
 
 @login_required()
-@permission_required('wwwapp.see_all_workshops', raise_exception=True)
+@permission_required('wwwapp.see_all_users', raise_exception=True)
 def participants_view(request, year=None):
     participants = WorkshopParticipant.objects.all().prefetch_related('workshop', 'participant', 'participant__user')
     workshops = Workshop.objects.prefetch_related('lecturer', 'lecturer__user')
@@ -451,7 +451,7 @@ def participants_view(request, year=None):
 
 
 @login_required()
-@permission_required('wwwapp.see_all_workshops', raise_exception=True)
+@permission_required('wwwapp.see_all_users', raise_exception=True)
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = int(year)
 

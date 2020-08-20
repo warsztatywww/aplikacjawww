@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import redirect, render
 
 from .models import Workshop, WorkshopUserProfile
@@ -70,10 +71,9 @@ def _all_refused(year):
             WorkshopUserProfile.objects.filter(year=year) if profile.status == 'O']
 
 
+@login_required()
+@permission_required('wwwapp.see_all_users', raise_exception=True)
 def filtered_emails_view(request, year='0', filter_id=''):
-    if not request.user.has_perm('wwwapp.see_all_users'):
-        return redirect('login')
-
     year = int(year or settings.CURRENT_YEAR)
     context = get_context(request)
     context['title'] = 'Filtrowane emaile użytkowników'
