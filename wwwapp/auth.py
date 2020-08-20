@@ -6,6 +6,7 @@ from django.dispatch import receiver
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from social_core.pipeline.partial import partial_step
+from social_django.middleware import SocialAuthExceptionMiddleware
 from social_django.models import UserSocialAuth
 
 from .models import UserProfile
@@ -113,6 +114,7 @@ def finish_merge_verification(request):
     else:
         return redirect('/')
 
+
 # Register a receiver called whenever a User object is saved.
 # Add all created Users to group allUsers.
 @receiver(post_save, sender=User, dispatch_uid='user_post_save_handler')
@@ -120,3 +122,9 @@ def user_post_save(sender, instance, created, **kwargs):
     if created:
         group, group_created = Group.objects.get_or_create(name='allUsers')
         group.user_set.add(instance)
+
+
+class CustomSocialAuthExceptionMiddleware(SocialAuthExceptionMiddleware):
+    def raise_exception(self, request, exception):
+        # SocialAuthExceptionMiddleware is disabled when DEBUG=True, and there is no other way to override that...
+        return False

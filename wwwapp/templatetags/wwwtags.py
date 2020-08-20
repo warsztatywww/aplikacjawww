@@ -26,3 +26,8 @@ def question_mark_on_empty_string(value):
     if value == '':
         return '?'
     return value
+
+
+@register.filter
+def split(value, key):
+    return value.split(key)
