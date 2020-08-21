@@ -250,11 +250,14 @@ class WorkshopForm(ModelForm):
         self.fieldset_qualification = Fieldset(
             "Kwalifikacja",
             'is_qualifying',
-            'qualification_problems',
             Div(
-                Div('max_points', css_class='col-lg-6'),
-                Div('qualification_threshold', css_class='col-lg-6'),
-                css_class='row'
+                'qualification_problems',
+                Div(
+                    Div('max_points', css_class='col-lg-6'),
+                    Div('qualification_threshold', css_class='col-lg-6'),
+                    css_class='row'
+                ),
+                css_id='qualification_settings'
             ),
         )
         self.fieldset_public_page = Fieldset(
