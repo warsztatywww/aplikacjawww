@@ -1,0 +1,185 @@
+Delivered-To: cytadela88@gmail.com
+Received: by 2002:a6b:ef0b:0:0:0:0:0 with SMTP id k11csp1559897ioh;
+        Thu, 20 Aug 2020 10:05:46 -0700 (PDT)
+X-Received: by 2002:a05:6214:1108:: with SMTP id e8mr3892193qvs.237.1597943146620;
+        Thu, 20 Aug 2020 10:05:46 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1597943146; cv=none;
+        d=google.com; s=arc-20160816;
+        b=Q7yDwo5xdSq5viWo3imn+To2wjMPgLV4gm1Lh6O8UuO8xtzNd7a/Lxp3RqYvGPhBxY
+         rB1ZLUkgiFzMe6BcmpvBbvjKs1/odP6Bhfy/gupHpGZe2acrf8O5Wgwi7FZZkE3pnQ3b
+         KXL9KRoXfFR7dc5RL3oy6KTkFk3s/ccDQ3c8Fm/4Dwn7JhIoV/GB/ccl4+QuExO9EeBK
+         43EOwNwhwWEBtpSxAXuwUCgCctpAC0cig3lNnyo/Yn9ev+rit4GjPB037NpYxGtIDQEw
+         O1LNjSeW4ofaNP9BrTFj7cr8eD7FW8VRcxIOW9Qk/cXJDAvb01ZfNZQ1lFfFssGtEYBG
+         m59A==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=nOFrNCD7k1SIhuPrU5B51Fy1d4R3qekFlbHBBNyR5BY=;
+        b=Hb3UIrXQa1L7J5FvN+R+EumTQG2mo3bPNZk7hamnSI8x5D6OZd9xcYdFfhnu+h2HOU
+         VClcPnG22JDtvaagO9ADgOb64nb1Jsi6jRM1RgLOoV94TZUTv9aHg0DeGL2HX2cUxnUR
+         RI0bE7S+zG25+CyMM15ohsO1kY0vIemtFEHvsHUaOhlQIizEbIUsuzxc0GM4IxMxScqK
+         ezYB7i9heD/Z1Nqg2CUcvx03lDuNOqcq8BKkXufaHrhxBY+gNFCYh5gJhKL86215dLCb
+         ByQhI2+2Ytxort6zYj2DG0RFqtbU6z1MWSWPC5weRq6oRl32uELBuBXJnluDzov5MDtQ
+         R58w==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b=Sl0jpDSq;
+       spf=pass (google.com: domain of micha.7a@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=micha.7a@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+Return-Path: <micha.7a@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id v25sor2338169qtf.37.2020.08.20.10.05.46
+        for <cytadela88@gmail.com>
+        (Google Transport Security);
+        Thu, 20 Aug 2020 10:05:46 -0700 (PDT)
+Received-SPF: pass (google.com: domain of micha.7a@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b=Sl0jpDSq;
+       spf=pass (google.com: domain of micha.7a@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=micha.7a@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to;
+        bh=nOFrNCD7k1SIhuPrU5B51Fy1d4R3qekFlbHBBNyR5BY=;
+        b=Sl0jpDSqr97TbsSpBl2hIzuMpyUDly2R88J5JlvsDj0rFBOPhufehzX7AaZS/cwbQ0
+         OI58sqrAGfMslCK/EPHw4phXS1tlDx4PJEgh3FhlI97TerG6G6FNvqgc0wkgnoD+TKhO
+         ZtsKwUIPCUmBX4kbJhq664E9b0nskjNgEKKlyNN15tBycel88macDDVfEv32QXtbhCNZ
+         x5RROcsVV+5UD2oYqSFGaJoV5iknVC/5sxLaV9zx7RUD7FU+3gib4bBz7ogIqORZEivo
+         cjwXSJp420zUKswdp5gu0LY5Y/whSAQt5ujoTWAhjYxI2wRV+zRlBBDCEPMEE5jplMfI
+         72qg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to;
+        bh=nOFrNCD7k1SIhuPrU5B51Fy1d4R3qekFlbHBBNyR5BY=;
+        b=Fwz3O/Xq188Yn6ICnvnZFaxUyqYoAnrMAviEkQVyGSw1l3TyDx74TpW/U6pyWzUSJ3
+         NbrbKkrtAUCZy+i/Dkc9Fu5TSTyvdghpAT09BPYkGY2s/5aA8dchOdOCx1RsXo3IhqQD
+         h2FgYrK7J2kUTNkSe53OdTvUDyxnsWHgTZS5HRjS+RptD25/CnrBR43YddSbbJXsS7ee
+         dB2sjLh6lwrgFUtMuSR71acmyCGSC4KVj400+4aveK8qb5FWFYXWWbCpYhXtjacp4KxM
+         DktL3V3S0YxINi4QNwi+4cYWFy63e9VKR8jTPX4dhq0gXKEBQ2loKtBYkb/ys1h7LCgi
+         vT+Q==
+X-Gm-Message-State: AOAM5309NMx9pPTIZBVeYIcXkEQGOiBfJPuZ1jLq0zKADobvMrQQSaoI
+	t5xa4y5q9ad5G5AYNdN/ybHDUZC9tYmx+geuSuRydLNqsAkZ+w==
+X-Google-Smtp-Source: ABdhPJwIcenVVvA60oRDJy3nAuteCwnd8Et6K7FXDZW3pgVyFK9eM9G/SeEMnZl5fo2lWHDVTWEQ8YTc9/qTCkiN5/A=
+X-Received: by 2002:aed:2782:: with SMTP id a2mr3364231qtd.289.1597943145906;
+ Thu, 20 Aug 2020 10:05:45 -0700 (PDT)
+MIME-Version: 1.0
+References: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+In-Reply-To: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+From: Michalina Pacholska <micha.7a@gmail.com>
+Date: Thu, 20 Aug 2020 19:05:19 +0200
+Message-ID: <CADV8YnxBJQPBGmvkZJXzKHtqbSCCAhpQAn37GkZf6KCzH32oUA@mail.gmail.com>
+Subject: Re: AplikacjaWWW licencja
+To: cytadela88 <cytadela88@gmail.com>
+Content-Type: multipart/alternative; boundary="0000000000009547a105ad522111"
+
+--0000000000009547a105ad522111
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Cze=C5=9B=C4=87,
+ja oczywi=C5=9Bcie wyra=C5=BCam zgod=C4=99 na udost=C4=99pnienie moich (jak=
+=C5=BCe wielkich ;) )
+zmian na licencji GNU Affero General Public License v3, tylko nie wiem
+czy tak przez maila wystarczy?
+
+Serdecznie,
+Michalina Pacholska
+(github.com/micha7a/)
+
+PS,
+fajnie, =C5=BCe Warsztaty wci=C4=85=C5=BC istniej=C4=85 :)
+
+
+On Thu, 20 Aug 2020 at 18:34, cytadela88 <cytadela88@gmail.com> wrote:
+
+> Cze=C5=9B=C4=87,
+>
+> Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warsztat=
+=C3=B3w
+> WWW dost=C4=99pnym pod https://github.com/warsztatywww/aplikacjawww/
+>
+> Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=99=
+du jakim jest brak
+> wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie
+> nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgod=
+=C4=99 na
+> udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public Lic=
+ense
+> v3. Tekst licencji jest dost=C4=99pny pod
+> https://www.gnu.org/licenses/agpl-3.0.html oraz w za=C5=82=C4=85czniku.
+>
+> Na stronie gnu.org widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3ry s=
+k=C5=82oni=C5=82 mnie do
+> wyboru licencji zawartej w tej pro=C5=9Bbie "The GNU Affero General Publi=
+c
+> License is based on the GNU GPL, but has an additional term to allow
+> users who interact with the licensed software over a network to receive
+> the source for that program. We recommend that people consider using the
+> GNU AGPL for any software which will commonly be run over a network. The
+> latest version is version 3."
+>
+> Artur Puzio
+> github.com/cytadela8
+>
+>
+
+--0000000000009547a105ad522111
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Cze=C5=9B=C4=87,<br>ja oczywi=C5=9Bcie wyra=C5=BCam zgod=
+=C4=99=C2=A0na udost=C4=99pnienie moich (jak=C5=BCe wielkich ;) ) zmian na =
+licencji GNU Affero General Public License=C2=A0v3, tylko nie wiem czy=C2=
+=A0tak<span class=3D"gmail_default" style=3D"font-family:arial,helvetica,sa=
+ns-serif;color:rgb(0,51,0)"></span> przez maila wystarczy<span class=3D"gma=
+il_default" style=3D"font-family:arial,helvetica,sans-serif;color:rgb(0,51,=
+0)">? </span><br><br>Serdecznie,=C2=A0<br>Michalina Pacholska=C2=A0<div cla=
+ss=3D"gmail_default" style=3D"font-family:arial,helvetica,sans-serif;color:=
+rgb(0,51,0)"></div><div><div class=3D"gmail_default" style=3D"font-family:a=
+rial,helvetica,sans-serif;color:rgb(0,51,0)">(<a href=3D"http://github.com/=
+micha7a/">github.com/micha7a/</a>)<br><br>PS,=C2=A0<br>fajnie, =C5=BCe Wars=
+ztaty wci=C4=85=C5=BC istniej=C4=85 :)=C2=A0</div><br></div></div><br><div =
+class=3D"gmail_quote"><div dir=3D"ltr" class=3D"gmail_attr">On Thu, 20 Aug =
+2020 at 18:34, cytadela88 &lt;<a href=3D"mailto:cytadela88@gmail.com" targe=
+t=3D"_blank">cytadela88@gmail.com</a>&gt; wrote:<br></div><blockquote class=
+=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-left:1px solid rg=
+b(204,204,204);padding-left:1ex">Cze=C5=9B=C4=87,<br>
+<br>
+Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warsztat=C3=
+=B3w<br>
+WWW dost=C4=99pnym pod <a href=3D"https://github.com/warsztatywww/aplikacja=
+www/" rel=3D"noreferrer" target=3D"_blank">https://github.com/warsztatywww/=
+aplikacjawww/</a><br>
+<br>
+Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=99du=
+ jakim jest brak<br>
+wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie<br>
+nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgod=C4=
+=99 na<br>
+udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public Licen=
+se<br>
+v3. Tekst licencji jest dost=C4=99pny pod<br>
+<a href=3D"https://www.gnu.org/licenses/agpl-3.0.html" rel=3D"noreferrer" t=
+arget=3D"_blank">https://www.gnu.org/licenses/agpl-3.0.html</a> oraz w za=
+=C5=82=C4=85czniku.<br>
+<br>
+Na stronie <a href=3D"http://gnu.org" rel=3D"noreferrer" target=3D"_blank">=
+gnu.org</a> widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3ry sk=C5=82on=
+i=C5=82 mnie do<br>
+wyboru licencji zawartej w tej pro=C5=9Bbie &quot;The GNU Affero General Pu=
+blic<br>
+License is based on the GNU GPL, but has an additional term to allow<br>
+users who interact with the licensed software over a network to receive<br>
+the source for that program. We recommend that people consider using the<br=
+>
+GNU AGPL for any software which will commonly be run over a network. The<br=
+>
+latest version is version 3.&quot;<br>
+<br>
+Artur Puzio<br>
+<a href=3D"http://github.com/cytadela8" rel=3D"noreferrer" target=3D"_blank=
+">github.com/cytadela8</a><br>
+<br>
+</blockquote></div>
+
+--0000000000009547a105ad522111--
