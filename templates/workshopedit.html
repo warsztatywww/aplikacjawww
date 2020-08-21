@@ -70,4 +70,20 @@
   var django = {jQuery: jQuery};
   </script>
   {{ form.media }}
+
+  <script>
+    /* Hide the qualification settings when the is_qualifying checkbox is disabled */
+    $(function() {
+      if (! $("input[name='is_qualifying']").is(":checked"))
+          $("#qualification_settings").hide();
+    });
+
+    $("input[name='is_qualifying']").change(function() {
+      if ($(this).is(":checked")) {
+        $("#qualification_settings").slideDown(500);
+      } else {
+        $("#qualification_settings").slideUp(500);
+      }
+    });
+  </script>
 {% endblock %}

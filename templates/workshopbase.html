@@ -10,7 +10,11 @@
           <div>
             <a href="{% url 'workshop_page' workshop.name %}">Strona warsztatów</a> |
             <a href="{% url 'workshop_edit' workshop.name %}">Edycja warsztatów</a> |
-            <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy i ocenianie</a>
+            {% if workshop.is_qualifying %}
+              <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy i ocenianie</a>
+            {% else %}
+              <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy</a>
+            {% endif %}
           </div>
         {% endif %}
 

@@ -363,6 +363,9 @@ def save_points_view(request):
     if not has_perm_to_edit:
         return HttpResponseForbidden()
 
+    if not workshop_participant.workshop.is_qualifying:
+        return HttpResponseForbidden("Na te warsztaty nie obowiązuje kwalifikacja")
+
     form = WorkshopParticipantPointsForm(request.POST, instance=workshop_participant)
     if not form.is_valid():
         return JsonResponse({'error': form.errors.as_text()})
@@ -634,6 +637,8 @@ def qualification_problems_view(request, workshop_name):
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.is_qualifying:
+        return HttpResponseNotFound("Na te warsztaty nie ma kwalifikacji")
     if not workshop.qualification_problems:
         return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
 

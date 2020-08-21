@@ -7,11 +7,13 @@
     <th>Numer</th>
     <th>Imię i nazwisko</th>
     <th>Email</th>
+    {% if workshop.is_qualifying %}
     <th>Liczba punktów</th>
     <th></th>
     <th>Komentarz</th>
     <th></th>
     <th>Zakwalifikowano</th>
+    {%  endif %}
     </thead>
     <tbody>
     {% for workshop_participant in workshop_participants %}
@@ -27,6 +29,7 @@
         <td style="vertical-align: middle;">
           {{ workshop_participant.participant.user.email }}
         </td>
+        {% if workshop.is_qualifying %}
         <td style="vertical-align: middle; width: 12.5%;">
           {% if has_perm_to_edit %}
             {{ workshop_participant.form.qualification_result }}
@@ -54,6 +57,7 @@
         <td class="qualified-mark" style="vertical-align: middle;">
           {{ workshop_participant.is_qualified | qualified_mark }}
         </td>
+        {% endif %}
       </tr>
     {% endfor %}
     </tbody>
