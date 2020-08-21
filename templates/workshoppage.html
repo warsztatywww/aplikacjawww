@@ -1,74 +1,35 @@
-{% extends "base.html" %}
+{% extends "workshopbase.html" %}
 {% load bleach_tags %}
-{% load crispy_forms_tags %}
 
-{% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
-      <h1>{{ workshop.title }}</h1>
-
-      {% if has_perm_to_view_details %}
-        {% include '_workshopeditheader.html' %}
-      {% endif %}
-
-      {% if not form %}
-        <h3>Prowadzący: {% for lecturer in workshop.lecturer.all %}<a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</h3>
+{% block workshop_page_content %}
+  {% if workshop.page_content_is_public or has_perm_to_edit %}
+    {% if has_perm_to_edit %}
+      {% if workshop.is_qualifying and workshop.qualification_problems %}
+        <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.name%}">tutaj</a>.</p>
+      {% elif workshop.is_qualifying %}
+        <div class="alert alert-danger" role="alert">Nie wstawiłeś jeszcze zadań kwalifikacyjnych!</div>
       {% else %}
-        <hr>
+        <p>Na Twoje warsztaty nie obowiązuje kwalifikacja.</p>
       {% endif %}
-
-      {% if workshop.status == 'X' %}
-        <h3 style="color: red;">Te warsztaty są odwołane!</h3>
-      {% endif %}
-
-      {% if workshop.page_content_is_public or has_perm_to_edit %}
-        {% if has_perm_to_edit %}
-          {% if workshop.is_qualifying and workshop.qualification_problems %}
-            <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.name%}">tutaj</a>.</p>
-          {% elif workshop.is_qualifying %}
-            <div class="alert alert-danger" role="alert">Nie wstawiłeś jeszcze zadań kwalifikacyjnych!</div>
-          {% else %}
-            <p>Na Twoje warsztaty nie obowiązuje kwalifikacja.</p>
-          {% endif %}
-        {% else %}
-          {% if workshop.is_qualifying and workshop.qualification_problems %}
-            <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.name%}">tutaj</a>.</p>
-          {% elif workshop.is_qualifying %}
-            <p>Nie ma jeszcze zadań kwalifikacyjnych.</p>
-          {% else %}
-            <p>Na te warsztaty nie obowiązuje kwalifikacja.</p>
-          {% endif %}
-        {% endif %}
-
-        {% if form %}
-          <div role="tabpanel" style="margin: 1em 0;">
-            <form action="" method="post" enctype="multipart/form-data">
-              {% csrf_token %}
-              {% crispy form %}
-              <button class="btn btn-default">Zapisz</button>
-            </form>
-          </div>
-        {% elif workshop.page_content_is_public %}
-          <div role="tabpanel" style="margin: 1em 0;">
-            {{ workshop.page_content | bleach }}
-          </div>
-        {% else %}
-          <div class="alert alert-danger" role="alert">Nie opublikowałeś jeszcze opisu!</div>
-        {% endif %}
-
+    {% else %}
+      {% if workshop.is_qualifying and workshop.qualification_problems %}
+        <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.name%}">tutaj</a>.</p>
+      {% elif workshop.is_qualifying %}
+        <p>Nie ma jeszcze zadań kwalifikacyjnych.</p>
       {% else %}
-        <p>Prowadzący warsztatów nie wstawił jeszcze opisu.</p>
+        <p>Na te warsztaty nie obowiązuje kwalifikacja.</p>
       {% endif %}
-    </article>
-  </div>
-{% endblock %}
+    {% endif %}
 
-{% block script %}
-  {{ block.super }}
+    {% if workshop.page_content_is_public %}
+      <div role="tabpanel" style="margin: 1em 0;">
+        {{ workshop.page_content | bleach }}
+      </div>
+    {% else %}
+      <div class="alert alert-danger" role="alert">Nie opublikowałeś jeszcze opisu!</div>
+    {% endif %}
 
-  <script>
-  /* Fixes a bug in django-tinymce with TINYMCE_INCLUDE_JQUERY = False, see https://github.com/aljosa/django-tinymce/issues/234 */
-  var django = {jQuery: jQuery};
-  </script>
-  {{ form.media }}
+  {% else %}
+    <p>Prowadzący warsztatów nie wstawił jeszcze opisu.</p>
+  {% endif %}
 {% endblock %}

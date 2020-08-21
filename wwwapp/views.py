@@ -296,6 +296,7 @@ def workshop_page_view(request, name):
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
     context = get_context(request)
+    context['title'] = workshop.title
     context['workshop'] = workshop
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = \
@@ -334,13 +335,13 @@ def workshop_page_edit_view(request, name):
         form = WorkshopPageForm(instance=workshop)
 
     context = get_context(request)
+    context['title'] = workshop.title
     context['workshop'] = workshop
+    context['form'] = form
     context['has_perm_to_edit'] = True
     context['has_perm_to_view_details'] = True
 
-    context['form'] = form
-
-    return render(request, 'workshoppage.html', context)
+    return render(request, 'workshoppageedit.html', context)
 
 
 @login_required()
@@ -355,6 +356,7 @@ def workshop_participants_view(request, name):
         return HttpResponseForbidden()
 
     context = get_context(request)
+    context['title'] = '%s - uczestnicy' % workshop.title
     context['workshop'] = workshop
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
@@ -737,7 +739,7 @@ def render_workshops(request, title, link_to_edit, workshops):
     context['title'] = title
     context['link_to_edit'] = link_to_edit
 
-    return render(request, 'workshoplist.html', context)
+    return render(request, 'listworkshop.html', context)
 
 
 @login_required()

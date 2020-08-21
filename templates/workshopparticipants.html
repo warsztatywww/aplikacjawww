@@ -1,75 +1,67 @@
-{% extends "base.html" %}
-{% load bleach_tags %}
-{% load static %}
+{% extends "workshopbase.html" %}
 {% load wwwtags %}
 
-{% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
-      <h1>{{ workshop.title }} &dash; uczestnicy</h1>
-      {% include '_workshopeditheader.html' %}
-      <table class="table">
-        <thead>
-        <th>Numer</th>
-        <th>Imię i nazwisko</th>
-        <th>Email</th>
-        <th>Liczba punktów</th>
-        <th></th>
-        <th>Komentarz</th>
-        <th></th>
-        <th>Zakwalifikowano</th>
-        </thead>
-        <tbody>
-        {% for workshop_participant in workshop_participants %}
-          <tr>
-            <td style="vertical-align: middle;">
-              {{ forloop.counter }}
-            </td>
-            <td style="vertical-align: middle;">
-              <a href="{% url 'profile' workshop_participant.participant.user.id %}">
-                {{ workshop_participant.participant.user.get_full_name }}
-              </a>
-            </td>
-            <td style="vertical-align: middle;">
-              {{ workshop_participant.participant.user.email }}
-            </td>
-            <td style="vertical-align: middle; width: 12.5%;">
-              {% if has_perm_to_edit %}
-                {{ workshop_participant.form.qualification_result }}
-              {% else %}
-                {{ workshop_participant.qualification_result | default_if_none:'' }}
-              {% endif %}
-            </td>
-            <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
-              {% if has_perm_to_edit %}
-                <button class="btn btn-default" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><span class="glyphicon glyphicon-floppy-disk"></span></button>
-              {% endif %}
-            </td>
-            <td style="vertical-align: middle; width: 20%;">
-              {% if has_perm_to_edit %}
-                {{ workshop_participant.form.comment }}
-              {% else %}
-                {{ workshop_participant.comment | default_if_none:'' }}
-              {% endif %}
-            </td>
-            <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
-              {% if has_perm_to_edit %}
-                <button class="btn btn-default" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><span class="glyphicon glyphicon-floppy-disk"></span></button>
-              {% endif %}
-            </td>
-            <td class="qualified-mark" style="vertical-align: middle;">
-              {{ workshop_participant.is_qualified | qualified_mark }}
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      <div class="containter-fluid">
-        <div class="form-group">
-          <label for="participants_emails">Maile:</label>
-          <input id="participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{{ workshop_participant.participant.user.email }}, {% endfor %}" />
-        </div>
-      </div>
-    </article>
+{% block workshop_page_content %}
+  <table class="table">
+    <thead>
+    <th>Numer</th>
+    <th>Imię i nazwisko</th>
+    <th>Email</th>
+    <th>Liczba punktów</th>
+    <th></th>
+    <th>Komentarz</th>
+    <th></th>
+    <th>Zakwalifikowano</th>
+    </thead>
+    <tbody>
+    {% for workshop_participant in workshop_participants %}
+      <tr>
+        <td style="vertical-align: middle;">
+          {{ forloop.counter }}
+        </td>
+        <td style="vertical-align: middle;">
+          <a href="{% url 'profile' workshop_participant.participant.user.id %}">
+            {{ workshop_participant.participant.user.get_full_name }}
+          </a>
+        </td>
+        <td style="vertical-align: middle;">
+          {{ workshop_participant.participant.user.email }}
+        </td>
+        <td style="vertical-align: middle; width: 12.5%;">
+          {% if has_perm_to_edit %}
+            {{ workshop_participant.form.qualification_result }}
+          {% else %}
+            {{ workshop_participant.qualification_result | default_if_none:'' }}
+          {% endif %}
+        </td>
+        <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
+          {% if has_perm_to_edit %}
+            <button class="btn btn-default" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><span class="glyphicon glyphicon-floppy-disk"></span></button>
+          {% endif %}
+        </td>
+        <td style="vertical-align: middle; width: 20%;">
+          {% if has_perm_to_edit %}
+            {{ workshop_participant.form.comment }}
+          {% else %}
+            {{ workshop_participant.comment | default_if_none:'' }}
+          {% endif %}
+        </td>
+        <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
+          {% if has_perm_to_edit %}
+            <button class="btn btn-default" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><span class="glyphicon glyphicon-floppy-disk"></span></button>
+          {% endif %}
+        </td>
+        <td class="qualified-mark" style="vertical-align: middle;">
+          {{ workshop_participant.is_qualified | qualified_mark }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="containter-fluid">
+    <div class="form-group">
+      <label for="participants_emails">Maile:</label>
+      <input id="participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{{ workshop_participant.participant.user.email }}, {% endfor %}" />
+    </div>
   </div>
 {% endblock %}
