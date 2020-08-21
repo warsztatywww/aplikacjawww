@@ -86,7 +86,7 @@ class WorkshopEditViews(TestCase):
             ],
             'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
         })
-        self.assertRedirects(response, reverse('workshop_proposal', args=['fajne']))
+        self.assertRedirects(response, reverse('workshop_edit', args=['fajne']))
         messages = get_messages(response.wsgi_request)
         self.assertEqual(len(messages), 1)
         self.assertEqual(list(messages)[0].message, 'Zapisano.')
@@ -102,11 +102,8 @@ class WorkshopEditViews(TestCase):
         self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.userprofile})
         self.assertIsNone(workshop.status)
 
-    def _assert_can_edit_proposal(self, user, can_edit, can_open=None):
-        url = reverse('workshop_proposal', args=['bardzofajne'])
-
-        if can_open is None:
-            can_open = can_edit
+    def _assert_can_edit_proposal(self, user, can_open, can_edit):
+        url = reverse('workshop_edit', args=['bardzofajne'])
 
         if user is not None:
             self.client.force_login(user)
@@ -143,7 +140,7 @@ class WorkshopEditViews(TestCase):
                     self.assertEqual(response.status_code, 200)
             else:
                 save.assert_called()
-                self.assertRedirects(response, reverse('workshop_proposal', args=['niefajne']))
+                self.assertRedirects(response, reverse('workshop_edit', args=['niefajne']))
                 messages = get_messages(response.wsgi_request)
                 self.assertEqual(len(messages), 1)
                 self.assertEqual(list(messages)[0].message, 'Zapisano.')
@@ -160,19 +157,19 @@ class WorkshopEditViews(TestCase):
 
     def test_edit_proposal_unauthenticated(self):
         # Unauthenticated user can't view or edit the proposal
-        self._assert_can_edit_proposal(None, False)
+        self._assert_can_edit_proposal(None, can_open=False, can_edit=False)
 
     def test_edit_proposal_not_lecturer(self):
         # Other users can't view or edit the proposal
-        self._assert_can_edit_proposal(self.another_user, False)
+        self._assert_can_edit_proposal(self.another_user, can_open=False, can_edit=False)
 
     def test_edit_proposal_lecturer(self):
         # Lecturer can edit the proposal
-        self._assert_can_edit_proposal(self.normal_user, True)
+        self._assert_can_edit_proposal(self.normal_user, can_open=True, can_edit=True)
 
     def test_edit_proposal_admin(self):
         # Admin can edit the proposal
-        self._assert_can_edit_proposal(self.admin_user, True)
+        self._assert_can_edit_proposal(self.admin_user, can_open=True, can_edit=True)
 
     def test_edit_accepted_proposal(self):
         # Proposal description cannot be changed once it's accepted or rejected
@@ -181,7 +178,7 @@ class WorkshopEditViews(TestCase):
 
         self.client.force_login(self.normal_user)
 
-        url = reverse('workshop_proposal', args=['bardzofajne'])
+        url = reverse('workshop_edit', args=['bardzofajne'])
         response = self.client.post(url, {
             'title': 'Niefajne warsztaty',
             'name': 'niefajne',
@@ -189,27 +186,29 @@ class WorkshopEditViews(TestCase):
             'category': [
                 WorkshopCategory.objects.get(year=2020, name='This category 3').pk,
             ],
-            'proposition_description': '<p>PRZEGRAŁEM!!</p>'
+            'proposition_description': '<p>PRZEGRAŁEM!!</p>',
+            'is_qualifying': '',
+            'qualification_threshold': 1337,
+            'max_points': 2137,
+            'page_content': '<p>Zapraszam na moje warsztaty</p>',
+            'page_content_is_public': 'on',
         })
-        self.assertRedirects(response, reverse('workshop_proposal', args=['niefajne']))
+        self.assertRedirects(response, reverse('workshop_edit', args=['niefajne']))
         workshop = Workshop.objects.get(name='niefajne')
         self.assertHTMLEqual(workshop.proposition_description, '<p>Testowy opis</p>')
 
     @override_settings(CURRENT_YEAR=2021)
     def test_edit_historical_proposal_lecturer(self):
         # Lecturer can't edit the proposal from previous year
-        self._assert_can_edit_proposal(self.normal_user, False, True)
+        self._assert_can_edit_proposal(self.normal_user, can_open=True, can_edit=False)
 
     @override_settings(CURRENT_YEAR=2021)
     def test_edit_historical_proposal_admin(self):
         # Admin can't edit the proposal from previous year
-        self._assert_can_edit_proposal(self.admin_user, False, True)
+        self._assert_can_edit_proposal(self.admin_user, can_open=True, can_edit=False)
 
-    def _assert_can_edit_public_page(self, user, can_edit, can_open=None):
-        url = reverse('workshop_page_edit', args=['bardzofajne'])
-
-        if can_open is None:
-            can_open = can_edit
+    def _assert_can_edit_public_page(self, user, can_open, can_see_page_edit, can_edit, can_edit_page):
+        url = reverse('workshop_edit', args=['bardzofajne'])
 
         if user is not None:
             self.client.force_login(user)
@@ -226,9 +225,22 @@ class WorkshopEditViews(TestCase):
         else:
             self.assertEqual(response.status_code, 200)
 
+        if can_see_page_edit:
+            self.assertContains(response, 'Strona warsztatów')
+        elif can_open:
+            self.assertNotContains(response, 'Strona warsztatów')
+
         # Submit the edits
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
             response = self.client.post(url, {
+                'title': 'Bardzo fajne warsztaty',
+                'name': 'bardzofajne',
+                'type': WorkshopType.objects.get(year=2020, name='This type 1').pk,
+                'category': [
+                    WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
+                    WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
+                ],
+                'proposition_description': '<p>Testowy opis</p>',
                 'is_qualifying': '',
                 'qualification_threshold': 1337,
                 'max_points': 2137,
@@ -252,85 +264,104 @@ class WorkshopEditViews(TestCase):
                 self.assertEqual(list(messages)[0].message, 'Zapisano.')
 
                 workshop = Workshop.objects.get(name='bardzofajne')
-                self.assertEqual(workshop.is_qualifying, False)
-                self.assertEqual(workshop.qualification_threshold, 1337)
-                self.assertEqual(workshop.max_points, 2137)
-                self.assertHTMLEqual(workshop.page_content, '<p>Zapraszam na moje warsztaty</p>')
-                self.assertEqual(workshop.page_content_is_public, True)
+                if can_edit_page:
+                    self.assertEqual(workshop.is_qualifying, False)
+                    self.assertEqual(workshop.qualification_threshold, 1337)
+                    self.assertEqual(workshop.max_points, 2137)
+                    self.assertHTMLEqual(workshop.page_content, '<p>Zapraszam na moje warsztaty</p>')
+                    self.assertEqual(workshop.page_content_is_public, True)
+                else:
+                    self.assertEqual(workshop.is_qualifying, True)
+                    self.assertIsNone(workshop.qualification_threshold)
+                    self.assertIsNone(workshop.max_points)
+                    self.assertEqual(workshop.page_content, '')
+                    self.assertEqual(workshop.page_content_is_public, False)
 
     def test_edit_public_page_unauthenticated(self):
         # Unauthenticated user can't edit the public page
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        self._assert_can_edit_public_page(None, False)
+        self._assert_can_edit_public_page(None,
+                                          can_open=False, can_see_page_edit=False, can_edit=False, can_edit_page=False)
 
     def test_edit_public_page_not_lecturer(self):
         # Other users can't edit the public page
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.another_user, False)
+        self._assert_can_edit_public_page(self.another_user,
+                                          can_open=False, can_see_page_edit=False, can_edit=False, can_edit_page=False)
 
     def test_edit_public_page_lecturer(self):
         # Lecturer can edit the public page
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.normal_user, True)
+        self._assert_can_edit_public_page(self.normal_user,
+                                          can_open=True, can_see_page_edit=True, can_edit=True, can_edit_page=True)
 
     def test_edit_public_page_admin(self):
         # Admin can edit the public page
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.admin_user, True)
+        self._assert_can_edit_public_page(self.admin_user,
+                                          can_open=True, can_see_page_edit=True, can_edit=True, can_edit_page=True)
 
     def test_edit_public_page_not_accepted_lecturer(self):
         # Lecturer can't edit the public page until it's accepted
         self.workshop.status = None
         self.workshop.save()
-        self._assert_can_edit_public_page(self.normal_user, False)
+        self._assert_can_edit_public_page(self.normal_user,
+                                          can_open=True, can_see_page_edit=False, can_edit=True, can_edit_page=False)
 
     def test_edit_public_page_not_accepted_admin(self):
         # Admin can't edit the public page until it's accepted
         self.workshop.status = None
         self.workshop.save()
-        self._assert_can_edit_public_page(self.admin_user, False)
+        self._assert_can_edit_public_page(self.admin_user,
+                                          can_open=True, can_see_page_edit=False, can_edit=True, can_edit_page=False)
 
     def test_edit_public_page_rejected_lecturer(self):
         # Lecturer can't edit the public page if it's rejected
         self.workshop.status = Workshop.STATUS_REJECTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.normal_user, False)
+        self._assert_can_edit_public_page(self.normal_user,
+                                          can_open=True, can_see_page_edit=False, can_edit=True, can_edit_page=False)
 
     def test_edit_public_page_rejected_admin(self):
         # Admin can't edit the public page if it's rejected
         self.workshop.status = Workshop.STATUS_REJECTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.admin_user, False)
+        self._assert_can_edit_public_page(self.admin_user,
+                                          can_open=True, can_see_page_edit=False, can_edit=True, can_edit_page=False)
 
     def test_edit_public_page_cancelled_lecturer(self):
         # Lecturer can edit the public page when cancelled
         self.workshop.status = Workshop.STATUS_CANCELLED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.normal_user, True)
+        self._assert_can_edit_public_page(self.normal_user,
+                                          can_open=True, can_see_page_edit=True, can_edit=True, can_edit_page=True)
 
     def test_edit_public_page_cancelled_admin(self):
         # Admin can edit the public page when cancelled
         self.workshop.status = Workshop.STATUS_CANCELLED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.admin_user, True)
+        self._assert_can_edit_public_page(self.admin_user,
+                                          can_open=True, can_see_page_edit=True, can_edit=True, can_edit_page=True)
 
     @override_settings(CURRENT_YEAR=2021)
     def test_edit_historical_public_page_lecturer(self):
         # Lecturer can't edit the public page from previous year
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.normal_user, False, True)
+        self._assert_can_edit_public_page(self.normal_user,
+                                          can_open=True, can_see_page_edit=True, can_edit=False, can_edit_page=False)
 
     @override_settings(CURRENT_YEAR=2021)
     def test_edit_historical_public_page_admin(self):
         # Admin can't edit the public page from previous year
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        self._assert_can_edit_public_page(self.admin_user, False, True)
+        self._assert_can_edit_public_page(self.admin_user,
+                                          can_open=True, can_see_page_edit=True, can_edit=False, can_edit_page=False)
 
     def test_edit_qual_problems_add(self):
         self.workshop.status = Workshop.STATUS_ACCEPTED
@@ -339,8 +370,15 @@ class WorkshopEditViews(TestCase):
 
         data = os.urandom(1024 * 1024)
 
-        url = reverse('workshop_page_edit', args=[self.workshop.name])
+        url = reverse('workshop_edit', args=[self.workshop.name])
         response = self.client.post(url, {
+            'title': 'Bardzo fajne warsztaty',
+            'name': 'bardzofajne',
+            'type': WorkshopType.objects.get(year=2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
+            ],
             'qualification_problems': io.BytesIO(data),
             'is_qualifying': 'on',
             'qualification_threshold': '',
@@ -365,8 +403,15 @@ class WorkshopEditViews(TestCase):
 
         data = os.urandom(1024 * 1024)
 
-        url = reverse('workshop_page_edit', args=[self.workshop.name])
+        url = reverse('workshop_edit', args=[self.workshop.name])
         response = self.client.post(url, {
+            'title': 'Bardzo fajne warsztaty',
+            'name': 'bardzofajne',
+            'type': WorkshopType.objects.get(year=2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
+            ],
             'qualification_problems': io.BytesIO(data),
             'is_qualifying': 'on',
             'qualification_threshold': '',
@@ -390,8 +435,15 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         self.client.force_login(self.normal_user)
 
-        url = reverse('workshop_page_edit', args=[self.workshop.name])
+        url = reverse('workshop_edit', args=[self.workshop.name])
         response = self.client.post(url, {
+            'title': 'Bardzo fajne warsztaty',
+            'name': 'bardzofajne',
+            'type': WorkshopType.objects.get(year=2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
+            ],
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
@@ -503,48 +555,48 @@ class WorkshopEditViews(TestCase):
 
     def test_unauthed_cannot_set_workshop_status(self):
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'accept'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'accept'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_proposal', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'reject'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'reject'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_proposal', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'delete'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'delete'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_proposal', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'cancel'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'cancel'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_proposal', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
 
     def test_user_cannot_set_workshop_status(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'accept'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'accept'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'reject'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'reject'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'delete'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'delete'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'cancel'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'cancel'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
 
     def test_admin_can_accept_workshop(self):
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'accept'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'accept'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()
@@ -552,7 +604,7 @@ class WorkshopEditViews(TestCase):
 
     def test_admin_can_reject_workshop(self):
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'reject'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'reject'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()
@@ -562,7 +614,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'cancel'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'cancel'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()
@@ -572,7 +624,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_proposal', args=[self.workshop.name]), {'qualify': 'delete'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'delete'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()

@@ -1,5 +1,4 @@
 {% extends "workshopbase.html" %}
-{% load bleach_tags %}
 {% load crispy_forms_tags %}
 
 {% block workshop_page_title %}
@@ -51,17 +50,12 @@
 {% endblock %}
 
 {% block workshop_page_content %}
-  {% if has_perm_to_edit %}
-    <div role="tabpanel">
-      <form action="" method="post">
-        {% csrf_token %}
-        {% crispy form %}
-        <button class="btn btn-default">Zapisz</button>
-      </form>
-    </div>
-  {% else %}
-    {{ workshop.proposition_description | bleach }}
-  {% endif %}
+  <div role="tabpanel">
+    <form action="" method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {% crispy form %}
+    </form>
+  </div>
 {% endblock %}
 
 {% block script %}

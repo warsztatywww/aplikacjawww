@@ -32,14 +32,10 @@
                   <td>
                   </td>
                   <td>
-                    {% if workshop.is_publicly_visible %}
-                      {% if link_to_edit %}
-                        <a href="{% url 'workshop_page_edit' workshop.name %}">{{ workshop.title }}</a>
-                      {% else %}
-                        <a href="{% url 'workshop_page' workshop.name %}">{{ workshop.title }}</a>
-                      {% endif %}
+                    {% if link_to_edit or not workshop.is_publicly_visible %}
+                      <a href="{% url 'workshop_edit' workshop.name %}">{{ workshop.title }}</a>
                     {% else %}
-                      <a href="{% url 'workshop_proposal' workshop.name %}">{{ workshop.title }}</a>
+                      <a href="{% url 'workshop_page' workshop.name %}">{{ workshop.title }}</a>
                     {% endif %}
                   </td>
                   <td data-order="{% for lecturer in workshop.lecturer.all %}{{ lecturer.user.last_name }} {{ lecturer.user.first_name }} {% endfor %}">
