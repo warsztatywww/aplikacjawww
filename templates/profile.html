@@ -100,13 +100,13 @@
                     <a href="{% url 'workshop_page' workshop.name %}">{{ workshop.title }}</a>
                   {% else %}
                     {% if can_see_all_workshops %}
-                      <a href="{% url 'workshop_proposal' workshop.name %}">{{ workshop.title }}</a>
+                      <a href="{% url 'workshop_edit' workshop.name %}">{{ workshop.title }}</a>
                     {% else %}
                       {{ workshop.title }}
                     {% endif %}
                   {% endif %}
                 {% else %}
-                  <a href="{% url 'workshop_proposal' workshop.name %}">{{ workshop.title }}</a>
+                  <a href="{% url 'workshop_edit' workshop.name %}">{{ workshop.title }}</a>
                 {% endif %}
                 {% if workshop.status != 'Z' %}
                     <small>({{ workshop.get_status_display | default_if_none:"Propozycja" }})</small>
