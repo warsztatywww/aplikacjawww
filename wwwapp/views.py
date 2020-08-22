@@ -408,6 +408,7 @@ def participants_view(request, year=None):
         'user',
         'user_info',
         'workshop_profile',
+        'lecturer_workshops',
         Prefetch('workshopparticipant_set', queryset=WorkshopParticipant.objects.filter(workshop__type__year=year)),
         'workshopparticipant_set__workshop',
         'workshopparticipant_set__workshop__type',
