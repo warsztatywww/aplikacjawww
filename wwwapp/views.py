@@ -14,6 +14,7 @@ from wsgiref.util import FileWrapper
 from typing import Dict
 
 from django.contrib.auth.views import redirect_to_login
+from django.db.models.query import Prefetch
 from xkcdpass import xkcd_password as xp
 import owncloud
 
@@ -402,79 +403,86 @@ def save_points_view(request):
 @login_required()
 @permission_required('wwwapp.see_all_users', raise_exception=True)
 def participants_view(request, year=None):
-    participants = WorkshopParticipant.objects.all().prefetch_related('workshop', 'participant', 'participant__user')
-    workshops = Workshop.objects.prefetch_related('lecturer', 'lecturer__user')
-
-    lecturers_ids = set()
+    participants = UserProfile.objects.prefetch_related(
+        'user',
+        'user_info',
+        'workshop_profile',
+        'workshop_profile__year',
+    ).all()
 
     if year is not None:
         year = get_object_or_404(Camp, pk=year)
-        participants = participants.filter(workshop__type__year=year)
-        workshops = workshops.filter(type__year=year)
+        participants = participants.filter(workshops__type__year=year)
 
-        for workshop in workshops:
-            for l in workshop.lecturer.all():
-                lecturers_ids.add(l.user.id)
+        lecturers = Workshop.objects.filter(type__year=year).values_list('lecturer__user').distinct()
+        participants = participants.exclude(user__id__in=lecturers)
+
+        participants = participants.prefetch_related(
+            Prefetch('workshopparticipant_set', queryset=WorkshopParticipant.objects.filter(workshop__type__year=year)),
+            'workshopparticipant_set__workshop',
+            'workshopparticipant_set__workshop__type__year',
+        )
 
     people = {}
 
     for participant in participants:
-        p_id = participant.participant.id
-        if p_id not in people:
-            cover_letter = participant.participant.cover_letter
-            if participant.participant.user.id in lecturers_ids:
-                continue
+        birth = participant.user_info.get_birth_date()
+        is_adult = None
+        if birth is not None:
+            if year is not None and year.start_date:
+                is_adult = year.start_date >= birth + relativedelta(years=18)
+            else:
+                is_adult = datetime.date.today() >= birth + relativedelta(years=18)
 
-            birth = participant.participant.user_info.get_birth_date()
-            is_adult = None
-            if birth is not None:
-                if year is not None and year.start_date:
-                    is_adult = year.start_date >= birth + relativedelta(years=18)
-                else:
-                    is_adult = datetime.date.today() >= birth + relativedelta(years=18)
+        workshop_profile = None
+        if year is not None:
+            workshop_profile = participant.workshop_profile.all()
+            workshop_profile = list(filter(lambda x: x.year == year, workshop_profile))
+            workshop_profile = workshop_profile[0] if workshop_profile else None
 
-            workshop_profile = participant.participant.workshop_profile_for(year)
+        participation_data = participant.all_participation_data()
+        if not request.user.has_perm('wwwapp.see_all_workshops'):
+            # If the current user can't see non-public workshops, remove them from the list
+            for participation in participation_data:
+                participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
 
-            participation_data = participant.participant.all_participation_data()
-            if not request.user.has_perm('wwwapp.see_all_workshops'):
-                # If the current user can't see non-public workshops, remove them from the list
-                for participation in participation_data:
-                    participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
+        people[participant.id] = {
+            'user': participant.user,
+            'birth': birth,
+            'is_adult': is_adult,
+            'pesel': participant.user_info.pesel,
+            'address': participant.user_info.address,
+            'phone': participant.user_info.phone,
+            'tshirt_size': participant.user_info.tshirt_size,
+            'matura_exam_year': participant.matura_exam_year,
+            'accepted_workshop_count': 0,
+            'workshop_count': 0,
+            'has_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
+            'status': workshop_profile.status if workshop_profile else None,
+            'status_display': workshop_profile.get_status_display if workshop_profile else None,
+            'participation_data': participation_data,
+            'school': participant.school,
+            'points': 0.0,
+            'infos': [],
+            'how_do_you_know_about': participant.how_do_you_know_about,
+            'comments': participant.user_info.comments,
+            'start_date': participant.user_info.start_date,
+            'end_date': participant.user_info.end_date,
+        }
 
-            people[p_id] = {
-                'user': participant.participant.user,
-                'birth': birth,
-                'is_adult': is_adult,
-                'pesel': participant.participant.user_info.pesel,
-                'address': participant.participant.user_info.address,
-                'phone': participant.participant.user_info.phone,
-                'tshirt_size': participant.participant.user_info.tshirt_size,
-                'matura_exam_year': participant.participant.matura_exam_year,
-                'accepted_workshop_count': 0,
-                'workshop_count': 0,
-                'has_letter': bool(cover_letter and len(cover_letter) > 50),
-                'status': workshop_profile.status if workshop_profile else None,
-                'status_display': workshop_profile.get_status_display if workshop_profile else None,
-                'participation_data': participation_data,
-                'school': participant.participant.school,
-                'points': 0.0,
-                'infos': [],
-                'how_do_you_know_about': participant.participant.how_do_you_know_about,
-                'comments': participant.participant.user_info.comments,
-                'start_date': participant.participant.user_info.start_date,
-                'end_date': participant.participant.user_info.end_date,
-            }
-
-        if participant.qualification_result:
-            people[p_id]['points'] += float(participant.result_in_percent())
-        people[p_id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
-            title=participant.workshop.title,
-            result=participant.result_in_percent() if participant.qualification_result else 0,
-            comment=participant.comment if participant.comment else ""
-        ))
-        people[p_id]['workshop_count'] += 1
-        if participant.is_qualified():
-            people[p_id]['accepted_workshop_count'] += 1
+        if year:
+            for wp in participant.workshopparticipant_set.all():
+                assert wp.workshop.type.year == year
+                if wp.qualification_result:
+                    people[participant.id]['points'] += float(wp.result_in_percent())
+                people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
+                    title=wp.workshop.title,
+                    result=wp.result_in_percent() if wp.qualification_result else 0,
+                    comment=wp.comment if wp.comment else ""
+                ))
+                people[participant.id]['workshop_count'] += 1
+                if wp.is_qualified():
+                    people[participant.id]['accepted_workshop_count'] += 1
 
     people = list(people.values())
 
@@ -491,7 +499,7 @@ def participants_view(request, year=None):
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = get_object_or_404(Camp, pk=year)
 
-    workshops = Workshop.objects.filter(type__year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('lecturer', 'lecturer__user')
+    workshops = Workshop.objects.filter(type__year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('lecturer', 'lecturer__user', 'lecturer__user_info')
 
     people: Dict[int, Dict[str, any]] = {}
     for workshop in workshops:

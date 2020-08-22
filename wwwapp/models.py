@@ -141,7 +141,7 @@ class UserProfile(models.Model):
 
     def workshop_profile_for(self, year: Camp):
         try:
-            return self.workshop_profile.filter(year=year).get()
+            return self.workshop_profile.get(year=year)
         except WorkshopUserProfile.DoesNotExist:
             return None
 
