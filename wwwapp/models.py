@@ -89,8 +89,8 @@ class UserProfile(models.Model):
         """
         Returns the participation data from UserWorkshopProfile joined with data about lectures
         """
-        participant_data = self.workshop_profile.filter(status__isnull=False)
-        lecturer_data = self.lecturer_workshops.filter(status__isnull=False)
+        participant_data = [p for p in self.workshop_profile.all() if p.status is not None]
+        lecturer_data = [p for p in self.lecturer_workshops.all() if p.status is not None]
         years = set([profile.year for profile in participant_data] + [workshop.type.year for workshop in lecturer_data])
         data = []
         for year in sorted(years, key=lambda x: x.year):
