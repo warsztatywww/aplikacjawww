@@ -5,7 +5,7 @@
   {% if workshop.page_content_is_public or has_perm_to_edit %}
     {% if has_perm_to_edit %}
       {% if workshop.is_qualifying and workshop.qualification_problems %}
-        <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.name%}">tutaj</a>.</p>
+        <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
       {% elif workshop.is_qualifying %}
         <div class="alert alert-danger" role="alert">Nie wstawiłeś jeszcze zadań kwalifikacyjnych!</div>
       {% else %}
@@ -13,7 +13,7 @@
       {% endif %}
     {% else %}
       {% if workshop.is_qualifying and workshop.qualification_problems %}
-        <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.name%}">tutaj</a>.</p>
+        <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
       {% elif workshop.is_qualifying %}
         <p>Nie ma jeszcze zadań kwalifikacyjnych.</p>
       {% else %}
