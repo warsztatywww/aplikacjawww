@@ -742,23 +742,6 @@ def render_workshops(request, title, link_to_edit, workshops):
     return render(request, 'listworkshop.html', context)
 
 
-@login_required()
-@permission_required('wwwapp.see_all_workshops', raise_exception=True)  # Think about seperate permission
-def emails_view(request):
-    workshops = Workshop.objects.all()
-
-    result = []
-    for workshop in workshops:
-        lecturer = workshop.lecturer.all()[0]
-        email = lecturer.user.email
-        name = lecturer.user.first_name + " " + lecturer.user.last_name
-
-        to_append = {'workshopname': workshop.title, 'email': email, 'name': name}
-        result.append(to_append)
-
-    return JsonResponse(result, safe=False)
-
-
 def as_article(name):
     # We want to make sure that article with this name exists.
     # try-except is needed because of some migration/initialization problems.
