@@ -93,12 +93,12 @@
       <h1>{{ title }}</h1>
       <div class="panel-group">
         {% for workshop, registered in workshops %}
-          <div class="panel panel-default" id="{{ workshop.name }}">
+          <div class="panel panel-default" id="{{ workshop.name }}" data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}" data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">
             <div class="panel-heading row" style="font-size: 16pt;">
               <div class="col-sm-8">
                 {% if workshop.page_content_is_public %}
                   {% if workshop.status == 'X' %}(ODWOŁANE) {% endif %}
-                  <a href="{% url 'workshop_page' workshop.name %}"><span class="big">{{ workshop.title }}</span></a>
+                  <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}"><span class="big">{{ workshop.title }}</span></a>
                 {% else %}
                   <span class="big">{{ workshop.title }}</span>
                 {% endif %}
@@ -123,7 +123,7 @@
                     <td class="col-sm-3" style="border: none; height: 38px;">Zadania kwalifikacyjne:</td>
                     <td class="col-sm-9" style="border: none; height: 38px;">
                       {% if workshop.is_qualifying and workshop.qualification_problems %}
-                        <a href="{% url 'qualification_problems' workshop.name %}"> Link </a>
+                        <a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}"> Link </a>
                       {% elif workshop.is_qualifying %}
                         Pojawią się wkrótce.
                       {% else %}
@@ -152,10 +152,3 @@
     </article>
   </div>
 {% endblock %}
-
-{% block script %}
-  <script>
-    var register_to_workshops_url = "{% url 'register_to_workshop' %}";
-    var unregister_to_workshops_url = "{% url 'unregister_from_workshop' %}";
-  </script>
-{% endblock%}

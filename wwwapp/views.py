@@ -27,7 +27,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_POST
 from django_bleach.utils import get_bleach_default_options
 
 from .forms import ArticleForm, UserProfileForm, UserForm, \
@@ -78,16 +78,16 @@ def program_view(request, year=None):
     context['title'] = 'Program %s' % str(year)
 
     if request.user.is_authenticated:
-        user_participation = set(Workshop.objects.filter(participants__user=request.user).all())
+        user_participation = set(year.workshops.filter(participants__user=request.user).all())
     else:
         user_participation = set()
 
-    workshops = Workshop.objects.filter(Q(status='Z') | Q(status='X'), type__year=year).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'category')
+    workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
     context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
                             in workshops]
 
     if request.user.is_authenticated:
-        qualifications = WorkshopParticipant.objects.filter(participant__user=request.user, workshop__type__year=year).prefetch_related('workshop')
+        qualifications = WorkshopParticipant.objects.filter(participant__user=request.user, workshop__year=year).prefetch_related('workshop')
         if not any(qualification.qualification_result is not None for qualification in qualifications):
             qualifications = None
         context['your_qualifications'] = qualifications
@@ -108,7 +108,7 @@ def profile_view(request, user_id):
         'userprofile__user_info',
         'userprofile__workshop_profile',
         'userprofile__lecturer_workshops',
-        'userprofile__lecturer_workshops__type__year',
+        'userprofile__lecturer_workshops__year',
     ), pk=user_id)
 
     is_my_profile = (request.user == user)
@@ -158,9 +158,9 @@ def profile_view(request, user_id):
                 participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
 
     if can_see_all_workshops or is_my_profile:
-        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').all().order_by('type__year')
+        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').all().order_by('year')
     else:
-        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').filter(Q(status='Z') | Q(status='X')).order_by('type__year')
+        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').filter(Q(status='Z') | Q(status='X')).order_by('year')
     context['can_see_all_workshops'] = can_see_all_workshops
 
     return render(request, 'profile.html', context)
@@ -224,8 +224,8 @@ def can_edit_workshop(workshop, user):
         return False
 
 
-def workshop_page_view(request, name):
-    workshop = get_object_or_404(Workshop, name=name)
+def workshop_page_view(request, year, name):
+    workshop = get_object_or_404(Workshop, year=year, name=name)
     has_perm_to_edit = can_edit_workshop(workshop, request.user)
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
@@ -242,13 +242,14 @@ def workshop_page_view(request, name):
 
 
 @login_required()
-def workshop_edit_view(request, name=None):
+def workshop_edit_view(request, year=None, name=None):
     if name is None:
+        year = Camp.objects.latest()
         workshop = None
         title = 'Nowe warsztaty'
-        has_perm_to_edit = Camp.objects.latest().are_proposals_open()
+        has_perm_to_edit = year.are_proposals_open()
     else:
-        workshop = get_object_or_404(Workshop, name=name)
+        workshop = get_object_or_404(Workshop, year=year, name=name)
         title = workshop.title
         has_perm_to_edit = can_edit_workshop(workshop, request.user)
 
@@ -278,11 +279,18 @@ def workshop_edit_view(request, name=None):
         if request.method == 'POST' and 'qualify' not in request.POST:
             if not has_perm_to_edit:
                 return HttpResponseForbidden()
+            if not workshop:
+                initial_workshop = Workshop()
+                initial_workshop.year = year
+            else:
+                initial_workshop = workshop
             form = WorkshopForm(request.POST, request.FILES,
-                                instance=workshop, has_perm_to_edit=has_perm_to_edit)
+                                instance=initial_workshop, has_perm_to_edit=has_perm_to_edit)
             if form.is_valid():
                 new = workshop is None
                 workshop = form.save(commit=False)
+                if new:
+                    assert workshop.year == year
                 workshop.save()
                 form.save_m2m()
                 if new:
@@ -290,7 +298,7 @@ def workshop_edit_view(request, name=None):
                     workshop.lecturer.add(user_profile)
                     workshop.save()
                 messages.info(request, 'Zapisano.')
-                return redirect('workshop_edit', form.instance.name)
+                return redirect('workshop_edit', form.instance.year.pk, form.instance.name)
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
                 workshop_template = Article.objects.get(
@@ -312,9 +320,21 @@ def workshop_edit_view(request, name=None):
     return render(request, 'workshopedit.html', context)
 
 
+def legacy_workshop_redirect_view(request, name):
+    # To keep the old links working
+    workshop = get_object_or_404(Workshop, name=name, year__year__lte=2020)
+    return redirect('workshop_page', workshop.year.pk, workshop.name)
+
+
+def legacy_qualification_problems_redirect_view(request, name):
+    # To keep the old links working
+    workshop = get_object_or_404(Workshop, name=name, year__year__lte=2020)
+    return redirect('qualification_problems', workshop.year.pk, workshop.name)
+
+
 @login_required()
-def workshop_participants_view(request, name):
-    workshop = get_object_or_404(Workshop, name=name)
+def workshop_participants_view(request, year, name):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
     has_perm_to_edit = can_edit_workshop(workshop, request.user)
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
@@ -338,6 +358,7 @@ def workshop_participants_view(request, name):
     return render(request, 'workshopparticipants.html', context)
 
 
+@require_POST
 def save_points_view(request):
     if 'id' not in request.POST:
         raise SuspiciousOperation()
@@ -370,20 +391,20 @@ def participants_view(request, year=None):
         'workshop_profile',
         'workshop_profile__year',
         'lecturer_workshops',
-        'lecturer_workshops__type__year',
+        'lecturer_workshops__year',
     ).all()
 
     if year is not None:
         year = get_object_or_404(Camp, pk=year)
-        participants = participants.filter(workshops__type__year=year)
+        participants = participants.filter(workshops__year=year)
 
-        lecturers = Workshop.objects.filter(type__year=year).values_list('lecturer__user').distinct()
+        lecturers = Workshop.objects.filter(year=year).values_list('lecturer__user').distinct()
         participants = participants.exclude(user__id__in=lecturers)
 
         participants = participants.prefetch_related(
-            Prefetch('workshopparticipant_set', queryset=WorkshopParticipant.objects.filter(workshop__type__year=year)),
+            Prefetch('workshopparticipant_set', queryset=WorkshopParticipant.objects.filter(workshop__year=year)),
             'workshopparticipant_set__workshop',
-            'workshopparticipant_set__workshop__type__year',
+            'workshopparticipant_set__workshop__year',
         )
 
     people = {}
@@ -435,7 +456,7 @@ def participants_view(request, year=None):
 
         if year:
             for wp in participant.workshopparticipant_set.all():
-                assert wp.workshop.type.year == year
+                assert wp.workshop.year == year
                 if wp.qualification_result:
                     people[participant.id]['points'] += float(wp.result_in_percent())
                 people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
@@ -462,13 +483,13 @@ def participants_view(request, year=None):
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = get_object_or_404(Camp, pk=year)
 
-    workshops = Workshop.objects.filter(type__year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('lecturer', 'lecturer__user', 'lecturer__user_info')
+    workshops = Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('lecturer', 'lecturer__user', 'lecturer__user_info')
 
     people: Dict[int, Dict[str, any]] = {}
     for workshop in workshops:
         for lecturer in workshop.lecturer.all():
             if lecturer.id in people:
-                people[lecturer.id]['workshops'].append(workshop.info_for_client_link())
+                people[lecturer.id]['workshops'].append(workshop)
                 continue
 
             birth = lecturer.user_info.get_birth_date()
@@ -487,7 +508,7 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
                 'comments': lecturer.user_info.comments,
                 'start_date': lecturer.user_info.start_date,
                 'end_date': lecturer.user_info.end_date,
-                'workshops': [workshop.info_for_client_link()],
+                'workshops': [workshop],
             }
 
     people_list = list(people.values())
@@ -499,15 +520,12 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     return render(request, 'lecturers.html', context)
 
 
-def register_to_workshop_view(request):
+@require_POST
+def register_to_workshop_view(request, year, name):
     if not request.user.is_authenticated:
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
-    if 'workshop_name' not in request.POST:
-        raise SuspiciousOperation()
-
-    workshop_name = request.POST['workshop_name']
-    workshop = get_object_or_404(Workshop, name=workshop_name)
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
 
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
@@ -524,15 +542,12 @@ def register_to_workshop_view(request):
         return JsonResponse({'content': content, 'error': u'Już jesteś zapisany na te warsztaty'})
 
 
-def unregister_from_workshop_view(request):
+@require_POST
+def unregister_from_workshop_view(request, year, name):
     if not request.user.is_authenticated:
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
-    if 'workshop_name' not in request.POST:
-        raise SuspiciousOperation()
-
-    workshop_name = request.POST['workshop_name']
-    workshop = get_object_or_404(Workshop, name=workshop_name)
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
     profile = UserProfile.objects.get(user=request.user)
     workshop_participant = WorkshopParticipant.objects.filter(workshop=workshop, participant=profile).first()
 
@@ -566,7 +581,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     lecturer_profiles_raw = set()
     workshop_ids = set()
     workshops = []
-    for workshop in Workshop.objects.filter(status='Z', type__year=year):
+    for workshop in Workshop.objects.filter(status='Z', year=year):
         workshop_data = {'wid': workshop.id,
                          'name': workshop.title,
                          'lecturers': [lect.id for lect in
@@ -617,8 +632,8 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     return JsonResponse(data, json_dumps_params={'indent': 4})
 
 
-def qualification_problems_view(request, workshop_name):
-    workshop = get_object_or_404(Workshop, name=workshop_name)
+def qualification_problems_view(request, year, name):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
@@ -694,8 +709,8 @@ def article_name_list_view(request):
     articles = Article.objects.all()
     article_list = [{'title': 'Artykuł: ' + (article.title or article.name), 'value': reverse('article', kwargs={'name': article.name})} for article in articles]
 
-    workshops = Workshop.objects.filter(Q(status='Z') | Q(status='X')).order_by('-type__year')
-    workshop_list = [{'title': 'Warsztaty (' + str(workshop.type.year) + '): ' + workshop.title, 'value': reverse('workshop_page', kwargs={'name': workshop.name})} for workshop in workshops]
+    workshops = Workshop.objects.filter(Q(status='Z') | Q(status='X')).order_by('-year')
+    workshop_list = [{'title': 'Warsztaty (' + str(workshop.year) + '): ' + workshop.title, 'value': reverse('workshop_page', kwargs={'year': workshop.year.pk, 'name': workshop.name})} for workshop in workshops]
 
     return JsonResponse(article_list + workshop_list, safe=False)
 
@@ -719,7 +734,7 @@ def render_workshops(request, title, link_to_edit, workshops):
     years = Camp.objects.all().reverse()
     context['workshops'] = [
         {'year': year,
-         'workshops': [workshop for workshop in workshops if workshop.type.year == year]}
+         'workshops': [workshop for workshop in workshops if workshop.year == year]}
         for year in years]
     context['title'] = title
     context['link_to_edit'] = link_to_edit
@@ -772,28 +787,10 @@ def resource_auth_view(request):
     return HttpResponseForbidden("What about NO!")
 
 
-@login_required()
-@require_http_methods(["POST"])
-@csrf_exempt
-def upload_file(request, type, name):
+def _upload_file(request, target_dir):
     """
     Handle a file upload from TinyMCE
     """
-
-    target_dir = None
-    if type == "article":
-        article = get_object_or_404(Article, name=name)
-        target_dir = "images/articles/{}/".format(article.name)
-        if not request.user.has_perm('wwwapp.change_article'):
-            return HttpResponseForbidden()
-    elif type == "workshop":
-        workshop = get_object_or_404(Workshop, name=name)
-        if not can_edit_workshop(workshop, request.user) or not workshop.is_publicly_visible() or not workshop.is_workshop_editable():
-            return HttpResponseForbidden()
-        target_dir = "images/workshops/{}/".format(workshop.name)
-    else:
-        raise SuspiciousOperation()
-    assert target_dir is not None
 
     form = TinyMCEUpload(request.POST, request.FILES)
     if not form.is_valid():
@@ -816,3 +813,27 @@ def upload_file(request, type, name):
             destination.write(chunk)
 
     return JsonResponse({'location': urljoin(urljoin(settings.MEDIA_URL, target_dir), name)})
+
+
+@login_required()
+@require_POST
+@csrf_exempt
+def article_edit_upload_file(request, name):
+    article = get_object_or_404(Article, name=name)
+    target_dir = "images/articles/{}/".format(article.name)
+    if not request.user.has_perm('wwwapp.change_article'):
+        return HttpResponseForbidden()
+
+    return _upload_file(request, target_dir)
+
+
+@login_required()
+@require_POST
+@csrf_exempt
+def workshop_edit_upload_file(request, year, name):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    if not can_edit_workshop(workshop, request.user) or not workshop.is_publicly_visible() or not workshop.is_workshop_editable():
+        return HttpResponseForbidden()
+    target_dir = "images/workshops/{}/{}/".format(workshop.year.pk, workshop.name)
+
+    return _upload_file(request, target_dir)

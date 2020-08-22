@@ -1,7 +1,7 @@
 import os
 import urllib.parse
 import datetime
-from typing import Dict, Set
+from typing import Dict, Set, Optional, Collection
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -80,7 +80,7 @@ class UserProfile(models.Model):
         return self.participant_status_for(year) == 'Z'
 
     def is_lecturer_in(self, year: Camp) -> bool:
-        return self.lecturer_workshops.filter(type__year=year, status='Z').exists()
+        return self.lecturer_workshops.filter(year=year, status='Z').exists()
 
     def all_participation_data(self):
         """
@@ -88,11 +88,11 @@ class UserProfile(models.Model):
         """
         participant_data = [p for p in self.workshop_profile.all() if p.status is not None]
         lecturer_data = [p for p in self.lecturer_workshops.all() if p.status is not None]
-        years = set([profile.year for profile in participant_data] + [workshop.type.year for workshop in lecturer_data])
+        years = set([profile.year for profile in participant_data] + [workshop.year for workshop in lecturer_data])
         data = []
         for year in sorted(years, key=lambda x: x.year):
             profile = next(iter([x for x in participant_data if x.year == year]), None)
-            workshops = [x for x in lecturer_data if x.type.year == year]
+            workshops = [x for x in lecturer_data if x.year == year]
             status = None
             # If the user was a participant, their participation status takes precedence
             if profile:
@@ -130,7 +130,7 @@ class UserProfile(models.Model):
         Years user had a lecture
         :return: list of years (integers)
         """
-        return set([workshop.type.year for workshop in self.lecturer_workshops.filter(status='Z')])
+        return set([workshop.year for workshop in self.lecturer_workshops.filter(status='Z')])
 
     def participant_status_for(self, year: Camp):
         profile = self.workshop_profile_for(year)
@@ -316,7 +316,7 @@ class Article(models.Model):
 
 
 class WorkshopCategory(models.Model):
-    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT, editable=False)
     name = models.CharField(max_length=100, blank=False, null=False)
 
     class Meta:
@@ -327,7 +327,7 @@ class WorkshopCategory(models.Model):
 
 
 class WorkshopType(models.Model):
-    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT, editable=False)
     name = models.CharField(max_length=100, blank=False, null=False)
 
     class Meta:
@@ -350,7 +350,8 @@ class Workshop(models.Model):
         (STATUS_CANCELLED, 'Odwołane')
     ]
 
-    name = models.SlugField(max_length=50, null=False, blank=False, unique=True)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT, null=False, related_name='workshops')
+    name = models.SlugField(max_length=50, null=False, blank=False)
     title = models.CharField(max_length=50)
     proposition_description = models.TextField(max_length=100000, blank=True)
     type = models.ForeignKey(WorkshopType, on_delete=models.PROTECT, null=False)
@@ -369,13 +370,21 @@ class Workshop(models.Model):
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
 
     def is_workshop_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.type.year.are_workshops_editable()
+        return not hasattr(self, 'type') or self.year.are_workshops_editable()
 
     def is_qualification_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.type.year.is_qualification_editable()
+        return not hasattr(self, 'type') or self.year.is_qualification_editable()
 
     def clean(self):
         super(Workshop, self).clean()
+        if hasattr(self, 'year'):
+            if hasattr(self, 'type'):
+                if self.type.year != self.year:
+                    raise ValidationError({'type': 'Typ warsztatów nie jest z tego roku'})
+            if self.pk is not None:  # "needs to have an ID before this many-to-many relation can be used"
+                for cat in self.category.all():
+                    if cat.year != self.year:
+                        raise ValidationError({'category': 'Kategoria warsztatów nie jest z tego roku'})
         if self.max_points is None and self.qualification_threshold is not None:
             raise ValidationError('Maksymalna liczba punktów musi być ustawiona jeśli próg kwalifikacji jest ustawiony')
 
@@ -383,15 +392,10 @@ class Workshop(models.Model):
         permissions = (('see_all_workshops', 'Can see all workshops'),
                        ('edit_all_workshops', 'Can edit all workshops'),
                        ('change_workshop_status', 'Can change workshop status'))
+        unique_together = ['year', 'name']
 
     def __str__(self):
-        return str(self.type.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title
-
-    """
-    Retrieve information needed to display a meaningful link to the workshop page
-    """
-    def info_for_client_link(self) -> Dict[str, str]:
-        return {'name': self.name, 'title': str(self.title)}
+        return str(self.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title
 
     def registered_count(self):
         return self.workshopparticipant_set.count()

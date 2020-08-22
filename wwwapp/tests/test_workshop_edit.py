@@ -5,6 +5,7 @@ import os
 import mock
 from django.contrib.auth.models import User
 from django.contrib.messages.api import get_messages
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test.testcases import TestCase
 from django.urls import reverse
@@ -38,6 +39,7 @@ class WorkshopEditViews(TestCase):
         self.workshop = Workshop.objects.create(
             title='Bardzo fajne warsztaty',
             name='bardzofajne',
+            year=self.year_2020,
             type=WorkshopType.objects.get(year=self.year_2020, name='This type 1'),
             proposition_description='<p>Testowy opis</p>'
         )
@@ -90,13 +92,14 @@ class WorkshopEditViews(TestCase):
             ],
             'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
         })
-        self.assertRedirects(response, reverse('workshop_edit', args=['fajne']))
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
         messages = get_messages(response.wsgi_request)
         self.assertEqual(len(messages), 1)
         self.assertEqual(list(messages)[0].message, 'Zapisano.')
         workshop = Workshop.objects.filter(name='fajne').get()
         self.assertEqual(workshop.title, 'Fajne warsztaty')
         self.assertEqual(workshop.name, 'fajne')
+        self.assertEqual(workshop.year, self.year_2020)
         self.assertEqual(workshop.type, WorkshopType.objects.get(year=self.year_2020, name='This type 1'))
         self.assertSetEqual(set(workshop.category.all()), {
             WorkshopCategory.objects.get(year=self.year_2020, name='This category 1'),
@@ -105,6 +108,111 @@ class WorkshopEditViews(TestCase):
         self.assertHTMLEqual(workshop.proposition_description, '<p>Na tych warsztatach będziemy testować fajną stronę</p>')
         self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.userprofile})
         self.assertIsNone(workshop.status)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_create_proposal_wrong_type_year(self):
+        self.client.force_login(self.normal_user)
+        with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
+            response = self.client.post(reverse('addWorkshop'), {
+                'title': 'Fajne warsztaty',
+                'name': 'fajne',
+                'type': WorkshopType.objects.get(year=self.year_2019, name='Not this type').pk,
+                'category': [
+                    WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk,
+                    WorkshopCategory.objects.get(year=self.year_2020, name='This category 2').pk
+                ],
+                'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+            })
+            save.assert_not_called()
+            self.assertEqual(response.status_code, 200)
+            self.assertFormError(response, 'form', 'type', 'Wybierz poprawną wartość. Podana nie jest jednym z dostępnych wyborów.')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_create_proposal_wrong_category_year(self):
+        self.client.force_login(self.normal_user)
+        with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
+            response = self.client.post(reverse('addWorkshop'), {
+                'title': 'Fajne warsztaty',
+                'name': 'fajne',
+                'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+                'category': [
+                    WorkshopCategory.objects.get(year=self.year_2019, name='Not this category').pk
+                ],
+                'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+            })
+            save.assert_not_called()
+            self.assertEqual(response.status_code, 200)
+            self.assertFormError(response, 'form', 'category', 'Wybierz poprawną wartość. 1 nie jest żadną z dostępnych opcji.')
+
+    def test_model_save_workshop_wrong_type_year(self):
+        workshop = Workshop.objects.create(
+            title='Test',
+            name='testtest',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2019, name='Not this type')
+        )
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 1'))
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 2'))
+        workshop.lecturer.add(self.normal_user.userprofile)
+        with self.assertRaisesRegexp(ValidationError, 'Typ warsztatów nie jest z tego roku'):
+            workshop.full_clean()
+
+    def test_model_save_workshop_wrong_category_year(self):
+        workshop = Workshop.objects.create(
+            title='Test',
+            name='testtest',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='This type 1')
+        )
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2019, name='Not this category'))
+        workshop.lecturer.add(self.normal_user.userprofile)
+        workshop.save()
+        with self.assertRaisesRegexp(ValidationError, 'Kategoria warsztatów nie jest z tego roku'):
+            workshop.full_clean()
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_create_proposal_duplicate_slug(self):
+        self.client.force_login(self.normal_user)
+        with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
+            response = self.client.post(reverse('addWorkshop'), {
+                'title': 'Kolejne bardzo fajne warsztaty',
+                'name': 'bardzofajne',
+                'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+                'category': [
+                    WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk
+                ],
+                'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+            })
+            save.assert_not_called()
+            self.assertEqual(response.status_code, 200)
+            self.assertFormError(response, 'form', None, 'Workshop z tymi Year i Name już istnieje.')
+
+    @freeze_time('2021-05-01 12:00:00')
+    def test_create_proposal_duplicate_slug_different_year(self):
+        year_2021 = Camp.objects.create(year=2021)
+        type = WorkshopType.objects.create(year=year_2021, name='Future type')
+        category = WorkshopCategory.objects.create(year=year_2021, name='Future category')
+
+        self.client.force_login(self.normal_user)
+        with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
+            response = self.client.post(reverse('addWorkshop'), {
+                'title': 'Kolejne bardzo fajne warsztaty',
+                'name': 'bardzofajne',
+                'type': type.pk,
+                'category': [
+                    category.pk
+                ],
+                'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+            })
+            save.assert_called()
+
+            self.assertRedirects(response, reverse('workshop_edit', args=[2021, 'bardzofajne']))
+            messages = get_messages(response.wsgi_request)
+            self.assertEqual(len(messages), 1)
+            self.assertEqual(list(messages)[0].message, 'Zapisano.')
+
+            self.assertTrue(Workshop.objects.filter(year=self.year_2020, name='bardzofajne').count() == 1)
+            self.assertTrue(Workshop.objects.filter(year=year_2021, name='bardzofajne').count() == 1)
 
     @freeze_time('2020-12-01 12:00:00')
     def test_create_proposal_closed(self):
@@ -160,7 +268,7 @@ class WorkshopEditViews(TestCase):
             self.assertContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
 
     def _assert_can_edit_proposal(self, user, can_open, can_edit):
-        url = reverse('workshop_edit', args=['bardzofajne'])
+        url = reverse('workshop_edit', args=[2020, 'bardzofajne'])
 
         if user is not None:
             self.client.force_login(user)
@@ -197,7 +305,7 @@ class WorkshopEditViews(TestCase):
                     self.assertEqual(response.status_code, 200)
             else:
                 save.assert_called()
-                self.assertRedirects(response, reverse('workshop_edit', args=['niefajne']))
+                self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'niefajne']))
                 messages = get_messages(response.wsgi_request)
                 self.assertEqual(len(messages), 1)
                 self.assertEqual(list(messages)[0].message, 'Zapisano.')
@@ -205,6 +313,7 @@ class WorkshopEditViews(TestCase):
                 workshop = Workshop.objects.get(name='niefajne')
                 self.assertEqual(workshop.title, 'Niefajne warsztaty')
                 self.assertEqual(workshop.name, 'niefajne')
+                self.assertEqual(workshop.year, self.year_2020)
                 self.assertEqual(workshop.type, WorkshopType.objects.get(year=self.year_2020, name='This type 2'))
                 self.assertSetEqual(set(workshop.category.all()), {
                     WorkshopCategory.objects.get(year=self.year_2020, name='This category 3'),
@@ -235,7 +344,7 @@ class WorkshopEditViews(TestCase):
 
         self.client.force_login(self.normal_user)
 
-        url = reverse('workshop_edit', args=['bardzofajne'])
+        url = reverse('workshop_edit', args=[2020, 'bardzofajne'])
         response = self.client.post(url, {
             'title': 'Niefajne warsztaty',
             'name': 'niefajne',
@@ -250,7 +359,7 @@ class WorkshopEditViews(TestCase):
             'page_content': '<p>Zapraszam na moje warsztaty</p>',
             'page_content_is_public': 'on',
         })
-        self.assertRedirects(response, reverse('workshop_edit', args=['niefajne']))
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'niefajne']))
         workshop = Workshop.objects.get(name='niefajne')
         self.assertHTMLEqual(workshop.proposition_description, '<p>Testowy opis</p>')
 
@@ -265,7 +374,7 @@ class WorkshopEditViews(TestCase):
         self._assert_can_edit_proposal(self.admin_user, can_open=True, can_edit=False)
 
     def _assert_can_edit_public_page(self, user, can_open, can_see_page_edit, can_edit, can_edit_page):
-        url = reverse('workshop_edit', args=['bardzofajne'])
+        url = reverse('workshop_edit', args=[2020, 'bardzofajne'])
 
         if user is not None:
             self.client.force_login(user)
@@ -427,7 +536,7 @@ class WorkshopEditViews(TestCase):
 
         data = os.urandom(1024 * 1024)
 
-        url = reverse('workshop_edit', args=[self.workshop.name])
+        url = reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name])
         response = self.client.post(url, {
             'title': 'Bardzo fajne warsztaty',
             'name': 'bardzofajne',
@@ -448,7 +557,7 @@ class WorkshopEditViews(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(list(messages)[0].message, 'Zapisano.')
 
-        response = self.client.get(reverse('qualification_problems', args=[self.workshop.name]))
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, data)
 
@@ -460,7 +569,7 @@ class WorkshopEditViews(TestCase):
 
         data = os.urandom(1024 * 1024)
 
-        url = reverse('workshop_edit', args=[self.workshop.name])
+        url = reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name])
         response = self.client.post(url, {
             'title': 'Bardzo fajne warsztaty',
             'name': 'bardzofajne',
@@ -481,7 +590,7 @@ class WorkshopEditViews(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(list(messages)[0].message, 'Zapisano.')
 
-        response = self.client.get(reverse('qualification_problems', args=[self.workshop.name]))
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, data)
 
@@ -492,7 +601,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         self.client.force_login(self.normal_user)
 
-        url = reverse('workshop_edit', args=[self.workshop.name])
+        url = reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name])
         response = self.client.post(url, {
             'title': 'Bardzo fajne warsztaty',
             'name': 'bardzofajne',
@@ -512,14 +621,14 @@ class WorkshopEditViews(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(list(messages)[0].message, 'Zapisano.')
 
-        response = self.client.get(reverse('qualification_problems', args=[self.workshop.name]))
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, data)
 
     def test_view_empty_qual_problems(self):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        response = self.client.get(reverse('qualification_problems', args=[self.workshop.name]))
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 404)
 
     def test_view_proposal_qual_problems(self):
@@ -527,7 +636,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.qualification_problems = SimpleUploadedFile('problems.pdf', data)
         self.workshop.status = None
         self.workshop.save()
-        response = self.client.get(reverse('qualification_problems', args=[self.workshop.name]))
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 403)
 
     def test_view_qual_problems(self):
@@ -535,7 +644,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.qualification_problems = SimpleUploadedFile('problems.pdf', data)
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
-        response = self.client.get(reverse('qualification_problems', args=[self.workshop.name]))
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, data)
 
@@ -544,19 +653,19 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = None
         self.workshop.save()
 
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertEqual(response.status_code, 403)
 
         self.client.force_login(self.another_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertEqual(response.status_code, 403)
 
         self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertEqual(response.status_code, 403)
 
         self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertEqual(response.status_code, 403)
 
     def test_view_public_page_nonpublic(self):
@@ -566,22 +675,22 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
 
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertNotContains(response, 'opis iks de')
 
         self.client.force_login(self.another_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertNotContains(response, 'opis iks de')
 
         self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertContains(response, 'Nie opublikowałeś jeszcze opisu!')
         self.assertNotContains(response, 'opis iks de')
 
         self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertContains(response, 'Nie opublikowałeś jeszcze opisu!')
         self.assertNotContains(response, 'opis iks de')
 
@@ -591,69 +700,69 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
 
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
         self.client.force_login(self.another_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
         self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertNotContains(response, 'Nie opublikowałeś jeszcze opisu!')
         self.assertContains(response, 'opis iks de')
 
         self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('workshop_page', args=['bardzofajne']))
+        response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertNotContains(response, 'Nie opublikowałeś jeszcze opisu!')
         self.assertContains(response, 'opis iks de')
 
     def test_unauthed_cannot_set_workshop_status(self):
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'accept'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'reject'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'reject'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'delete'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'delete'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'cancel'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'cancel'})
             save.assert_not_called()
-            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.name]))
+            self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
 
     def test_user_cannot_set_workshop_status(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'accept'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'reject'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'reject'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'delete'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'delete'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'cancel'})
+            response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'cancel'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
 
     def test_admin_can_accept_workshop(self):
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'accept'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()
@@ -661,7 +770,7 @@ class WorkshopEditViews(TestCase):
 
     def test_admin_can_reject_workshop(self):
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'reject'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'reject'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()
@@ -671,7 +780,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'cancel'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'cancel'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()
@@ -681,7 +790,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
         self.client.force_login(self.admin_user)
-        response = self.client.post(reverse('workshop_edit', args=[self.workshop.name]), {'qualify': 'delete'})
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'delete'})
         self.assertEqual(response.status_code, 200)
 
         self.workshop.refresh_from_db()

@@ -8,12 +8,12 @@
       {% if workshop %}
         {% if has_perm_to_view_details and workshop.is_publicly_visible %}
           <div>
-            <a href="{% url 'workshop_page' workshop.name %}">Strona warsztatów</a> |
-            <a href="{% url 'workshop_edit' workshop.name %}">Edycja warsztatów</a> |
+            <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">Strona warsztatów</a> |
+            <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">Edycja warsztatów</a> |
             {% if workshop.is_qualifying %}
-              <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy i ocenianie</a>
+              <a href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">Uczestnicy i ocenianie</a>
             {% else %}
-              <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy</a>
+              <a href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">Uczestnicy</a>
             {% endif %}
           </div>
         {% endif %}
