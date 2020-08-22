@@ -408,6 +408,8 @@ def participants_view(request, year=None):
         'user_info',
         'workshop_profile',
         'workshop_profile__year',
+        'lecturer_workshops',
+        'lecturer_workshops__type__year',
     ).all()
 
     if year is not None:
