@@ -32,6 +32,7 @@ class WorkshopQualificationViews(TestCase):
         self.workshop = Workshop.objects.create(
             title='Bardzo fajne warsztaty',
             name='bardzofajne',
+            year=self.year_2020,
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED
@@ -43,6 +44,7 @@ class WorkshopQualificationViews(TestCase):
         self.workshop_proposal = Workshop.objects.create(
             title='To tylko propozycja',
             name='propozycja',
+            year=self.year_2020,
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>nie akceptuj tego</p>',
             status=None
@@ -54,6 +56,7 @@ class WorkshopQualificationViews(TestCase):
         self.previous_year_workshop = Workshop.objects.create(
             title='Jakiś staroć',
             name='starocie',
+            year=self.year_2019,
             type=WorkshopType.objects.get(year=self.year_2019, name='Not this type'),
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED
@@ -115,7 +118,7 @@ class WorkshopQualificationViews(TestCase):
     @freeze_time('2020-05-01 12:00:00')
     def test_redirect_register_unauthenticated(self):
         # User not logged in, redirect to login
-        response = self.client.post(reverse('register_to_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('register_to_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertIn('error', data)
         self.assertIn('redirect', data)
@@ -126,7 +129,7 @@ class WorkshopQualificationViews(TestCase):
     @freeze_time('2020-05-01 12:00:00')
     def test_can_register_user(self):
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('register_to_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('register_to_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertNotIn('error', data)
@@ -139,7 +142,7 @@ class WorkshopQualificationViews(TestCase):
         # User already registered, can't register again
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('register_to_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('register_to_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertIn('error', data)
@@ -150,7 +153,7 @@ class WorkshopQualificationViews(TestCase):
     def test_can_unregister_user(self):
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('unregister_from_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertNotIn('error', data)
@@ -162,7 +165,7 @@ class WorkshopQualificationViews(TestCase):
     def test_cant_unregister_user_again(self):
         # User not registered, can't unregister
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('unregister_from_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertIn('error', data)
@@ -173,7 +176,7 @@ class WorkshopQualificationViews(TestCase):
     def test_cannot_register(self):
         # After workshops started, registration cannot be changed
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('register_to_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('register_to_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertIn('error', data)
@@ -186,7 +189,7 @@ class WorkshopQualificationViews(TestCase):
         # After workshops started, registration cannot be changed
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('unregister_from_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertIn('error', data)
@@ -199,7 +202,7 @@ class WorkshopQualificationViews(TestCase):
         # User cannot unregister after he has qualification results for this workshop
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile, qualification_result=15)
         self.client.force_login(self.participant_user)
-        response = self.client.post(reverse('unregister_from_workshop'), {'workshop_name': self.workshop.name})
+        response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
         self.assertNotIn('redirect', data)
         self.assertIn('error', data)
@@ -210,7 +213,7 @@ class WorkshopQualificationViews(TestCase):
     def _test_can_edit_points(self, user, can_view, can_edit):
         participant = WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
 
-        url = reverse('workshop_participants', args=[self.workshop.name])
+        url = reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name])
 
         if user is not None:
             self.client.force_login(user)
@@ -313,7 +316,7 @@ class WorkshopQualificationViews(TestCase):
         self.assertEqual(data['mark'], wwwtags.qualified_mark(True))
 
         # Check after page reload
-        response = self.client.get(reverse('workshop_participants', args=[self.workshop.name]))
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertContains(response, wwwtags.qualified_mark(True))
 
         # Check participant view
@@ -338,7 +341,7 @@ class WorkshopQualificationViews(TestCase):
         self.assertEqual(data['mark'], wwwtags.qualified_mark(False))
 
         # Check after page reload
-        response = self.client.get(reverse('workshop_participants', args=[self.workshop.name]))
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertContains(response, wwwtags.qualified_mark(False))
 
         # Check participant view
@@ -363,7 +366,7 @@ class WorkshopQualificationViews(TestCase):
         self.assertEqual(data['mark'], wwwtags.qualified_mark(None))
 
         # Check after page reload
-        response = self.client.get(reverse('workshop_participants', args=[self.workshop.name]))
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertContains(response, wwwtags.qualified_mark(None))
 
         # Check participant view

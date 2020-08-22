@@ -119,10 +119,12 @@ class Command(BaseCommand):
                       types: List[WorkshopType],
                       categories: List[WorkshopCategory],
                       sequence: Union[str, None] = None) -> Workshop:
+        type = random.choice(types)
         workshop = Workshop(name=self.fake.uri_page() + self.tail_for_sequence(sequence),
                             title=self.fake.text(10),
                             proposition_description=self.fake.paragraph(),
-                            type=random.choice(types),
+                            type=type,
+                            year=type.year,
                             status='Z',
                             page_content=self.fake.paragraph(),
                             page_content_is_public=True,
