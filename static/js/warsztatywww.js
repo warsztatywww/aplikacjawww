@@ -93,9 +93,9 @@ $('button[data-save]').each(function() {
 function handle_registration_change(workshop_name_txt, register) {
     var proper_url;
     if(register) {
-        proper_url = register_to_workshops_url;
+        proper_url = $("#" + workshop_name_txt).data('register');
     } else {
-        proper_url = unregister_to_workshops_url;
+        proper_url = $("#" + workshop_name_txt).data('unregister');
     }
 
     function error(message) {
@@ -108,7 +108,6 @@ function handle_registration_change(workshop_name_txt, register) {
     $.ajax({
         url : proper_url, // the endpoint
         type : "POST", // http method
-        data : { workshop_name : workshop_name_txt }, // data sent with the post request
 
         // handle a successful response
         success : function(json) {

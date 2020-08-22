@@ -158,7 +158,7 @@ class ArticleForm(ModelForm):
         if kwargs['instance']:
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('upload', kwargs={'type': 'article', 'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': kwargs['instance'].name})
         self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
         if not user.has_perm('wwwapp.can_put_on_menubar'):
             del self.fields['on_menubar']
@@ -179,7 +179,7 @@ class WorkshopForm(ModelForm):
         self.helper.disable_csrf = True
         self.helper.include_media = False
 
-        year = self.instance.type.year if hasattr(self.instance, 'type') else Camp.objects.latest()
+        year = self.instance.year if hasattr(self.instance, 'type') else Camp.objects.latest()
         self.fields['category'].queryset = year.workshopcategory_set.all()
         self.fields['type'].queryset = year.workshoptype_set.all()
 
@@ -211,6 +211,17 @@ class WorkshopForm(ModelForm):
         if not self.instance.is_workshop_editable():
             raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
 
+    def validate_unique(self):
+        # Must remove year field from exclude in order
+        # for the unique_together constraint to be enforced.
+        exclude = self._get_validation_exclusions()
+        exclude.remove('year')
+
+        try:
+            self.instance.validate_unique(exclude=exclude)
+        except ValidationError as e:
+            self._update_errors(e.message_dict)
+
 
 class WorkshopPageForm(ModelForm):
     qualification_problems = FileField(required=False, widget=FileInput(), label='Zadania kwalifikacyjne (zalecany format PDF):')
@@ -238,7 +249,7 @@ class WorkshopPageForm(ModelForm):
         if kwargs['instance']:
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('upload', kwargs={'type': 'workshop', 'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('workshop_page_edit_upload', kwargs={'year': kwargs['instance'].year.pk, 'name': kwargs['instance'].name})
         if not self.instance.is_workshop_editable():
             mce_attrs['readonly'] = True  # does not seem to respect the Django field settings for some reason
         self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
