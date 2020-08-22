@@ -117,10 +117,14 @@ def profile_view(request, user_id):
     """
     context = get_context(request)
     user_id = int(user_id)
-    user = get_object_or_404(User, pk=user_id)
-
-    profile = UserProfile.objects.get(user=user)
-    profile_page = profile.profile_page
+    user = get_object_or_404(User.objects.prefetch_related(
+        'userprofile',
+        'userprofile__user',
+        'userprofile__user_info',
+        'userprofile__workshop_profile',
+        'userprofile__lecturer_workshops',
+        'userprofile__lecturer_workshops__type__year',
+    ), pk=user_id)
 
     is_my_profile = (request.user == user)
     can_see_all_users = request.user.has_perm('wwwapp.see_all_users')
@@ -152,25 +156,26 @@ def profile_view(request, user_id):
             edition_profile = None
         else:
             raise SuspiciousOperation("Invalid argument")
+        user.userprofile.refresh_from_db(fields=['workshop_profile'])
         context['workshop_profile'] = edition_profile
 
     context['title'] = "{0.first_name} {0.last_name}".format(user)
-    context['profile_page'] = profile_page
+    context['profile_page'] = user.userprofile.profile_page
     context['is_my_profile'] = is_my_profile
-    context['gender'] = profile.gender
+    context['gender'] = user.userprofile.gender
 
     if can_see_all_users or is_my_profile:
-        context['profile'] = profile
-        context['participation_data'] = profile.all_participation_data()
+        context['profile'] = user.userprofile
+        context['participation_data'] = user.userprofile.all_participation_data()
         if not can_see_all_workshops and not is_my_profile:
             # If the current user can't see non-public workshops, remove them from the list
             for participation in context['participation_data']:
                 participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
 
     if can_see_all_workshops or is_my_profile:
-        context['lecturer_workshops'] = profile.lecturer_workshops.all().order_by('type__year')
+        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').all().order_by('type__year')
     else:
-        context['lecturer_workshops'] = profile.lecturer_workshops.filter(Q(status='Z') | Q(status='X')).order_by('type__year')
+        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').filter(Q(status='Z') | Q(status='X')).order_by('type__year')
     context['can_see_all_workshops'] = can_see_all_workshops
 
     return render(request, 'profile.html', context)
