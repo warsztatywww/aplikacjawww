@@ -8,8 +8,57 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
 from django.db import models
 from django.db.models.query_utils import Q
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
+
+
+class Camp(models.Model):
+    year = models.IntegerField(primary_key=True, null=False, blank=False)
+    proposal_end_date = models.DateField(null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+
+    def clean(self):
+        if (self.start_date is not None) != (self.end_date is not None):
+            raise ValidationError('Daty rozpoczęcia i zakończenia muszą być albo ustawione, albo nieustawione')
+        if (self.proposal_end_date is not None) and (self.start_date is not None) and self.proposal_end_date > self.start_date:
+            raise ValidationError('Data zakończenia przyjmowania propozycji warsztatów nie może być późniejsza niż data ich rozpoczęcia')
+        super().clean()
+
+    class Meta:
+        get_latest_by = 'year'
+        ordering = ['year']
+
+    def __str__(self):
+        return 'WWW%d (%d)' % (self.year % 100 - 4, self.year)
+
+    def are_proposals_open(self) -> bool:
+        if self.proposal_end_date:
+            return self.are_workshops_editable() and datetime.datetime.now().date() <= self.proposal_end_date
+        elif self.start_date:
+            return self.are_workshops_editable() and datetime.datetime.now().date() < self.start_date
+        else:
+            return self.are_workshops_editable()
+
+    def are_workshops_editable(self) -> bool:
+        return self == Camp.objects.latest()
+
+    def is_qualification_editable(self) -> bool:
+        if self.start_date:
+            return self.are_workshops_editable() and datetime.datetime.now().date() < self.start_date
+        else:
+            return self.are_workshops_editable()
+
+
+@receiver(pre_delete, sender=Camp)
+def protect_last_camp(sender, instance, using, **kwargs):
+    # I'm way too lazy to check if current_year exists everywhere,
+    # and that scenario will not really ever happen in production
+
+    # The add_camp_model migration makes sure that the initial Camp object is created
+    if not Camp.objects.exclude(pk=instance.pk).exists():
+        # TODO: This does not display a nice message in the admin panel for some reason but who cares
+        raise ValidationError('At least one Camp object must exist')
 
 
 class UserProfile(models.Model):
@@ -27,13 +76,13 @@ class UserProfile(models.Model):
     k8s_user = models.CharField(max_length=32, blank=True, default="")
     k8s_password = models.CharField(max_length=32, blank=True, default="")
 
-    def is_participating_in(self, year):
+    def is_participating_in(self, year: Camp) -> bool:
         return self.is_participant_in(year) or self.is_lecturer_in(year)
 
-    def is_participant_in(self, year):
+    def is_participant_in(self, year: Camp) -> bool:
         return self.participant_status_for(year) == 'Z'
 
-    def is_lecturer_in(self, year):
+    def is_lecturer_in(self, year: Camp) -> bool:
         return self.lecturer_workshops.filter(type__year=year, status='Z').exists()
 
     def all_participation_data(self):
@@ -44,7 +93,7 @@ class UserProfile(models.Model):
         lecturer_data = self.lecturer_workshops.filter(status__isnull=False)
         years = set([profile.year for profile in participant_data] + [workshop.type.year for workshop in lecturer_data])
         data = []
-        for year in sorted(years):
+        for year in sorted(years, key=lambda x: x.year):
             profile = next(iter([x for x in participant_data if x.year == year]), None)
             workshops = [x for x in lecturer_data if x.type.year == year]
             status = None
@@ -65,32 +114,32 @@ class UserProfile(models.Model):
             data.append({'year': year, 'status': status, 'workshops': workshops})
         return data
 
-    def all_participation_years(self) -> Set[int]:
+    def all_participation_years(self) -> Set[Camp]:
         """
         All years user was qualified or had a lecture
         :return: list of years (integers)
         """
         return self.participant_years().union(self.lecturer_years())
 
-    def participant_years(self) -> Set[int]:
+    def participant_years(self) -> Set[Camp]:
         """
         Years user qualified
         :return: list of years (integers)
         """
         return set([profile.year for profile in self.workshop_profile.filter(status=WorkshopUserProfile.STATUS_ACCEPTED)])
 
-    def lecturer_years(self) -> Set[int]:
+    def lecturer_years(self) -> Set[Camp]:
         """
         Years user had a lecture
         :return: list of years (integers)
         """
         return set([workshop.type.year for workshop in self.lecturer_workshops.filter(status='Z')])
 
-    def participant_status_for(self, year: int):
+    def participant_status_for(self, year: Camp):
         profile = self.workshop_profile_for(year)
         return profile.status if profile else None
 
-    def workshop_profile_for(self, year: int):
+    def workshop_profile_for(self, year: Camp):
         try:
             return self.workshop_profile.filter(year=year).get()
         except WorkshopUserProfile.DoesNotExist:
@@ -128,7 +177,7 @@ class WorkshopUserProfile(models.Model):
     ]
     user_profile = models.ForeignKey('UserProfile', null=True, related_name='workshop_profile', on_delete=models.CASCADE)
 
-    year = models.IntegerField()
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,
                               null=True, default=None, blank=True)
@@ -230,7 +279,8 @@ class ArticleContentHistory(models.Model):
         time = '?'
         if self.time:
             time = self.time.strftime('%y-%m-%d %H:%M')
-        return '{} (v{} by {} at {})'.format(self.article.name, self.version, self.modified_by, time)
+        return '{} (v{} by {} at {})'.format(
+            self.article.name if self.article else '<removed article>', self.version, self.modified_by, time)
 
     class Meta:
         unique_together = ('version', 'article',)
@@ -269,25 +319,25 @@ class Article(models.Model):
 
 
 class WorkshopCategory(models.Model):
-    year = models.IntegerField()
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
     name = models.CharField(max_length=100, blank=False, null=False)
 
     class Meta:
         unique_together = ('year', 'name',)
 
     def __str__(self):
-        return '%d: %s' % (self.year, self.name)
+        return '%s: %s' % (self.year, self.name)
 
 
 class WorkshopType(models.Model):
-    year = models.IntegerField()
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
     name = models.CharField(max_length=100, blank=False, null=False)
 
     class Meta:
         unique_together = ('year', 'name',)
 
     def __str__(self):
-        return '%d: %s' % (self.year, self.name)
+        return '%s: %s' % (self.year, self.name)
 
 
 class Workshop(models.Model):
@@ -322,10 +372,10 @@ class Workshop(models.Model):
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
 
     def is_workshop_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.type.year == settings.CURRENT_YEAR
+        return not hasattr(self, 'type') or self.type.year.are_workshops_editable()
 
     def is_qualification_editable(self) -> bool:
-        return self.is_workshop_editable() and datetime.datetime.now().date() < settings.WORKSHOPS_START_DATE
+        return not hasattr(self, 'type') or self.type.year.is_qualification_editable()
 
     def clean(self):
         super(Workshop, self).clean()
@@ -400,7 +450,7 @@ class ResourceYearPermission(models.Model):
                                  help_text="URL dla przycisku w menu. Przycisk nie jest wyświetlany jeśli url jest pusty")
     root_path = models.CharField(max_length=256, null=False, blank=False,
                                  help_text='bez "/" na końcu. np. "/internety/www15"')
-    year = models.IntegerField(null=False, blank=False)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
 
     def __str__(self):
         return "{} - {}".format(self.year,

@@ -39,7 +39,7 @@ from .forms import ArticleForm, UserProfileForm, UserForm, WorkshopForm, \
     UserProfilePageForm, WorkshopPageForm, UserCoverLetterForm, UserInfoPageForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission
+    WorkshopUserProfile, ResourceYearPermission, Camp
 from .templatetags.wwwtags import qualified_mark
 
 
@@ -59,13 +59,13 @@ def get_context(request):
             try:
                 user_profile = UserProfile.objects.get(user=request.user)
                 context['resources'] = visible_resources.filter(year__in=user_profile.all_participation_years())
-                context['is_participating_this_year'] = user_profile.is_participating_in(settings.CURRENT_YEAR)
+                context['is_participating_this_year'] = user_profile.is_participating_in(Camp.objects.latest())
             except UserProfile.DoesNotExist:
                 context['resources'] = []
 
     context['google_analytics_key'] = settings.GOOGLE_ANALYTICS_KEY
     context['articles_on_menubar'] = Article.objects.filter(on_menubar=True).all()
-    context['current_year'] = settings.CURRENT_YEAR
+    context['current_year'] = Camp.objects.latest()
 
     return context
 
@@ -78,9 +78,18 @@ def generate_nice_pass():
         xp.generate_xkcdpassword(mywords, numwords=4).title().split(' '))
 
 
-def program_view(request, year):
+def program_view(request, year=None):
+    if year is None:
+        url = reverse('program', args=[Camp.objects.latest().pk])
+        args = request.META.get('QUERY_STRING', '')
+        if args:
+            url = "%s?%s" % (url, args)
+        return redirect(url)
+
+    year = get_object_or_404(Camp, pk=year)
+
     context = get_context(request)
-    context['title'] = 'Program WWW%d' % (int(year) % 100 - 4)  # :)
+    context['title'] = 'Program %s' % str(year)
 
     if request.user.is_authenticated:
         user_participation = set(Workshop.objects.filter(participants__user=request.user).all())
@@ -119,7 +128,7 @@ def profile_view(request, user_id):
     can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
     context['can_qualify'] = can_qualify
     context['workshop_profile'] = WorkshopUserProfile.objects.filter(
-        user_profile=user.userprofile, year=settings.CURRENT_YEAR)
+        user_profile=user.userprofile, year=Camp.objects.latest())
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -127,7 +136,7 @@ def profile_view(request, user_id):
         if not can_qualify:
             return HttpResponseForbidden()
         (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
-            user_profile=user.userprofile, year=settings.CURRENT_YEAR)
+            user_profile=user.userprofile, year=Camp.objects.latest())
         if request.POST['qualify'] == 'accept':
             edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
             edition_profile.save()
@@ -222,7 +231,7 @@ def workshop_proposal_view(request, name=None):
     if new:
         workshop = None
         title = 'Nowe warsztaty'
-        has_perm_to_edit = True
+        has_perm_to_edit = Camp.objects.latest().are_proposals_open()
     else:
         workshop = get_object_or_404(Workshop, name=name)
         title = workshop.title
@@ -230,7 +239,7 @@ def workshop_proposal_view(request, name=None):
 
     # Workshop proposals are only visible to admins
     has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
-    if not has_perm_to_edit and not has_perm_to_see_all:
+    if workshop and not has_perm_to_edit and not has_perm_to_see_all:
         return HttpResponseForbidden()
 
     if request.method == 'POST' and 'qualify' in request.POST:
@@ -399,7 +408,7 @@ def participants_view(request, year=None):
     lecturers_ids = set()
 
     if year is not None:
-        year = int(year)
+        year = get_object_or_404(Camp, pk=year)
         participants = participants.filter(workshop__type__year=year)
         workshops = workshops.filter(type__year=year)
 
@@ -419,7 +428,10 @@ def participants_view(request, year=None):
             birth = participant.participant.user_info.get_birth_date()
             is_adult = None
             if birth is not None:
-                is_adult = settings.WORKSHOPS_START_DATE >= birth + relativedelta(years=18)
+                if year is not None and year.start_date:
+                    is_adult = year.start_date >= birth + relativedelta(years=18)
+                else:
+                    is_adult = datetime.date.today() >= birth + relativedelta(years=18)
 
             workshop_profile = participant.participant.workshop_profile_for(year)
 
@@ -467,7 +479,7 @@ def participants_view(request, year=None):
     people = list(people.values())
 
     context = get_context(request)
-    context['title'] = ('Uczestnicy: %d' % year) if year is not None else 'Wszyscy ludzie'
+    context['title'] = ('Uczestnicy: %s' % year) if year is not None else 'Wszyscy ludzie'
     context['people'] = people
     context['is_all_people'] = year is None
 
@@ -477,7 +489,7 @@ def participants_view(request, year=None):
 @login_required()
 @permission_required('wwwapp.see_all_users', raise_exception=True)
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
-    year = int(year)
+    year = get_object_or_404(Camp, pk=year)
 
     workshops = Workshop.objects.filter(type__year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('lecturer', 'lecturer__user')
 
@@ -490,8 +502,8 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
 
             birth = lecturer.user_info.get_birth_date()
             is_adult = None
-            if birth is not None:
-                is_adult = settings.WORKSHOPS_START_DATE >= birth + relativedelta(years=18)
+            if birth is not None and year.start_date:
+                is_adult = year.start_date >= birth + relativedelta(years=18)
 
             people[lecturer.id] = {
                 'user': lecturer.user,
@@ -510,7 +522,7 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     people_list = list(people.values())
 
     context = get_context(request)
-    context['title'] = 'Prowadzący: %d' % year
+    context['title'] = 'Prowadzący: %s' % year
     context['people'] = people_list
 
     return render(request, 'lecturers.html', context)
@@ -574,7 +586,7 @@ def unregister_from_workshop_view(request):
 
 @permission_required('wwwapp.export_workshop_registration')
 def data_for_plan_view(request, year: int) -> HttpResponse:
-    year = int(year)
+    year = get_object_or_404(Camp, pk=year)
 
     data = {}
 
@@ -599,10 +611,11 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     user_ids = set()
 
     def clean_date(date: datetime.date or None, min: datetime.date, max: datetime.date, default: datetime.date) -> datetime.date:
-        if date is None or date < min or date > max:
+        if date is None or (min is not None and date < min) or (max is not None and date > max):
             return default
         return date
 
+    current_year = Camp.objects.latest()
     for user_type, profiles in [('Lecturer', lecturer_profiles_raw),
                                 ('Participant', participant_profiles_raw)]:
         for up in profiles:
@@ -611,11 +624,11 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
                 'name': up.user.get_full_name(),
                 'type': user_type,
             }
-            if year == settings.CURRENT_YEAR:
-                # UserInfo data is valid for the current year only
+            if year == current_year:
+                # TODO: UserInfo data is valid for the current year only
                 user.update({
-                    'start': clean_date(up.user_info.start_date, settings.WORKSHOPS_START_DATE, settings.WORKSHOPS_END_DATE, settings.WORKSHOPS_START_DATE),
-                    'end': clean_date(up.user_info.end_date, settings.WORKSHOPS_START_DATE, settings.WORKSHOPS_END_DATE, settings.WORKSHOPS_END_DATE)
+                    'start': clean_date(up.user_info.start_date, year.start_date, year.end_date, year.start_date),
+                    'end': clean_date(up.user_info.end_date, year.start_date, year.end_date, year.end_date)
                 })
             users.append(user)
             user_ids.add(up.id)
@@ -730,8 +743,7 @@ def all_workshops_view(request):
 def render_workshops(request, title, link_to_edit, workshops):
     context = get_context(request)
 
-    years = set(workshop.type.year for workshop in workshops)
-    years = list(reversed(sorted(years)))
+    years = Camp.objects.all().reverse()
     context['workshops'] = [
         {'year': year,
          'workshops': [workshop for workshop in workshops if workshop.type.year == year]}
@@ -803,7 +815,7 @@ def upload_file(request, type, name):
             return HttpResponseForbidden()
     elif type == "workshop":
         workshop = get_object_or_404(Workshop, name=name)
-        if not can_edit_workshop(workshop, request.user) or not workshop.is_publicly_visible() or workshop.type.year != settings.CURRENT_YEAR:
+        if not can_edit_workshop(workshop, request.user) or not workshop.is_publicly_visible() or not workshop.is_workshop_editable():
             return HttpResponseForbidden()
         target_dir = "images/workshops/{}/".format(workshop.name)
     else:
@@ -837,8 +849,8 @@ def upload_file(request, type, name):
 def cloud_access_view(request):
     context = get_context(request)
     userprofile = request.user.userprofile
-    is_lecturer = userprofile.is_lecturer_in(settings.CURRENT_YEAR)
-    is_participant = userprofile.is_participant_in(settings.CURRENT_YEAR)
+    is_lecturer = userprofile.is_lecturer_in(Camp.objects.latest())
+    is_participant = userprofile.is_participant_in(Camp.objects.latest())
     if not (is_lecturer or is_participant):
         return HttpResponseForbidden()
 

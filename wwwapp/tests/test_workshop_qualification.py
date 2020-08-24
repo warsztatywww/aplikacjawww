@@ -3,21 +3,20 @@ import datetime
 import mock
 from django.contrib.auth.models import User
 from django.test.testcases import TestCase
-from django.test.utils import override_settings
 from django.urls import reverse
 from freezegun import freeze_time
 
 from wwwapp.templatetags import wwwtags
-from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant
+from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant, Camp
 
 
-@override_settings(
-    CURRENT_YEAR=2020,
-    WORKSHOPS_START_DATE=datetime.date(2020, 7, 3),
-    WORKSHOPS_END_DATE=datetime.date(2020, 7, 15)
-)
 class WorkshopQualificationViews(TestCase):
     def setUp(self):
+        # TODO: This is weird because of the constraint that one Camp object needs to exist at all times
+        Camp.objects.all().update(year=2020, start_date=datetime.date(2020, 7, 3), end_date=datetime.date(2020, 7, 15))
+        self.year_2020 = Camp.objects.get()
+        self.year_2019 = Camp.objects.create(year=2019)
+
         self.admin_user = User.objects.create_superuser(
             username='admin', email='admin@example.com', password='admin123')
         self.lecturer_user = User.objects.create_user(
@@ -25,91 +24,91 @@ class WorkshopQualificationViews(TestCase):
         self.participant_user = User.objects.create_user(
             username='participant', email='participant@example.com', password='user123')
 
-        WorkshopType.objects.create(year=2019, name='Not this type')
-        WorkshopType.objects.create(year=2020, name='This type')
-        WorkshopCategory.objects.create(year=2019, name='Not this category')
-        WorkshopCategory.objects.create(year=2020, name='This category')
+        WorkshopType.objects.create(year=self.year_2019, name='Not this type')
+        WorkshopType.objects.create(year=self.year_2020, name='This type')
+        WorkshopCategory.objects.create(year=self.year_2019, name='Not this category')
+        WorkshopCategory.objects.create(year=self.year_2020, name='This category')
 
         self.workshop = Workshop.objects.create(
             title='Bardzo fajne warsztaty',
             name='bardzofajne',
-            type=WorkshopType.objects.get(year=2020, name='This type'),
+            type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED
         )
-        self.workshop.category.add(WorkshopCategory.objects.get(year=2020, name='This category'))
+        self.workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
         self.workshop.lecturer.add(self.lecturer_user.userprofile)
         self.workshop.save()
 
         self.workshop_proposal = Workshop.objects.create(
             title='To tylko propozycja',
             name='propozycja',
-            type=WorkshopType.objects.get(year=2020, name='This type'),
+            type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>nie akceptuj tego</p>',
             status=None
         )
-        self.workshop_proposal.category.add(WorkshopCategory.objects.get(year=2020, name='This category'))
+        self.workshop_proposal.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
         self.workshop_proposal.lecturer.add(self.lecturer_user.userprofile)
         self.workshop_proposal.save()
 
         self.previous_year_workshop = Workshop.objects.create(
             title='Jakiś staroć',
             name='starocie',
-            type=WorkshopType.objects.get(year=2019, name='Not this type'),
+            type=WorkshopType.objects.get(year=self.year_2019, name='Not this type'),
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED
         )
-        self.previous_year_workshop.category.add(WorkshopCategory.objects.get(year=2019, name='Not this category'))
+        self.previous_year_workshop.category.add(WorkshopCategory.objects.get(year=self.year_2019, name='Not this category'))
         self.previous_year_workshop.lecturer.add(self.lecturer_user.userprofile)
         self.previous_year_workshop.save()
 
     def test_latest_program_redirect(self):
-        response = self.client.get(reverse('program'))
-        self.assertRedirects(response, reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('latest_program'))
+        self.assertRedirects(response, reverse('program', args=[2020]))
 
     def test_latest_program_redirect_keeps_qs(self):
-        response = self.client.get(reverse('program') + '?this=is&my=query&string=XD')
-        self.assertRedirects(response, reverse('year_program', args=[2020]) + '?this=is&my=query&string=XD')
+        response = self.client.get(reverse('latest_program') + '?this=is&my=query&string=XD')
+        self.assertRedirects(response, reverse('program', args=[2020]) + '?this=is&my=query&string=XD')
 
     def test_view_program(self):
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, 'Bardzo fajne warsztaty')
         self.assertNotContains(response, 'To tylko propozycja')
         self.assertNotContains(response, 'Jakiś staroć')
 
-        response = self.client.get(reverse('year_program', args=[2019]))
+        response = self.client.get(reverse('program', args=[2019]))
         self.assertNotContains(response, 'Bardzo fajne warsztaty')
         self.assertNotContains(response, 'To tylko propozycja')
         self.assertContains(response, 'Jakiś staroć')
 
     @freeze_time('2020-05-01 12:00:00')
     def test_view_program_can_register_unauthenticated(self):
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, 'Zapisz się')
 
     @freeze_time('2020-05-01 12:00:00')
     def test_view_program_can_register_user(self):
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, 'Zapisz się')
 
     @freeze_time('2020-05-01 12:00:00')
     def test_view_program_can_unregister_user(self):
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, 'Wypisz się')
 
     @freeze_time('2020-12-01 12:00:00')
     def test_view_program_cannot_register(self):
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertNotContains(response, 'Zapisz się')
 
     @freeze_time('2020-12-01 12:00:00')
     def test_view_program_cannot_unregister(self):
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertNotContains(response, 'Wypisz się')
         self.assertContains(response, 'Byłeś zapisany')
 
@@ -286,14 +285,14 @@ class WorkshopQualificationViews(TestCase):
         self._test_can_edit_points(self.admin_user, True, False)
 
     @freeze_time('2020-05-01 12:00:00')
-    @override_settings(CURRENT_YEAR=2021)
     def test_edit_points_lecturer_historical(self):
         # Lecturer can view participants but not edit points from previous years
+        Camp.objects.create(year=2021)
         self._test_can_edit_points(self.lecturer_user, True, False)
 
     @freeze_time('2020-05-01 12:00:00')
-    @override_settings(CURRENT_YEAR=2021)
     def test_edit_points_admin_historical(self):
+        Camp.objects.create(year=2021)
         # Admin can view participants but not edit points from previous years
         self._test_can_edit_points(self.admin_user, True, False)
 
@@ -319,7 +318,7 @@ class WorkshopQualificationViews(TestCase):
 
         # Check participant view
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, wwwtags.qualified_mark(True))
 
     @freeze_time('2020-05-01 12:00:00')
@@ -344,7 +343,7 @@ class WorkshopQualificationViews(TestCase):
 
         # Check participant view
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, wwwtags.qualified_mark(False))
 
     @freeze_time('2020-05-01 12:00:00')
@@ -369,5 +368,5 @@ class WorkshopQualificationViews(TestCase):
 
         # Check participant view
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('year_program', args=[2020]))
+        response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, wwwtags.qualified_mark(None))
