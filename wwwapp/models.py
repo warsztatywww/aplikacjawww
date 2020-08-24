@@ -10,6 +10,7 @@ from django.db import models
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
+from django.utils.functional import cached_property
 
 
 class Camp(models.Model):
@@ -89,8 +90,8 @@ class UserProfile(models.Model):
         """
         Returns the participation data from UserWorkshopProfile joined with data about lectures
         """
-        participant_data = self.workshop_profile.filter(status__isnull=False)
-        lecturer_data = self.lecturer_workshops.filter(status__isnull=False)
+        participant_data = [p for p in self.workshop_profile.all() if p.status is not None]
+        lecturer_data = [p for p in self.lecturer_workshops.all() if p.status is not None]
         years = set([profile.year for profile in participant_data] + [workshop.type.year for workshop in lecturer_data])
         data = []
         for year in sorted(years, key=lambda x: x.year):
@@ -141,7 +142,7 @@ class UserProfile(models.Model):
 
     def workshop_profile_for(self, year: Camp):
         try:
-            return self.workshop_profile.filter(year=year).get()
+            return self.workshop_profile.get(year=year)
         except WorkshopUserProfile.DoesNotExist:
             return None
 
@@ -404,11 +405,20 @@ class Workshop(models.Model):
             return None
         return self.workshopparticipant_set.filter(qualification_result__gte=self.qualification_threshold).count()
 
-    """
-    Should the workshop be publicly visible? (accepted or cancelled)
-    """
     def is_publicly_visible(self):
+        """
+        Should the workshop be publicly visible? (accepted or cancelled)
+        """
         return self.status == 'Z' or self.status == 'X'
+
+    @cached_property
+    def max_entered_points(self):
+        """
+        The maximum number of points a participant actually received. Note that this is different from max_points.
+
+        Used if max_points is not set (e.g. in old [< 2020] workshops that didn't have this value)
+        """
+        return self.workshopparticipant_set.aggregate(max_points=models.Max('qualification_result'))['max_points']
 
 
 class WorkshopParticipant(models.Model):
@@ -430,9 +440,7 @@ class WorkshopParticipant(models.Model):
     def result_in_percent(self):
         if self.qualification_result is None:
             return None
-        max_points = self.workshop.max_points
-        if max_points is None:
-            max_points = self.workshop.workshopparticipant_set.aggregate(max_points=models.Max('qualification_result'))['max_points']
+        max_points = self.workshop.max_points if self.workshop.max_points is not None else self.workshop.max_entered_points
         return max(min(self.qualification_result / max_points * 100, settings.MAX_POINTS_PERCENT), 0)
 
     class Meta:
