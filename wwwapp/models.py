@@ -10,6 +10,7 @@ from django.db import models
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
+from django.utils.functional import cached_property
 
 
 class Camp(models.Model):
@@ -404,11 +405,20 @@ class Workshop(models.Model):
             return None
         return self.workshopparticipant_set.filter(qualification_result__gte=self.qualification_threshold).count()
 
-    """
-    Should the workshop be publicly visible? (accepted or cancelled)
-    """
     def is_publicly_visible(self):
+        """
+        Should the workshop be publicly visible? (accepted or cancelled)
+        """
         return self.status == 'Z' or self.status == 'X'
+
+    @cached_property
+    def max_entered_points(self):
+        """
+        The maximum number of points a participant actually received. Note that this is different from max_points.
+
+        Used if max_points is not set (e.g. in old [< 2020] workshops that didn't have this value)
+        """
+        return self.workshopparticipant_set.aggregate(max_points=models.Max('qualification_result'))['max_points']
 
 
 class WorkshopParticipant(models.Model):
@@ -430,9 +440,7 @@ class WorkshopParticipant(models.Model):
     def result_in_percent(self):
         if self.qualification_result is None:
             return None
-        max_points = self.workshop.max_points
-        if max_points is None:
-            max_points = self.workshop.workshopparticipant_set.aggregate(max_points=models.Max('qualification_result'))['max_points']
+        max_points = self.workshop.max_points if self.workshop.max_points is not None else self.workshop.max_entered_points
         return max(min(self.qualification_result / max_points * 100, settings.MAX_POINTS_PERCENT), 0)
 
     class Meta:
