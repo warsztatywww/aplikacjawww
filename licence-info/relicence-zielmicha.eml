@@ -1,0 +1,171 @@
+Delivered-To: cytadela88@gmail.com
+Received: by 2002:a6b:ef0b:0:0:0:0:0 with SMTP id k11csp282126ioh;
+        Fri, 21 Aug 2020 04:10:15 -0700 (PDT)
+X-Received: by 2002:a9d:3da1:: with SMTP id l30mr1602308otc.233.1598008214902;
+        Fri, 21 Aug 2020 04:10:14 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1598008214; cv=none;
+        d=google.com; s=arc-20160816;
+        b=DwQLB0CZ9j1ylw+ZeIE/dlNJPIhDsnkdBTWMSbzb7gQfL5Tb+2BQgsafLx0EHLjsNc
+         zcc1s/WjY7SOXQdSNEcreSobiycicv6dlbJVAaOhCYjHRUmg1sByl8jlVJvVFuTqniAg
+         ys4p3dVs0fHdyecdbDDlR4mRTd8rjNZrUtBpe8Ko0VggxWYfsiap/vNBaHf1l74VQFqh
+         xrtWd124ibhBGANO+hHnEGb2e7vL2BYRqUIisL3t/JbaUTY8fkJARsRUfEfIEOQjTQkJ
+         n/Vn6qBXNQI/VgL80pmIG2vJ3f0y/YKIbI0KqRNSTfk13RTRgqZaswzDDaCD8KB0F7w8
+         FcQQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=cc:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:dkim-signature;
+        bh=zwNEPt4AXwfv8eDFeAV+j3xNntcH/skF7qRF7EoyNmc=;
+        b=peZld31bWtkbaIYbQ2Xfah1lCCwE9q8dVtUY5bGcXufnmqRHyByQ52g7jMIeGAnPnO
+         2tAlOoZLtzgEi3svSHSauCAF8W+MCFy//VhwZW9nV43QOWnB9Kwzzg85Y+WjuRLp0dfu
+         pXbqT2c5ne9w/w5rZz355dEFUn5+uq+CFo83U2IHYjQrmclThWMdu9x1DxzjCRvuLh6M
+         8wEG2GSqvN84TbcvePvyA6fCBaGSF/Zw0puph+52czEcqQSe9TYVc+2H+Bo15WzDO8kL
+         AteRmgDa/aVyP9I3RoLHrzXqSFbcrrCMRHEO6gmtNvDOthzmbcRDSwWOF/DUZNumNUKv
+         dK+A==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@zielinscy-org-pl.20150623.gappssmtp.com header.s=20150623 header.b=I81+aZkV;
+       spf=pass (google.com: domain of michal@zielinscy.org.pl designates 209.85.220.65 as permitted sender) smtp.mailfrom=michal@zielinscy.org.pl
+Return-Path: <michal@zielinscy.org.pl>
+Received: from mail-sor-f65.google.com (mail-sor-f65.google.com. [209.85.220.65])
+        by mx.google.com with SMTPS id 21sor240822otd.109.2020.08.21.04.10.14
+        for <cytadela88@gmail.com>
+        (Google Transport Security);
+        Fri, 21 Aug 2020 04:10:14 -0700 (PDT)
+Received-SPF: pass (google.com: domain of michal@zielinscy.org.pl designates 209.85.220.65 as permitted sender) client-ip=209.85.220.65;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@zielinscy-org-pl.20150623.gappssmtp.com header.s=20150623 header.b=I81+aZkV;
+       spf=pass (google.com: domain of michal@zielinscy.org.pl designates 209.85.220.65 as permitted sender) smtp.mailfrom=michal@zielinscy.org.pl
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=zielinscy-org-pl.20150623.gappssmtp.com; s=20150623;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to
+         :cc;
+        bh=zwNEPt4AXwfv8eDFeAV+j3xNntcH/skF7qRF7EoyNmc=;
+        b=I81+aZkVse8Dy2a5Pk7Ic3vNsDsl1oKukGGwVI3zOaTboq+gh9kJLJ5WMuWhQDkPnH
+         E5UXfjdSG/Exy0GLMUUdomRLU7xn8ICwLAZoxy9F/ngLF7QK4tZ6WaiyoL4cYy3xIt3Y
+         /pofpITIhFE+wdR2zYo6HJ6QSS/4hzzNmuCxOBawjwV8ui94RjkI/BQ3m71ydDtNZdcL
+         iViHkOUTLO5r9W9AT7FP2fmP6m2QSa2z2zURMeLoHilTYl2oUxJ3j9lm4XpGWt+YZwnQ
+         R6z1XP/j+kjqfmiFtfA+sYKghmNoS2GtQH/pCGswW6pEBiGQQ0nP/Ku8leD/TS4jDWlp
+         9sHA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to:cc;
+        bh=zwNEPt4AXwfv8eDFeAV+j3xNntcH/skF7qRF7EoyNmc=;
+        b=dY93Jjduigw5roo0oJVROpJ2a7dcoBhp21w5LFv+ktzYbcWHNZgK15CyN+3Py5n4/A
+         bEoFkA5i/JSd3ogYzYchev3IpPjzu3cgGVuC7GQ604xFj62i3om4HOPsYnHId3nwI5ts
+         u18ZAalGbl0CfguDJYrsnnia2pK8DTfyXbIgAbNhOVjtHUWI3lPzYfp026VHGfvWpxMM
+         ifPqdzi3vbE9adjOXnSlAlLRkZq6akRIciJdSf9FSpC7zG+RCb5xebvFi5F/2kcsJiCM
+         giGZcWe/SduewY97xO2Lr8VxE2DGeQVeNh4LpZBFKw6lQENhAYRod2OCRTJDQCDr5avc
+         0PsA==
+X-Gm-Message-State: AOAM531oH+SDrzGh1qzOnllglyVdhHu+uws7UehX3F8BS2xuDLStDkCf
+	me6hpYKmLRtwls4dr5yqx+j0oQMJaBn4VK0p9bLFBGfFkWXCgl5l
+X-Google-Smtp-Source: ABdhPJyU0upUFu6uaaXStAm2yOzD6zGT4D2Ugk5MyFyK+5vhYRUHJUwCsmyQq9GbqMCPTA+RWFeHvQG1awEtTycPb1E=
+X-Received: by 2002:a05:6830:1d8c:: with SMTP id y12mr1597393oti.77.1598008214162;
+ Fri, 21 Aug 2020 04:10:14 -0700 (PDT)
+MIME-Version: 1.0
+References: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+In-Reply-To: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+From: =?UTF-8?B?TWljaGHFgiBaaWVsacWEc2tp?= <michal@zielinscy.org.pl>
+Date: Fri, 21 Aug 2020 12:09:59 +0100
+Message-ID: <CAKEi-_doOesN7Gs1X7kdcWqjpZKabNLW94PSOOwuMgum2Bb4Ag@mail.gmail.com>
+Subject: Re: AplikacjaWWW licencja
+To: cytadela88 <cytadela88@gmail.com>
+Cc: Warsztaty WWW <sebastian.jaszczur@gmail.com>, =?UTF-8?Q?Krzysztof_Ha=C5=82adyn?= <krzys_h@interia.pl>, 
+	Grzegorz Uriasz <gorbak25@gmail.com>, kalmar2718@gmail.com, kalmar@linux-a4lp.site, 
+	mwrochna+git@gmail.com, enedil@outlook.com, artur.jamro@gmail.com, 
+	micha7a@gmail.com, jakub.jakub.nowak@gmail.com, sygnowski@gmail.com, 
+	35342116+radrow@users.noreply.github.com, pawelzell@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000f42b2a05ad61476f"
+
+--000000000000f42b2a05ad61476f
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+M=C3=B3j wk=C5=82ad w aplikacje Django dzia=C5=82aj=C4=85ca na warsztatywww=
+.pl udost=C4=99pniam na
+licencjach AGPL oraz MIT.
+
+czw., 20 sie 2020, 17:34 u=C5=BCytkownik cytadela88 <cytadela88@gmail.com>
+napisa=C5=82:
+
+> Cze=C5=9B=C4=87,
+>
+> Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warsztat=
+=C3=B3w
+> WWW dost=C4=99pnym pod https://github.com/warsztatywww/aplikacjawww/
+>
+> Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=99=
+du jakim jest brak
+> wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie
+> nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgod=
+=C4=99 na
+> udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public Lic=
+ense
+> v3. Tekst licencji jest dost=C4=99pny pod
+> https://www.gnu.org/licenses/agpl-3.0.html oraz w za=C5=82=C4=85czniku.
+>
+> Na stronie gnu.org widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3ry s=
+k=C5=82oni=C5=82 mnie do
+> wyboru licencji zawartej w tej pro=C5=9Bbie "The GNU Affero General Publi=
+c
+> License is based on the GNU GPL, but has an additional term to allow
+> users who interact with the licensed software over a network to receive
+> the source for that program. We recommend that people consider using the
+> GNU AGPL for any software which will commonly be run over a network. The
+> latest version is version 3."
+>
+> Artur Puzio
+> github.com/cytadela8
+>
+>
+
+--000000000000f42b2a05ad61476f
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto">M=C3=B3j wk=C5=82ad w aplikacje Django dzia=C5=82aj=C4=85=
+ca na <a href=3D"http://warsztatywww.pl">warsztatywww.pl</a> udost=C4=99pni=
+am na licencjach AGPL oraz MIT.</div><br><div class=3D"gmail_quote"><div di=
+r=3D"ltr" class=3D"gmail_attr">czw., 20 sie 2020, 17:34 u=C5=BCytkownik cyt=
+adela88 &lt;<a href=3D"mailto:cytadela88@gmail.com" target=3D"_blank" rel=
+=3D"noreferrer">cytadela88@gmail.com</a>&gt; napisa=C5=82:<br></div><blockq=
+uote class=3D"gmail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc =
+solid;padding-left:1ex">Cze=C5=9B=C4=87,<br>
+<br>
+Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warsztat=C3=
+=B3w<br>
+WWW dost=C4=99pnym pod <a href=3D"https://github.com/warsztatywww/aplikacja=
+www/" rel=3D"noreferrer noreferrer noreferrer" target=3D"_blank">https://gi=
+thub.com/warsztatywww/aplikacjawww/</a><br>
+<br>
+Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=99du=
+ jakim jest brak<br>
+wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie<br>
+nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgod=C4=
+=99 na<br>
+udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public Licen=
+se<br>
+v3. Tekst licencji jest dost=C4=99pny pod<br>
+<a href=3D"https://www.gnu.org/licenses/agpl-3.0.html" rel=3D"noreferrer no=
+referrer noreferrer" target=3D"_blank">https://www.gnu.org/licenses/agpl-3.=
+0.html</a> oraz w za=C5=82=C4=85czniku.<br>
+<br>
+Na stronie <a href=3D"http://gnu.org" rel=3D"noreferrer noreferrer noreferr=
+er" target=3D"_blank">gnu.org</a> widnieje nast=C4=99puj=C4=85cy komentarz,=
+ kt=C3=B3ry sk=C5=82oni=C5=82 mnie do<br>
+wyboru licencji zawartej w tej pro=C5=9Bbie &quot;The GNU Affero General Pu=
+blic<br>
+License is based on the GNU GPL, but has an additional term to allow<br>
+users who interact with the licensed software over a network to receive<br>
+the source for that program. We recommend that people consider using the<br=
+>
+GNU AGPL for any software which will commonly be run over a network. The<br=
+>
+latest version is version 3.&quot;<br>
+<br>
+Artur Puzio<br>
+<a href=3D"http://github.com/cytadela8" rel=3D"noreferrer noreferrer norefe=
+rrer" target=3D"_blank">github.com/cytadela8</a><br>
+<br>
+</blockquote></div>
+
+--000000000000f42b2a05ad61476f--

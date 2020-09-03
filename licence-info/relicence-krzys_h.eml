@@ -1,0 +1,157 @@
+Delivered-To: cytadela88@gmail.com
+Received: by 2002:a05:6602:2c8e:0:0:0:0 with SMTP id i14csp2118449iow;
+        Tue, 1 Sep 2020 03:01:26 -0700 (PDT)
+X-Google-Smtp-Source: ABdhPJyvKS9L3U7xMSff6KVnX0hJaRj1gPTKtJk1wY7W2Ek3vSEu4VSWMwYDfNjvyyEK50SX8VUb
+X-Received: by 2002:a19:3f06:: with SMTP id m6mr212401lfa.50.1598954486752;
+        Tue, 01 Sep 2020 03:01:26 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1598954486; cv=none;
+        d=google.com; s=arc-20160816;
+        b=xv+FjVxJ6tnK+Fwlkgb6szikpJSo+hKwDeTY39acMrbRCGsiNWlmDgYyPS8i9RTRWC
+         C0JxzN/95zojDrEIL5ojD5Fc7Z67OiYjXQVHcsFW8cYqsonTVeESt5+XHhv8liKe/Qxf
+         SzByxoVgoqAeDnNnrF5aLcVVUPHu9139M5GqbtKH7qI92SQ983F82pEQ0rJe5UFYFdOT
+         Hz8I3umIBB+8tec6pzDfxXqeOI0s7io3NF+EM/cpsdpZ4bcaZVoyHYXq6Ndnux5N1HYP
+         583+1aGBXD9MRCgINODptm/FnJB09xkHEjkELGIt10e7AdZxFAn1go3RymJyAjEBeGmX
+         xGcA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=dkim-signature:mime-version:message-id:references:in-reply-to:to
+         :subject:from:date;
+        bh=APrSQGTK5HWerlKrHc4ttNg/mCx3EILSXYrr23gz62A=;
+        b=iZKFIPkRnOCjhzTiEUHBZ1raT0ACECbWxp0nUK66UiZJIp8x2Sv19ws+TlcaQVvuoF
+         6BxqF0u0gR4d2vRltsVjeS/0wjEZFUl3EaH2XLIEmh6XrUPtA3mIhvr9cMYDzU64Amph
+         KuLH08+OM53D2tsuQF8NmDTpoW1ZeJKiZ3ALld+jcit8Sl2t/8DVA/pSsL2GcpCmyLKg
+         csq2FiwxvUvVBLE4N04Y/pmSCpZFcj0mf/28QD7YGsuEuKMlinSUvDXd9fXxR+O/ujM1
+         KFepjYyIXJiFh4YUTzGeInf9HfhzZDLeK65bdTa1LN9XLX472rZHrvZbdhhzAN6dr5zX
+         0FKQ==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass (test mode) header.i=@interia.pl header.s=biztos header.b=Ep8mXgyd;
+       spf=pass (google.com: domain of krzys_h@interia.pl designates 217.74.65.157 as permitted sender) smtp.mailfrom=krzys_h@interia.pl
+Return-Path: <krzys_h@interia.pl>
+Received: from smtpo.poczta.interia.pl (smtpo.poczta.interia.pl. [217.74.65.157])
+        by mx.google.com with ESMTPS id 9si458181ljr.555.2020.09.01.03.01.26
+        for <cytadela88@gmail.com>
+        (version=TLS1_2 cipher=ECDHE-ECDSA-CHACHA20-POLY1305 bits=256/256);
+        Tue, 01 Sep 2020 03:01:26 -0700 (PDT)
+Received-SPF: pass (google.com: domain of krzys_h@interia.pl designates 217.74.65.157 as permitted sender) client-ip=217.74.65.157;
+Authentication-Results: mx.google.com;
+       dkim=pass (test mode) header.i=@interia.pl header.s=biztos header.b=Ep8mXgyd;
+       spf=pass (google.com: domain of krzys_h@interia.pl designates 217.74.65.157 as permitted sender) smtp.mailfrom=krzys_h@interia.pl
+Date: Tue, 01 Sep 2020 12:01:25 +0200
+From: Krzysztof =?iso-8859-2?q?Ha=B3adyn?= <krzys_h@interia.pl>
+Subject: Re: AplikacjaWWW licencja
+To: cytadela88 <cytadela88@gmail.com>
+X-Mailer: interia.pl/pf09
+In-Reply-To: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+References: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+X-Originating-IP: 31.183.229.50
+Message-Id: <gstpafcruzbvatlgrebu@vsna>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="=-fWXo8q5DwM9dSfRcCu3O"
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=interia.pl;
+	s=biztos; t=1598954486;
+	bh=APrSQGTK5HWerlKrHc4ttNg/mCx3EILSXYrr23gz62A=;
+	h=Date:From:Subject:To:X-Mailer:In-Reply-To:References:
+	 X-Originating-IP:Message-Id:MIME-Version:Content-Type;
+	b=Ep8mXgydXf/uacdQGbMC2enWVLDtWXqotjTp9khJegUR9ZCzLU0V5tJrwkCcGNYwu
+	 Faih706EcfQXK65BgPFEFSBhIvBPPys4iBEo+wahW1ZnqPnhOF1zLTDGp8eMDU3XUc
+	 5wMi1EgC1nFuEPjiIfaZTplIUvSt9+d/8yyTlPmQ=
+
+--=-fWXo8q5DwM9dSfRcCu3O
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+Wyra=C5=BCam zgod=C4=99 na udost=C4=99pnienie moich zmian na licencji AGPLv=
+3Krzysztof Ha=C5=82adyngithub.com/krzys-hTemat: AplikacjaWWW licencjaData: =
+2020-08-20 18:34Nadawca: "cytadela88" Adresat: "Warsztaty WWW" ; "Krzysztof=
+ Ha=C5=82adyn" ; "Grzegorz Uriasz" ; michal@zielinscy.org.pl; kalmar2718@gm=
+ail.com; kalmar@linux-a4lp.site; mwrochna+git@gmail.com; enedil@outlook.com=
+; artur.jamro@gmail.com; micha7a@gmail.com; jakub.jakub.nowak@gmail.com; sy=
+gnowski@gmail.com; 35342116+radrow@users.noreply.github.com; enedil@outlook=
+.com; pawelzell@gmail.com; &gt; Cze=C5=9B=C4=87,
+&gt;=20
+&gt; Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warszt=
+at=C3=B3w
+&gt; WWW dost=C4=99pnym pod https://github.com/warsztatywww/aplikacjawww/
+&gt;=20
+&gt; Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=
+=99du jakim jest brak
+&gt; wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie
+&gt; nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgo=
+d=C4=99 na
+&gt; udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public =
+License
+&gt; v3. Tekst licencji jest dost=C4=99pny pod
+&gt; https://www.gnu.org/licenses/agpl-3.0.html oraz w za=C5=82=C4=85czniku=
+.
+&gt;=20
+&gt; Na stronie gnu.org widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3r=
+y sk=C5=82oni=C5=82 mnie do
+&gt; wyboru licencji zawartej w tej pro=C5=9Bbie "The GNU Affero General Pu=
+blic
+&gt; License is based on the GNU GPL, but has an additional term to allow
+&gt; users who interact with the licensed software over a network to receiv=
+e
+&gt; the source for that program. We recommend that people consider using t=
+he
+&gt; GNU AGPL for any software which will commonly be run over a network. T=
+he
+&gt; latest version is version 3."
+&gt;=20
+&gt; Artur Puzio
+&gt; github.com/cytadela8
+&gt;=20
+&gt;=20=
+
+--=-fWXo8q5DwM9dSfRcCu3O
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w=
+3.org/TR/REC-html40/loose.dtd">
+<html><body><p>Wyra=C5=BCam zgod=C4=99 na udost=C4=99pnienie moich zmian na=
+ licencji AGPLv3<br><br>Krzysztof Ha=C5=82adyn<br><a href=3D"http://github.=
+com/krzys-h" target=3D"_blank">github.com/krzys-h</a></p><div class=3D"inpl=
+-collapsed">Temat: AplikacjaWWW licencja<br>Data: 2020-08-20 18:34<br>Nadaw=
+ca: "cytadela88" <cytadela88><br>Adresat: "Warsztaty WWW" <sebastian.jaszcz=
+ur>; "Krzysztof Ha=C5=82adyn" <krzys_h>; "Grzegorz Uriasz" <gorbak25>; mich=
+al@zielinscy.org.pl; kalmar2718@gmail.com; kalmar@linux-a4lp.site; mwrochna=
++git@gmail.com; enedil@outlook.com; artur.jamro@gmail.com; micha7a@gmail.co=
+m; jakub.jakub.nowak@gmail.com; sygnowski@gmail.com; 35342116+radrow@users.=
+noreply.github.com; enedil@outlook.com; pawelzell@gmail.com; <br><br><block=
+quote class=3D"nxt-original-message-notrevealed" style=3D"margin:0px;paddin=
+g-left:1ex;border-left:1px solid #CCCCCC;"><pre>&gt; Cze=C5=9B=C4=87,
+&gt;=20
+&gt; Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warszt=
+at=C3=B3w
+&gt; WWW dost=C4=99pnym pod https://github.com/warsztatywww/aplikacjawww/
+&gt;=20
+&gt; Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=
+=99du jakim jest brak
+&gt; wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie
+&gt; nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgo=
+d=C4=99 na
+&gt; udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public =
+License
+&gt; v3. Tekst licencji jest dost=C4=99pny pod
+&gt; https://www.gnu.org/licenses/agpl-3.0.html oraz w za=C5=82=C4=85czniku=
+.
+&gt;=20
+&gt; Na stronie gnu.org widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3r=
+y sk=C5=82oni=C5=82 mnie do
+&gt; wyboru licencji zawartej w tej pro=C5=9Bbie "The GNU Affero General Pu=
+blic
+&gt; License is based on the GNU GPL, but has an additional term to allow
+&gt; users who interact with the licensed software over a network to receiv=
+e
+&gt; the source for that program. We recommend that people consider using t=
+he
+&gt; GNU AGPL for any software which will commonly be run over a network. T=
+he
+&gt; latest version is version 3."
+&gt;=20
+&gt; Artur Puzio
+&gt; github.com/cytadela8
+&gt;=20
+&gt; </pre><br></blockquote><br><br></gorbak25></krzys_h></sebastian.jaszcz=
+ur></cytadela88></div></body></html>
+
+--=-fWXo8q5DwM9dSfRcCu3O--

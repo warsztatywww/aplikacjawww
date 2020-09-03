@@ -1,0 +1,161 @@
+Delivered-To: cytadela88@gmail.com
+Received: by 2002:a6b:ef0b:0:0:0:0:0 with SMTP id k11csp1545556ioh;
+        Thu, 20 Aug 2020 09:45:37 -0700 (PDT)
+X-Received: by 2002:a7b:c1c2:: with SMTP id a2mr4207969wmj.74.1597941937123;
+        Thu, 20 Aug 2020 09:45:37 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1597941937; cv=none;
+        d=google.com; s=arc-20160816;
+        b=pAtQsekdfIiYKRCupnyF7PSpQ2yS2UF6zMNPF0Vfj9m6YJcgZI7TgTI+Zzi1tpGB4u
+         fnE/zkjpqv7CFgsjN+IagyLHTytAHa4K+N3wG5g3OembzsWfm20RA00c+nB4YXaUIaN3
+         r9F3zLoXaICnYeDk8ayjnwVZVv04Y/fg/nRW8TpY5zk4gFfyUyN/lJ7BJbxYNjNjvMAJ
+         jKnHJ3CehCiagugXwPUgZUJwOtOr4F2jEC3w4HKIocgBtwkz4eDnfJCrOmpmdKU3SHu4
+         Le+8wSjflrw7bzn3dTR6FccLI2EaYWdAE+t/D5urhVZBB3zmPt1BIdEeKl84Iv7R9/Pu
+         7iFw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=XZ4w4n9+uKGniQwxFJJ91tQHoRrGqUpisw8jqK3Ncgw=;
+        b=JIq0tchCVVJjqxaX8SukDiM3RuQtg+VML7wwwxg7yQJBv5mQ15+Czx9DBjOhK6pRjB
+         AMb+SLjfMlVI7SFFKpVYquRA4YFBdar0GF7ESAMYa39tX74Nhml6wTfE57fhWzAriZdX
+         mKDU9ZU7+dQtaRPu31BzlCR8Sz6eef7GZnL9k8LexGF7pAKaW50fmEaGQoJtSW2Hsz8M
+         pcq+U5Gt9z6deYCtotYKMu1qkILPBCyBMnCdcxRco6RKNxBeTKlYRUKcrxrcvS/bO0gk
+         /cxO0CC7VOlR/OP6/7E3mVwC8w9m5Fm7IBVpwfmqRnUgc6QrTMygFTpGo1a1vEH+yCzo
+         qidg==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b=tecPPIbK;
+       spf=pass (google.com: domain of sygnowski@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=sygnowski@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+Return-Path: <sygnowski@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id a24sor1535188wmb.7.2020.08.20.09.45.36
+        for <cytadela88@gmail.com>
+        (Google Transport Security);
+        Thu, 20 Aug 2020 09:45:37 -0700 (PDT)
+Received-SPF: pass (google.com: domain of sygnowski@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20161025 header.b=tecPPIbK;
+       spf=pass (google.com: domain of sygnowski@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=sygnowski@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20161025;
+        h=mime-version:references:in-reply-to:from:date:message-id:subject:to;
+        bh=XZ4w4n9+uKGniQwxFJJ91tQHoRrGqUpisw8jqK3Ncgw=;
+        b=tecPPIbKbZF+5qkzVclcFePpzIl/2RsTM4ndTeoqRcP0Cs7eXzCHeF/aIXVei5UPqJ
+         TlGcoFyJVv/UVdOQV3mGb5zpJtkLHuchVtywosUGYt0jBdMFzPIRusmB3Wf6Siw5QoHG
+         8GFYcKqGHDBM35GvbhkoNhJvmT+uwuICdiu9/Fk7ueBdaNmS8yEcqM4yZWwf7HW5h+nb
+         ShvWnfGoCBCMX1F6JBHkVVKUbf0+tU4qW4MxCamzO6CE985JAqkxSyldYrvdEGf4VT3W
+         wIs4qiPopiGsWQB/KkugVLdKtyJjaJLzKMaHfWz3Q6LEbHFnadimQ8RKA8OtRjM9JQFN
+         L2aQ==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20161025;
+        h=x-gm-message-state:mime-version:references:in-reply-to:from:date
+         :message-id:subject:to;
+        bh=XZ4w4n9+uKGniQwxFJJ91tQHoRrGqUpisw8jqK3Ncgw=;
+        b=ejZnRbpu7WSjvAryKRzJYq/6GoR/Uyk93/wbpIOXDhV2CU2YKg4PiHRy2yuSB96B4f
+         7tAkYHLp3rlV2wXuePISSjMInqdLiqIHZVxAzVPIPzAaPKzwXBm6CjGPCVtAjap8MncF
+         h6Z94X5KC+IVSr97c2HNZ9Uzni64rpFvopTzIswQVWm7ousbLVdP+O2yz4jJycyumTNM
+         Ur0IXgJxVChGP6rMEVa0eESBRTxjzAza9fUME9hXMS/qtkLo264jqtu8OFEnVQ6FQO9G
+         PDgf/MkfEWS4FhJPH22DH0TQ7VxE11BXjbDt0Hs87sKcUHUgO8NLgoAVsxMl+9xQJy7k
+         qG6A==
+X-Gm-Message-State: AOAM530fPi5kdd/ai4PAUzFDVV0kFoOXXUFtP0erFwHEdcAx4zVj2ZRW
+	Y0O7bdhoCwtR79C34Hz0inY8vOxBFZeEqXYneOhCka2XT74=
+X-Google-Smtp-Source: ABdhPJy/SLZ7cxouqJCes+rEARX+jxmVHo1VS2QcuWnPBZUiuL9mxvZR0W3KPV5aYt5t1Zby74GyZLZdxNpVh78ELQc=
+X-Received: by 2002:a1c:f605:: with SMTP id w5mr4271538wmc.26.1597941936645;
+ Thu, 20 Aug 2020 09:45:36 -0700 (PDT)
+MIME-Version: 1.0
+References: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+In-Reply-To: <255fdd3d-df2a-d866-ecac-548d7d08372d@gmail.com>
+From: Jakub Sygnowski <sygnowski@gmail.com>
+Date: Thu, 20 Aug 2020 17:45:09 +0100
+Message-ID: <CAFpSRNk7bsXTjTAYYm1ZuTD56PtsCikA6KYOLe7kOapCNZ=RRg@mail.gmail.com>
+Subject: Re: AplikacjaWWW licencja
+To: cytadela88 <cytadela88@gmail.com>
+Content-Type: multipart/alternative; boundary="00000000000081698905ad51d96d"
+
+--00000000000081698905ad51d96d
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+ok
+
+On Thu, 20 Aug 2020 at 17:34, cytadela88 <cytadela88@gmail.com> wrote:
+
+> Cze=C5=9B=C4=87,
+>
+> Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warsztat=
+=C3=B3w
+> WWW dost=C4=99pnym pod https://github.com/warsztatywww/aplikacjawww/
+>
+> Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=99=
+du jakim jest brak
+> wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie
+> nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgod=
+=C4=99 na
+> udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public Lic=
+ense
+> v3. Tekst licencji jest dost=C4=99pny pod
+> https://www.gnu.org/licenses/agpl-3.0.html oraz w za=C5=82=C4=85czniku.
+>
+> Na stronie gnu.org widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3ry s=
+k=C5=82oni=C5=82 mnie do
+> wyboru licencji zawartej w tej pro=C5=9Bbie "The GNU Affero General Publi=
+c
+> License is based on the GNU GPL, but has an additional term to allow
+> users who interact with the licensed software over a network to receive
+> the source for that program. We recommend that people consider using the
+> GNU AGPL for any software which will commonly be run over a network. The
+> latest version is version 3."
+>
+> Artur Puzio
+> github.com/cytadela8
+>
+>
+
+--00000000000081698905ad51d96d
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">ok</div><br><div class=3D"gmail_quote"><div dir=3D"ltr" cl=
+ass=3D"gmail_attr">On Thu, 20 Aug 2020 at 17:34, cytadela88 &lt;<a href=3D"=
+mailto:cytadela88@gmail.com">cytadela88@gmail.com</a>&gt; wrote:<br></div><=
+blockquote class=3D"gmail_quote" style=3D"margin:0px 0px 0px 0.8ex;border-l=
+eft:1px solid rgb(204,204,204);padding-left:1ex">Cze=C5=9B=C4=87,<br>
+<br>
+Pisz=C4=99 do Was, bo posiadacie commity w repozytorium systemu Warsztat=C3=
+=B3w<br>
+WWW dost=C4=99pnym pod <a href=3D"https://github.com/warsztatywww/aplikacja=
+www/" rel=3D"noreferrer" target=3D"_blank">https://github.com/warsztatywww/=
+aplikacjawww/</a><br>
+<br>
+Kiedy=C5=9B przy tworzeniu systemu dosz=C5=82o do wielkiego b=C5=82=C4=99du=
+ jakim jest brak<br>
+wybrania licencji otwarto=C5=BAr=C3=B3d=C5=82owej i kod jest aktualnie<br>
+nielicencjonowany. Chcia=C5=82bym prosi=C4=87 ka=C5=BCdego z was o zgod=C4=
+=99 na<br>
+udost=C4=99pnienie swoich zmian na licencji GNU Affero General Public Licen=
+se<br>
+v3. Tekst licencji jest dost=C4=99pny pod<br>
+<a href=3D"https://www.gnu.org/licenses/agpl-3.0.html" rel=3D"noreferrer" t=
+arget=3D"_blank">https://www.gnu.org/licenses/agpl-3.0.html</a> oraz w za=
+=C5=82=C4=85czniku.<br>
+<br>
+Na stronie <a href=3D"http://gnu.org" rel=3D"noreferrer" target=3D"_blank">=
+gnu.org</a> widnieje nast=C4=99puj=C4=85cy komentarz, kt=C3=B3ry sk=C5=82on=
+i=C5=82 mnie do<br>
+wyboru licencji zawartej w tej pro=C5=9Bbie &quot;The GNU Affero General Pu=
+blic<br>
+License is based on the GNU GPL, but has an additional term to allow<br>
+users who interact with the licensed software over a network to receive<br>
+the source for that program. We recommend that people consider using the<br=
+>
+GNU AGPL for any software which will commonly be run over a network. The<br=
+>
+latest version is version 3.&quot;<br>
+<br>
+Artur Puzio<br>
+<a href=3D"http://github.com/cytadela8" rel=3D"noreferrer" target=3D"_blank=
+">github.com/cytadela8</a><br>
+<br>
+</blockquote></div>
+
+--00000000000081698905ad51d96d--
