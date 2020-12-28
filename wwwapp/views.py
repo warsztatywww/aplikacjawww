@@ -275,6 +275,12 @@ def workshop_edit_view(request, year=None, name=None):
         else:
             raise SuspiciousOperation("Invalid argument")
 
+    # Generate the parts of the workshop URL displayed in the workshop slug editor
+    workshop_url = request.build_absolute_uri(
+        reverse('workshop_page', kwargs={'year': 9999, 'name': 'SOMENAME'}))
+    workshop_url = workshop_url.split('SOMENAME')
+    workshop_url[0:1] = workshop_url[0].split('9999')
+
     if workshop or has_perm_to_edit:
         if request.method == 'POST' and 'qualify' not in request.POST:
             if not has_perm_to_edit:
@@ -284,7 +290,8 @@ def workshop_edit_view(request, year=None, name=None):
                 initial_workshop.year = year
             else:
                 initial_workshop = workshop
-            form = WorkshopForm(request.POST, request.FILES,
+
+            form = WorkshopForm(request.POST, request.FILES, workshop_url=workshop_url,
                                 instance=initial_workshop, has_perm_to_edit=has_perm_to_edit)
             if form.is_valid():
                 new = workshop is None
@@ -305,7 +312,7 @@ def workshop_edit_view(request, year=None, name=None):
                     name="template_for_workshop_page").content
                 workshop.page_content = workshop_template
                 workshop.save()
-            form = WorkshopForm(instance=workshop, has_perm_to_edit=has_perm_to_edit)
+            form = WorkshopForm(instance=workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit)
     else:
         form = None
 
