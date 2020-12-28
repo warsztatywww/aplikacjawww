@@ -16,6 +16,9 @@ def forwards_func(apps, schema_editor):
         return
 
     for access in AccountAccess.objects.all():
+        if access.user is None or access.user == 0:
+            print("Skipping null user of %s" % str(access))
+            continue
         if access.provider.name == 'facebook':
             UserSocialAuth(provider='facebook', uid=access.identifier, user=access.user, extra_data=access.access_token).save()
         elif access.provider.name == 'google':
