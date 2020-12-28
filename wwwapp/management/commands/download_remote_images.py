@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 from django.core.management.base import BaseCommand
 
-import wwwapp.settings as settings
+from django.conf import settings
 from wwwapp.models import Workshop, Article
 
 
