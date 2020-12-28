@@ -322,13 +322,15 @@ def workshop_edit_view(request, year=None, name=None):
 
 def legacy_workshop_redirect_view(request, name):
     # To keep the old links working
-    workshop = get_object_or_404(Workshop, name=name, year__year__lte=2020)
+    # Workshops from editions <= 2020 should be unique
+    workshop = get_object_or_404(Workshop.objects.filter(name=name).order_by('year')[:1])
     return redirect('workshop_page', workshop.year.pk, workshop.name)
 
 
 def legacy_qualification_problems_redirect_view(request, name):
     # To keep the old links working
-    workshop = get_object_or_404(Workshop, name=name, year__year__lte=2020)
+    # Workshops from editions <= 2020 should be unique
+    workshop = get_object_or_404(Workshop.objects.filter(name=name).order_by('year')[:1])
     return redirect('qualification_problems', workshop.year.pk, workshop.name)
 
 
