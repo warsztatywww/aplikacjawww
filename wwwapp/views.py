@@ -22,7 +22,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
+from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils.safestring import mark_safe
@@ -322,13 +322,15 @@ def workshop_edit_view(request, year=None, name=None):
 
 def legacy_workshop_redirect_view(request, name):
     # To keep the old links working
-    workshop = get_object_or_404(Workshop, name=name, year__year__lte=2020)
+    # Workshops from editions <= 2020 should be unique
+    workshop = get_object_or_404(Workshop.objects.filter(name=name).order_by('year')[:1])
     return redirect('workshop_page', workshop.year.pk, workshop.name)
 
 
 def legacy_qualification_problems_redirect_view(request, name):
     # To keep the old links working
-    workshop = get_object_or_404(Workshop, name=name, year__year__lte=2020)
+    # Workshops from editions <= 2020 should be unique
+    workshop = get_object_or_404(Workshop.objects.filter(name=name).order_by('year')[:1])
     return redirect('qualification_problems', workshop.year.pk, workshop.name)
 
 
