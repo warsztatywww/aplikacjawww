@@ -1,4 +1,4 @@
-from crispy_forms.bootstrap import FormActions, StrictButton
+from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Button, Div
 from django.contrib.auth.models import User
@@ -196,7 +196,7 @@ class WorkshopForm(ModelForm):
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
         }
 
-    def __init__(self, *args, has_perm_to_edit=True, **kwargs):
+    def __init__(self, *args, workshop_url, has_perm_to_edit=True, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.form_tag = False
@@ -233,8 +233,11 @@ class WorkshopForm(ModelForm):
         self.fieldset_general = Fieldset(
             "Ogólne",
             Div(
-                Div('title', css_class='col-lg-8'),
-                Div('name', css_class='col-lg-4'),
+                Div(PrependedAppendedText('name',
+                    workshop_url[0] + '<b>' + str(year.pk) + '</b>' + workshop_url[1],
+                    workshop_url[2]
+                ), css_class='col-lg-12'),
+                Div('title', css_class='col-lg-12'),
                 css_class='row'
             ),
             Div(
