@@ -30,8 +30,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django_bleach.utils import get_bleach_default_options
 
-from .forms import ArticleForm, UserProfileForm, UserForm, WorkshopForm, \
-    UserProfilePageForm, WorkshopPageForm, UserCoverLetterForm, UserInfoPageForm, WorkshopParticipantPointsForm, \
+from .forms import ArticleForm, UserProfileForm, UserForm, \
+    UserProfilePageForm, WorkshopForm, UserCoverLetterForm, UserInfoPageForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
     WorkshopUserProfile, ResourceYearPermission, Camp
@@ -216,70 +216,6 @@ def my_profile_edit_view(request):
     return render(request, 'profileedit.html', context)
 
 
-@login_required()
-def workshop_proposal_view(request, name=None):
-    new = (name is None)
-    if new:
-        workshop = None
-        title = 'Nowe warsztaty'
-        has_perm_to_edit = Camp.objects.latest().are_proposals_open()
-    else:
-        workshop = get_object_or_404(Workshop, name=name)
-        title = workshop.title
-        has_perm_to_edit = can_edit_workshop(workshop, request.user)
-
-    # Workshop proposals are only visible to admins
-    has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
-    if workshop and not has_perm_to_edit and not has_perm_to_see_all:
-        return HttpResponseForbidden()
-
-    if request.method == 'POST' and 'qualify' in request.POST:
-        if not request.user.has_perm('wwwapp.change_workshop_status'):
-            return HttpResponseForbidden()
-        if request.POST['qualify'] == 'accept':
-            workshop.status = Workshop.STATUS_ACCEPTED
-            workshop.save()
-        elif request.POST['qualify'] == 'reject':
-            workshop.status = Workshop.STATUS_REJECTED
-            workshop.save()
-        elif request.POST['qualify'] == 'cancel':
-            workshop.status = Workshop.STATUS_CANCELLED
-            workshop.save()
-        elif request.POST['qualify'] == 'delete':
-            workshop.status = None
-            workshop.save()
-        else:
-            raise SuspiciousOperation("Invalid argument")
-
-    if has_perm_to_edit:
-        if request.method == 'POST' and 'qualify' not in request.POST:
-            form = WorkshopForm(request.POST, instance=workshop)
-            if form.is_valid():
-                workshop = form.save(commit=False)
-                workshop.save()
-                form.save_m2m()
-                if new:
-                    user_profile = UserProfile.objects.get(user=request.user)
-                    workshop.lecturer.add(user_profile)
-                    workshop.save()
-                messages.info(request, 'Zapisano.')
-                return redirect('workshop_proposal', form.instance.name)
-        else:
-            form = WorkshopForm(instance=workshop)
-    else:
-        form = None
-
-    context = get_context(request)
-    context['title'] = title
-    context['workshop'] = workshop
-    context['has_perm_to_edit'] = has_perm_to_edit
-    context['has_perm_to_view_details'] = has_perm_to_edit or has_perm_to_see_all
-
-    context['form'] = form
-
-    return render(request, 'workshopproposal.html', context)
-
-
 def can_edit_workshop(workshop, user):
     if user.is_authenticated:
         return workshop.lecturer.filter(user=user).exists() \
@@ -306,42 +242,74 @@ def workshop_page_view(request, name):
 
 
 @login_required()
-def workshop_page_edit_view(request, name):
-    workshop = get_object_or_404(Workshop, name=name)
+def workshop_edit_view(request, name=None):
+    if name is None:
+        workshop = None
+        title = 'Nowe warsztaty'
+        has_perm_to_edit = Camp.objects.latest().are_proposals_open()
+    else:
+        workshop = get_object_or_404(Workshop, name=name)
+        title = workshop.title
+        has_perm_to_edit = can_edit_workshop(workshop, request.user)
 
-    if not workshop.is_publicly_visible():  # Accepted or cancelled
-        return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
-    if not can_edit_workshop(workshop, request.user):
+    has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
+    if workshop and not has_perm_to_edit and not has_perm_to_see_all:
         return HttpResponseForbidden()
 
-    if request.method == 'POST':
-        form = WorkshopPageForm(request.POST, request.FILES,
-                                instance=workshop)
-        if form.is_valid():
-            workshop = form.save(commit=False)
+    if workshop and request.method == 'POST' and 'qualify' in request.POST:
+        if not request.user.has_perm('wwwapp.change_workshop_status') or not workshop.is_workshop_editable():
+            return HttpResponseForbidden()
+        if request.POST['qualify'] == 'accept':
+            workshop.status = Workshop.STATUS_ACCEPTED
             workshop.save()
-            form.save_m2m()
-            user_profile = UserProfile.objects.get(user=request.user)
-            workshop.lecturer.add(user_profile)
+        elif request.POST['qualify'] == 'reject':
+            workshop.status = Workshop.STATUS_REJECTED
             workshop.save()
-            messages.info(request, 'Zapisano.')
-            return redirect('workshop_page_edit', form.instance.name)
+        elif request.POST['qualify'] == 'cancel':
+            workshop.status = Workshop.STATUS_CANCELLED
+            workshop.save()
+        elif request.POST['qualify'] == 'delete':
+            workshop.status = None
+            workshop.save()
+        else:
+            raise SuspiciousOperation("Invalid argument")
+
+    if workshop or has_perm_to_edit:
+        if request.method == 'POST' and 'qualify' not in request.POST:
+            if not has_perm_to_edit:
+                return HttpResponseForbidden()
+            form = WorkshopForm(request.POST, request.FILES,
+                                instance=workshop, has_perm_to_edit=has_perm_to_edit)
+            if form.is_valid():
+                new = workshop is None
+                workshop = form.save(commit=False)
+                workshop.save()
+                form.save_m2m()
+                if new:
+                    user_profile = UserProfile.objects.get(user=request.user)
+                    workshop.lecturer.add(user_profile)
+                    workshop.save()
+                messages.info(request, 'Zapisano.')
+                return redirect('workshop_edit', form.instance.name)
+        else:
+            if workshop and workshop.is_publicly_visible() and not workshop.page_content:
+                workshop_template = Article.objects.get(
+                    name="template_for_workshop_page").content
+                workshop.page_content = workshop_template
+                workshop.save()
+            form = WorkshopForm(instance=workshop, has_perm_to_edit=has_perm_to_edit)
     else:
-        if not workshop.page_content:
-            workshop_template = Article.objects.get(
-                name="template_for_workshop_page").content
-            workshop.page_content = workshop_template
-            workshop.save()
-        form = WorkshopPageForm(instance=workshop)
+        form = None
 
     context = get_context(request)
-    context['title'] = workshop.title
+    context['title'] = title
     context['workshop'] = workshop
-    context['form'] = form
-    context['has_perm_to_edit'] = True
-    context['has_perm_to_view_details'] = True
+    context['has_perm_to_edit'] = has_perm_to_edit
+    context['has_perm_to_view_details'] = has_perm_to_edit or has_perm_to_see_all
 
-    return render(request, 'workshoppageedit.html', context)
+    context['form'] = form
+
+    return render(request, 'workshopedit.html', context)
 
 
 @login_required()
@@ -379,6 +347,9 @@ def save_points_view(request):
     has_perm_to_edit = can_edit_workshop(workshop_participant.workshop, request.user)
     if not has_perm_to_edit:
         return HttpResponseForbidden()
+
+    if not workshop_participant.workshop.is_qualifying:
+        return HttpResponseForbidden("Na te warsztaty nie obowiązuje kwalifikacja")
 
     form = WorkshopParticipantPointsForm(request.POST, instance=workshop_participant)
     if not form.is_valid():
@@ -651,6 +622,8 @@ def qualification_problems_view(request, workshop_name):
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.is_qualifying:
+        return HttpResponseNotFound("Na te warsztaty nie ma kwalifikacji")
     if not workshop.qualification_problems:
         return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
 

@@ -425,6 +425,8 @@ class WorkshopParticipant(models.Model):
     comment = models.CharField(max_length=1000, null=True, default=None, blank=True)
 
     def is_qualified(self):
+        if not self.workshop.is_qualifying:
+            return None
         threshold = self.workshop.qualification_threshold
         if threshold is None or self.qualification_result is None:
             return None
@@ -434,6 +436,8 @@ class WorkshopParticipant(models.Model):
             return False
 
     def result_in_percent(self):
+        if not self.workshop.is_qualifying:
+            return None
         if self.qualification_result is None:
             return None
         max_points = self.workshop.max_points if self.workshop.max_points is not None else self.workshop.max_entered_points

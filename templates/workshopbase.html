@@ -8,14 +8,13 @@
       {% if workshop %}
         {% if has_perm_to_view_details and workshop.is_publicly_visible %}
           <div>
-            {% if has_perm_to_edit %}
-              <a href="{% url 'workshop_proposal' workshop.name %}">Edycja zgłoszenia</a> |
-              <a href="{% url 'workshop_page_edit' workshop.name %}">Edycja strony warsztatów</a> |
+            <a href="{% url 'workshop_page' workshop.name %}">Strona warsztatów</a> |
+            <a href="{% url 'workshop_edit' workshop.name %}">Edycja warsztatów</a> |
+            {% if workshop.is_qualifying %}
+              <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy i ocenianie</a>
             {% else %}
-              <a href="{% url 'workshop_proposal' workshop.name %}">Podgląd zgłoszenia</a> |
+              <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy</a>
             {% endif %}
-            <a href="{% url 'workshop_page' workshop.name %}">Podgląd strony warsztatów</a> |
-            <a href="{% url 'workshop_participants' workshop.name %}">Uczestnicy i ocenianie</a>
           </div>
         {% endif %}
 

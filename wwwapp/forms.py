@@ -1,4 +1,6 @@
+from crispy_forms.bootstrap import FormActions, StrictButton
 from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Fieldset, Button, Div
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, DateInput
@@ -165,90 +167,139 @@ class ArticleForm(ModelForm):
 
 
 class WorkshopForm(ModelForm):
+    # Note that the querysets for category and type are overwritten in __init__, but the argument is required here
     category = ModelMultipleChoiceField(label="Kategorie", queryset=WorkshopCategory.objects.all(),
                                         widget=Select2MultipleWidget(attrs={'width': '200px'}))
-
-    category.help_text = ""  # this removes annoying message ' Hold down "Control", or "Command" (..) '
     type = ModelChoiceField(label="Rodzaj zajęć", queryset=WorkshopType.objects.all(),
                             widget=Select2Widget(attrs={'width': '200px'}))
 
-    def __init__(self, *args, **kwargs):
-        super(WorkshopForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
-        self.helper.include_media = False
-
-        year = self.instance.type.year if hasattr(self.instance, 'type') else Camp.objects.latest()
-        self.fields['category'].queryset = year.workshopcategory_set.all()
-        self.fields['type'].queryset = year.workshoptype_set.all()
-
-        if self.instance.status:
-            self.fields['proposition_description'].disabled = True
-
-        if not self.instance.is_workshop_editable():
-            for field in self.fields.values():
-                field.disabled = True
-
-        mce_attrs = {}
-        mce_attrs['readonly'] = self.fields['proposition_description'].disabled  # does not seem to respect the Django field settings for some reason
-        self.fields['proposition_description'].widget = TinyMCE(mce_attrs=mce_attrs)
-
-    class Meta:
-        model = Workshop
-        fields = ['title', 'name', 'type', 'category', 'proposition_description']
-        widgets = {
-            'proposition_description': TinyMCE()
-        }
-        labels = {
-            'title': 'Tytuł',
-            'name': 'Nazwa (w URLach)',
-            'proposition_description': 'Opis propozycji warsztatów',
-        }
-
-    def clean(self):
-        super(WorkshopForm, self).clean()
-        if not self.instance.is_workshop_editable():
-            raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
-
-
-class WorkshopPageForm(ModelForm):
     qualification_problems = FileField(required=False, widget=FileInput(), label='Zadania kwalifikacyjne (zalecany format PDF):')
 
     class Meta:
         model = Workshop
-        fields = ['qualification_problems', 'is_qualifying',
-                  'qualification_threshold', 'max_points',
+        fields = ['title', 'name', 'type', 'category', 'proposition_description',
+                  'qualification_problems', 'is_qualifying',
+                  'max_points', 'qualification_threshold',
                   'page_content', 'page_content_is_public']
         labels = {
-            'is_qualifying': 'Czy warsztaty są kwalifikujące (odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
-            'qualification_threshold': 'Minimalna liczba punktów potrzebna do kwalifikacji (wpisz dopiero po sprawdzeniu zadań)',
+            'title': 'Tytuł',
+            'name': 'Nazwa (w URLach)',
+            'proposition_description': 'Opis propozycji warsztatów',
+            'is_qualifying': 'Czy warsztaty są kwalifikujące',
             'max_points': 'Maksymalna liczba punktów możliwa do uzyskania z obowiązkowych zadań',
+            'qualification_threshold': 'Minimalna liczba punktów potrzebna do kwalifikacji',
             'page_content': 'Strona warsztatów',
             'page_content_is_public': 'Zaznacz, jeśli opis jest gotowy i może już być publiczny.'
         }
+        help_texts = {
+            'is_qualifying': '(odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
+            'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
+        }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, has_perm_to_edit=True, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.include_media = False
-        mce_attrs = {}
-        if kwargs['instance']:
-            mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
-            mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('upload', kwargs={'type': 'workshop', 'name': kwargs['instance'].name})
-        if not self.instance.is_workshop_editable():
-            mce_attrs['readonly'] = True  # does not seem to respect the Django field settings for some reason
-        self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
-        if not self.instance.is_workshop_editable():
+        # Disable fields that should be disabled
+        if not self.instance.is_workshop_editable() or not has_perm_to_edit:
             for field in self.fields.values():
                 field.disabled = True
 
+        if self.instance.status:
+            # The proposition cannot be edited once the workshop has a status set
+            self.fields['proposition_description'].disabled = True
+
+        # Make sure only current category and type choices are displayed
+        year = self.instance.type.year if hasattr(self.instance, 'type') else Camp.objects.latest()
+        self.fields['category'].queryset = WorkshopCategory.objects.filter(year=year)
+        self.fields['type'].queryset = WorkshopType.objects.filter(year=year)
+
+        # Configure TinyMCE settings
+        mce_attrs = {}
+        mce_attrs['readonly'] = self.fields['proposition_description'].disabled  # does not seem to respect the Django field settings for some reason
+        self.fields['proposition_description'].widget = TinyMCE(mce_attrs=mce_attrs)
+
+        mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
+        if kwargs['instance']:
+            mce_attrs['automatic_uploads'] = True
+            mce_attrs['images_upload_url'] = reverse('upload', kwargs={'type': 'workshop', 'name': kwargs['instance'].name})
+        mce_attrs['readonly'] = self.fields['proposition_description'].disabled  # does not seem to respect the Django field settings for some reason
+        self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
+
+        # Layout
+        self.fieldset_general = Fieldset(
+            "Ogólne",
+            Div(
+                Div('title', css_class='col-lg-8'),
+                Div('name', css_class='col-lg-4'),
+                css_class='row'
+            ),
+            Div(
+                Div('type', css_class='col-lg-6'),
+                Div('category', css_class='col-lg-6'),
+                css_class='row'
+            ),
+        )
+        self.fieldset_proposal = Fieldset(
+            "Opis propozycji",
+            'proposition_description',
+        )
+        self.fieldset_qualification = Fieldset(
+            "Kwalifikacja",
+            'is_qualifying',
+            Div(
+                'qualification_problems',
+                Div(
+                    Div('max_points', css_class='col-lg-6'),
+                    Div('qualification_threshold', css_class='col-lg-6'),
+                    css_class='row'
+                ),
+                css_id='qualification_settings'
+            ),
+        )
+        self.fieldset_public_page = Fieldset(
+            "Strona warsztatów",
+            'page_content',
+            'page_content_is_public'
+        )
+        self.fieldset_submit = FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+        )
+
+        if not self.instance or not self.instance.is_publicly_visible():
+            for field in [
+                  'qualification_problems', 'is_qualifying',
+                  'max_points', 'qualification_threshold',
+                  'page_content', 'page_content_is_public']:
+                del self.fields[field]
+
+            self.helper.layout = Layout(
+                self.fieldset_general,
+                self.fieldset_proposal,
+                self.fieldset_submit,
+            )
+        else:
+            if not has_perm_to_edit:
+                self.helper.layout = Layout(
+                    self.fieldset_general,
+                    self.fieldset_proposal,
+                    self.fieldset_qualification,
+                    self.fieldset_public_page,
+                )
+            else:
+                self.helper.layout = Layout(
+                    self.fieldset_general,
+                    self.fieldset_proposal,
+                    self.fieldset_qualification,
+                    self.fieldset_public_page,
+                    self.fieldset_submit,
+                )
+
     def clean(self):
-        super(WorkshopPageForm, self).clean()
+        super(WorkshopForm, self).clean()
         if not self.instance.is_workshop_editable():
             raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
 

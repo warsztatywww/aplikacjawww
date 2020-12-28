@@ -1,5 +1,4 @@
 {% extends "workshopbase.html" %}
-{% load bleach_tags %}
 {% load crispy_forms_tags %}
 
 {% block workshop_page_title %}
@@ -51,20 +50,15 @@
 {% endblock %}
 
 {% block workshop_page_content %}
-  {% if has_perm_to_edit %}
+  {% if not workshop and not has_perm_to_edit %}
+      Zgłoszenia warsztatów nie są obecnie aktywne
+  {% else %}
     <div role="tabpanel">
-      <form action="" method="post">
+      <form action="" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {% crispy form %}
-        <button class="btn btn-default">Zapisz</button>
       </form>
     </div>
-  {% else %}
-    {% if not workshop %}
-      Zgłoszenia warsztatów nie są obecnie aktywne
-    {% else %}
-      {{ workshop.proposition_description | bleach }}
-    {% endif %}
   {% endif %}
 {% endblock %}
 
@@ -76,4 +70,20 @@
   var django = {jQuery: jQuery};
   </script>
   {{ form.media }}
+
+  <script>
+    /* Hide the qualification settings when the is_qualifying checkbox is disabled */
+    $(function() {
+      if (! $("input[name='is_qualifying']").is(":checked"))
+          $("#qualification_settings").hide();
+    });
+
+    $("input[name='is_qualifying']").change(function() {
+      if ($(this).is(":checked")) {
+        $("#qualification_settings").slideDown(500);
+      } else {
+        $("#qualification_settings").slideUp(500);
+      }
+    });
+  </script>
 {% endblock %}
