@@ -4,6 +4,7 @@ omit =
     ./venv/*
     ./gallery/*
     ./wwwapp/migrations/*
+    ./wwwapp/tests/*
     ./wwwapp/management/commands/download_remote_images.py
     ./wwwapp/settings*.py
     ./wwwapp/wsgi.py
@@ -16,7 +17,7 @@ relative_files = True
 
 [report]
 show_missing = True
-skip_covered = True
+skip_covered = False
 exclude_lines =
     pragma: no cover
     if settings.DEBUG
