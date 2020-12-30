@@ -99,9 +99,14 @@
                   <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>
                   <li><a href="{% url 'filter_emails' %}">Adresy email</a></li>
                   {% endif %}
-                  {% if request.user.is_staff %}
+                  {% if request.user.is_staff or perms.wwwapp.export_workshop_registration or perms.wwwapp.change_article %}
                     <li role="separator" class="divider"></li>
+                  {% endif %}
+                  {% if request.user.is_staff %}
                     <li><a href="{% url 'admin:index' %}">Django admin</a></li>
+                  {% endif %}
+                  {% if perms.wwwapp.change_article %}
+                    <li><a href="{% url 'template_for_workshop_page' %}">Szablon strony warsztatów</a></li>
                   {% endif %}
                   {% if perms.wwwapp.export_workshop_registration %}
                     <li><a href="{% url 'dataForPlan' current_year.pk %}">Dane do planu</a></li>

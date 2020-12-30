@@ -282,6 +282,9 @@ def workshop_edit_view(request, year=None, name=None):
     workshop_url[0:1] = workshop_url[0].split('9999')
 
     if workshop or has_perm_to_edit:
+        workshop_template = Article.objects.get(
+            name="template_for_workshop_page").content
+
         if request.method == 'POST' and 'qualify' not in request.POST:
             if not has_perm_to_edit:
                 return HttpResponseForbidden()
@@ -298,6 +301,9 @@ def workshop_edit_view(request, year=None, name=None):
                 workshop = form.save(commit=False)
                 if new:
                     assert workshop.year == year
+                if workshop.page_content == workshop_template:
+                    # If the workshop page was not filled in, do not save the template to db
+                    workshop.page_content = ""
                 workshop.save()
                 form.save_m2m()
                 if new:
@@ -308,10 +314,7 @@ def workshop_edit_view(request, year=None, name=None):
                 return redirect('workshop_edit', form.instance.year.pk, form.instance.name)
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
-                workshop_template = Article.objects.get(
-                    name="template_for_workshop_page").content
                 workshop.page_content = workshop_template
-                workshop.save()
             form = WorkshopForm(instance=workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit)
     else:
         form = None
