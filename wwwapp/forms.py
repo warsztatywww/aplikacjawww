@@ -1,4 +1,4 @@
-from crispy_forms.bootstrap import FormActions, StrictButton
+from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Button, Div
 from django.contrib.auth.models import User
@@ -157,10 +157,10 @@ class ArticleForm(ModelForm):
         self.helper.disable_csrf = True
         self.helper.include_media = False
         mce_attrs = {}
-        if kwargs['instance']:
+        if kwargs['instance'] and kwargs['instance'].pk:
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('upload', kwargs={'type': 'article', 'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': kwargs['instance'].name})
         self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
         if not user.has_perm('wwwapp.can_put_on_menubar'):
             del self.fields['on_menubar']
@@ -196,7 +196,7 @@ class WorkshopForm(ModelForm):
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
         }
 
-    def __init__(self, *args, has_perm_to_edit=True, **kwargs):
+    def __init__(self, *args, workshop_url, has_perm_to_edit=True, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.form_tag = False
@@ -213,7 +213,7 @@ class WorkshopForm(ModelForm):
             self.fields['proposition_description'].disabled = True
 
         # Make sure only current category and type choices are displayed
-        year = self.instance.type.year if hasattr(self.instance, 'type') else Camp.objects.latest()
+        year = self.instance.year if hasattr(self.instance, 'type') else Camp.objects.latest()
         self.fields['category'].queryset = WorkshopCategory.objects.filter(year=year)
         self.fields['type'].queryset = WorkshopType.objects.filter(year=year)
 
@@ -223,9 +223,9 @@ class WorkshopForm(ModelForm):
         self.fields['proposition_description'].widget = TinyMCE(mce_attrs=mce_attrs)
 
         mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
-        if kwargs['instance']:
+        if kwargs['instance'] and kwargs['instance'].pk:
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('upload', kwargs={'type': 'workshop', 'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('workshop_edit_upload', kwargs={'year': kwargs['instance'].year.pk, 'name': kwargs['instance'].name})
         mce_attrs['readonly'] = self.fields['page_content'].disabled  # does not seem to respect the Django field settings for some reason
         self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
@@ -233,8 +233,11 @@ class WorkshopForm(ModelForm):
         self.fieldset_general = Fieldset(
             "Ogólne",
             Div(
-                Div('title', css_class='col-lg-8'),
-                Div('name', css_class='col-lg-4'),
+                Div(PrependedAppendedText('name',
+                    workshop_url[0] + '<b>' + str(year.pk) + '</b>' + workshop_url[1],
+                    workshop_url[2]
+                ), css_class='col-lg-12'),
+                Div('title', css_class='col-lg-12'),
                 css_class='row'
             ),
             Div(
@@ -302,6 +305,17 @@ class WorkshopForm(ModelForm):
         super(WorkshopForm, self).clean()
         if not self.instance.is_workshop_editable():
             raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
+
+    def validate_unique(self):
+        # Must remove year field from exclude in order
+        # for the unique_together constraint to be enforced.
+        exclude = self._get_validation_exclusions()
+        exclude.remove('year')
+
+        try:
+            self.instance.validate_unique(exclude=exclude)
+        except ValidationError as e:
+            self._update_errors(e.message_dict)
 
 
 class WorkshopParticipantPointsForm(ModelForm):

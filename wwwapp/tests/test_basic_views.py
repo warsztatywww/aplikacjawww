@@ -34,6 +34,7 @@ class CampQualificationViews(TestCase):
         self.workshop = Workshop.objects.create(
             title='Bardzo fajne warsztaty',
             name='bardzofajne',
+            year=self.year_2020,
             type=self.workshop_type,
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED,

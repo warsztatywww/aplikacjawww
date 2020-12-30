@@ -47,7 +47,7 @@
                 </td>
                 <td>
                   {% for workshop in person.workshops %}
-                    <a href="/workshop/{{ workshop.name }}">
+                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
                       {{ workshop.title }}
                     </a>
                     <br>

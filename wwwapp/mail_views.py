@@ -33,25 +33,25 @@ def _get_user_objects_of_lecturers_of_workshops(workshops):
 
 @_register_as_email_filter('allLecturers', 'wszyscy prowadzący')
 def _all_lecturers(year):
-    all_workshops = Workshop.objects.filter(type__year=year)
+    all_workshops = Workshop.objects.filter(year=year)
     return _get_user_objects_of_lecturers_of_workshops(all_workshops)
 
 
 @_register_as_email_filter('acceptedLecturers', 'prowadzący zaakceptowanych warsztatów')
 def _accepted_lecturers(year):
-    accepted_workshops = Workshop.objects.filter(status='Z', type__year=year)
+    accepted_workshops = Workshop.objects.filter(status='Z', year=year)
     return _get_user_objects_of_lecturers_of_workshops(accepted_workshops)
 
 
 @_register_as_email_filter('deniedLecturers', 'prowadzący odrzuconych warsztatów')
 def _denied_lecturers(year):
-    denied_workshops = Workshop.objects.filter(status='O', type__year=year)
+    denied_workshops = Workshop.objects.filter(status='O', year=year)
     return _get_user_objects_of_lecturers_of_workshops(denied_workshops)
 
 
 @_register_as_email_filter('allParticipants', 'wszyscy uczestnicy zapisani na co najmniej jeden warsztat')
 def _all_participants(year):
-    all_workshops = Workshop.objects.filter(type__year=year)
+    all_workshops = Workshop.objects.filter(year=year)
     participants = set()
     for workshop in all_workshops:
         for participant in workshop.participants.all():

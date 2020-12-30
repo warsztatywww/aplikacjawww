@@ -27,7 +27,7 @@ class Command(BaseCommand):
             if not options['dryrun']:
                 article.save()
         for workshop in Workshop.objects.all():
-            print("Upgrading Workshop {} {}".format(workshop.type.year, workshop.name))
+            print("Upgrading Workshop {} {}".format(workshop.year, workshop.name))
             workshop.page_content = self.update_description(workshop.page_content, "images/workshops/{}/".format(workshop.name), options['dryrun'])
             if not options['dryrun']:
                 workshop.save()
