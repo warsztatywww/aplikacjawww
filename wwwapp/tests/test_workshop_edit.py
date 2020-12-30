@@ -11,7 +11,7 @@ from django.test.testcases import TestCase
 from django.urls import reverse
 from freezegun import freeze_time
 
-from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, Camp
+from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, Camp, Article
 
 
 class WorkshopEditViews(TestCase):
@@ -795,3 +795,119 @@ class WorkshopEditViews(TestCase):
 
         self.workshop.refresh_from_db()
         self.assertIsNone(self.workshop.status)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_template_not_added_to_proposals(self):
+        template_for_workshop_page = Article.objects.get(name="template_for_workshop_page")
+        template_for_workshop_page.content = 'This is the template.'
+        template_for_workshop_page.save()
+
+        self.client.force_login(self.admin_user)
+        # Add proposal
+        response = self.client.post(reverse('addWorkshop'), {
+            'title': 'Fajne warsztaty',
+            'name': 'fajne',
+            'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 2').pk
+            ],
+            'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+        })
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
+        messages = get_messages(response.wsgi_request)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+
+        # Template should not be added yet
+        workshop = Workshop.objects.filter(name='fajne').get()
+        self.assertEqual(workshop.page_content, '')
+
+        # Edit proposal
+        response = self.client.post(reverse('workshop_edit', args=[2020, 'fajne']), {
+            'title': 'Niefajne warsztaty',
+            'name': 'fajne',
+            'type': WorkshopType.objects.get(year=self.year_2020, name='This type 2').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 3').pk,
+            ],
+            'proposition_description': '<p>PRZEGRAŁEM!!</p>'
+        })
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
+        messages = get_messages(response.wsgi_request)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+
+        # Template should not be added yet
+        workshop.refresh_from_db()
+        self.assertEqual(workshop.page_content, '')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_template_added_to_accepted(self):
+        template_for_workshop_page = Article.objects.get(name="template_for_workshop_page")
+        template_for_workshop_page.content = 'This is the template.'
+        template_for_workshop_page.save()
+
+        self.client.force_login(self.admin_user)
+        # Add proposal
+        response = self.client.post(reverse('addWorkshop'), {
+            'title': 'Fajne warsztaty',
+            'name': 'fajne',
+            'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 2').pk
+            ],
+            'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+        })
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
+        messages = get_messages(response.wsgi_request)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+
+        # Template should not be added yet
+        workshop = Workshop.objects.filter(name='fajne').get()
+        self.assertEqual(workshop.page_content, '')
+
+        # Accept proposal
+        response = self.client.post(reverse('workshop_edit', args=[2020, 'fajne']), {'qualify': 'accept'})
+        self.assertEqual(response.status_code, 200)
+
+        # Template should not be added yet
+        workshop.refresh_from_db()
+        self.assertEqual(workshop.page_content, '')
+
+        # Open the editor
+        response = self.client.get(reverse('workshop_edit', args=[2020, 'fajne']))
+
+        # The template should be auto filled in
+        self.assertContains(response, template_for_workshop_page.content)
+
+        # But not stored to DB until you click save
+        workshop.refresh_from_db()
+        self.assertEqual(workshop.page_content, '')
+
+        # If you save edits without touching the template...
+        response = self.client.post(reverse('workshop_edit', args=[2020, 'fajne']), {
+            'title': 'Fajne warsztaty',
+            'name': 'fajne',
+            'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 2').pk
+            ],
+            'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>',
+            'is_qualifying': '',
+            'qualification_threshold': 1337,
+            'max_points': 2137,
+            'page_content': template_for_workshop_page.content,
+            'page_content_is_public': '',
+        })
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
+        messages = get_messages(response.wsgi_request)
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+
+        # ... the template should not get saved to db
+        workshop.refresh_from_db()
+        self.assertEqual(workshop.page_content, '')
