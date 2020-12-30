@@ -3,6 +3,8 @@ Aplikacja WWW
 
 Django-based application to manage registration of people for [scientific summer school](https://warsztatywww.pl/).
 
+[![Updates](https://pyup.io/repos/github/warsztatywww/aplikacjawww/shield.svg)](https://pyup.io/repos/github/warsztatywww/aplikacjawww/)
+
 ### Setup:
 - install `python3` and `pip3`
 - `python3 -m venv venv` - create a virtual python environment for the app
