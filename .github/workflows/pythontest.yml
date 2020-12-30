@@ -40,7 +40,7 @@ jobs:
     - name: Django migrations
       run: ./manage.py makemigrations --check --dry-run
     - name: Django test
-      run: coverage run ./manage.py test wwwapp -v 2
+      run: coverage run ./manage.py test -v 2
     - name: Generate coverage report
       run: coverage xml
     - name: Upload coverage to codecov.io

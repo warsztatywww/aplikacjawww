@@ -1,4 +1,11 @@
+import shutil
+import tempfile
+
+import imagekit.utils
+
+from django.core.files.base import File
 from django.test import TestCase
+from django.test.utils import override_settings
 from django.urls import reverse
 from django.conf import settings
 from django.utils.datastructures import MultiValueDict
@@ -11,7 +18,11 @@ from datetime import datetime
 from gallery.models import Album, Image
 from gallery.forms import ImageCreateForm
 
+# Find the local directory and add the test media location
+TEST_DATA_ROOT = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'media/')
+TMP_DIR = tempfile.mkdtemp()
 
+@override_settings(MEDIA_ROOT=os.path.join(TMP_DIR, 'media/'))
 class ImageTests(TestCase):
 
     test_image_title = "Antibes Marina"
@@ -28,19 +39,24 @@ class ImageTests(TestCase):
 
     def setUp(self):
 
-        # Find the local directory and add the test media location
-        TEST_ROOT = os.path.abspath(os.path.dirname(__file__))
-        settings.MEDIA_ROOT = os.path.join(TEST_ROOT, 'media/')
-
         # Create test album with test images inside
         self.album = Album.objects.create(title=self.test_album_title)
         self.images = []
         for filename in self.image_filenames:
-            self.images += [self.album.images.create(data=filename)]
+            self.images += [self.album.images.create(data=File(open(os.path.join(TEST_DATA_ROOT, filename), 'rb'), filename))]
         self.image = self.images[0]  # Set main set image
         self.unicode_image = self.images[2]  # Set unicode image
 
         User.objects.create_superuser(self.username, 'user@email.com', self.password)
+
+    def tearDown(self):
+        imagekit.utils.get_singleton('imagekit.cachefiles.backends.Simple', 'cache file backend').cache.clear()
+        shutil.rmtree(settings.MEDIA_ROOT)
+
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(TMP_DIR)
 
     # Test global image list
     def test_image_list(self):
@@ -105,14 +121,14 @@ class ImageTests(TestCase):
 
     def test_image_form_validation(self):
         data = {'apk': self.album.pk}
-        image_path = os.path.join(settings.MEDIA_ROOT, self.image_filenames[0])
+        image_path = os.path.join(TEST_DATA_ROOT, self.image_filenames[0])
         image_files = MultiValueDict({'data': [image_path]})
         form = ImageCreateForm(data, files=image_files)
         form.clean()
 
     def test_image_upload(self):
         album_size = len(self.album.images.all())
-        image_path = os.path.join(settings.MEDIA_ROOT, self.image_filenames[0])
+        image_path = os.path.join(TEST_DATA_ROOT, self.image_filenames[0])
         self.client.login(username=self.username, password=self.password)
 
         # No data

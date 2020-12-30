@@ -1,4 +1,6 @@
+import pytz
 from django.db import models
+from django.utils import timezone
 from django.utils.text import slugify
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
@@ -97,15 +99,19 @@ class Image(models.Model):
         original_exif = exif_data.get('DateTimeOriginal')
         if original_exif:
             try:
-                self.exif_date_taken = datetime.strptime(original_exif, "%Y:%m:%d %H:%M:%S")
+                # EXIF is not timezone aware, but Django requires a timezone, so the best we can do is assume UTC
+                date_taken = datetime.strptime(original_exif, "%Y:%m:%d %H:%M:%S")
+                self.exif_date_taken = timezone.make_aware(date_taken, pytz.timezone('UTC'))
             except ValueError:  # Fall back to file modification time
                 pass
 
     @property
     def date_taken(self):
         if self.exif_date_taken:
-            return self.exif_date_taken
-        return self.date_uploaded  # Fall back to upload date if no date taken present
+            # Make sure Django doesn't try to mess with timezones as EXIF is not timezone aware
+            return timezone.make_naive(self.exif_date_taken, pytz.timezone('UTC'))
+        # But date_uploaded should be in current timezone
+        return timezone.make_naive(self.date_uploaded)  # Fall back to upload date if no date taken present
 
     def update_title(self):
         """ Derive a title from the original filename """
