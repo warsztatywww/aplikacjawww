@@ -1,7 +1,7 @@
 from django.db import models
+from django.utils.text import slugify
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
-from django.template.defaultfilters import slugify
 from django.urls import reverse
 from django.utils.functional import cached_property
 from imagekit.models import ImageSpecField
@@ -62,7 +62,7 @@ class Image(models.Model):
 
     @property
     def slug(self):
-        return slugify(self.title)
+        return slugify(self.title, allow_unicode=True)
 
     def update_exif(self):
         exif_data = {}
@@ -80,10 +80,10 @@ class Image(models.Model):
                 if exif_data.get('Make', '') not in exif_data['Camera']:  # Work around for Canon
                     exif_data['Camera'] = "{0} {1}".format(exif_data['Make'].title(), exif_data['Model'])
                 if 'FNumber' in exif_data:
-                    exif_data['Aperture'] = str(exif_data['FNumber'][0] / exif_data['FNumber'][1])
+                    exif_data['Aperture'] = str(exif_data['FNumber'].numerator / exif_data['FNumber'].denominator)
                 if 'ExposureTime' in exif_data:
-                    exif_data['Exposure'] = "{0}/{1}".format(exif_data['ExposureTime'][0],
-                                                             exif_data['ExposureTime'][1])
+                    exif_data['Exposure'] = "{0}/{1}".format(exif_data['ExposureTime'].numerator,
+                                                             exif_data['ExposureTime'].denominator)
             img.close()
 
         self.exif_camera = exif_data.get('Camera')
@@ -154,7 +154,7 @@ class Album(models.Model):
 
     @property
     def slug(self):
-        return slugify(self.title)
+        return slugify(self.title, allow_unicode=True)
 
     @property
     def display_highlight(self):
