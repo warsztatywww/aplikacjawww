@@ -1,0 +1,23 @@
+[run]
+source = .
+omit =
+    ./venv/*
+    ./gallery/*
+    ./wwwapp/migrations/*
+    ./wwwapp/management/commands/download_remote_images.py
+    ./wwwapp/settings*.py
+    ./wwwapp/wsgi.py
+    ./manage.py
+    ./make_plan.py
+    ./htmlcov/*
+plugins =
+    django_coverage_plugin
+relative_files = True
+
+[report]
+show_missing = True
+skip_covered = True
+exclude_lines =
+    pragma: no cover
+    if settings.DEBUG
+    if not settings.DEBUG

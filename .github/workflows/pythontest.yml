@@ -38,4 +38,13 @@ jobs:
     - name: Django migrations
       run: ./manage.py makemigrations --check --dry-run
     - name: Django test
-      run: ./manage.py test wwwapp -v 2
+      run: coverage run ./manage.py test wwwapp -v 2
+    - name: Generate coverage report
+      run: coverage xml
+    - name: Upload coverage to codecov.io
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+        verbose: true
+      if: matrix.python-version == 3.8
