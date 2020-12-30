@@ -11,7 +11,7 @@ from wwwapp.models import Camp, WorkshopType, WorkshopCategory, Workshop, Worksh
 # This is just so that we have something basic until somebody wries better tests
 # TODO: write more proper tests for these views
 
-class CampQualificationViews(TestCase):
+class TestBasicViews(TestCase):
     def setUp(self):
         Camp.objects.all().update(year=2020, start_date=datetime.date(2020, 7, 3), end_date=datetime.date(2020, 7, 15))
         self.year_2020 = Camp.objects.get()
