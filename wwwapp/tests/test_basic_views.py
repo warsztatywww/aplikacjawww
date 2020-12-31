@@ -55,46 +55,6 @@ class TestBasicViews(TestCase):
         self.article = Article.objects.create(name='test_article', title='Testowy', content='<b>Test</b>',
                                               modified_by=self.admin_user, on_menubar=True)
 
-    def test_index_works(self):
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-        self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Edytuj')
-
-        self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-        self.client.force_login(self.lecturer_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-    def test_article_view_works(self):
-        response = self.client.get(reverse('article', args=[self.article.name]))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-        self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('article', args=[self.article.name]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Edytuj')
-
-        self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('article', args=[self.article.name]))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-        self.client.force_login(self.lecturer_user)
-        response = self.client.get(reverse('article', args=[self.article.name]))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
     def test_participant_view_works(self):
         response = self.client.get(reverse('participants', args=[self.year_2020.pk]))
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('participants', args=[self.year_2020.pk]))
