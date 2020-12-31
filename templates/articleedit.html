@@ -5,16 +5,15 @@
 {% block content %}
   <div class="container">
     <article class="col-sm-12 maincontent">
-      {% if article.title %}
+      {% if title %}
         <header>
-          <h1>{{ article.title }}</h1>
+          <h1>{{ title }}</h1>
         </header>
       {% endif %}
       <div role="tabpanel">
         <form action="" method="post">
           {% csrf_token %}
           {% crispy form %}
-          <button class="btn btn-default">Zapisz</button>
         </form>
       </div>
     </article>
