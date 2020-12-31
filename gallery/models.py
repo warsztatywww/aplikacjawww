@@ -1,7 +1,9 @@
+import pytz
 from django.db import models
+from django.utils import timezone
+from django.utils.text import slugify
 from django.db.models.signals import post_save
 from django.dispatch.dispatcher import receiver
-from django.template.defaultfilters import slugify
 from django.urls import reverse
 from django.utils.functional import cached_property
 from imagekit.models import ImageSpecField
@@ -62,7 +64,7 @@ class Image(models.Model):
 
     @property
     def slug(self):
-        return slugify(self.title)
+        return slugify(self.title, allow_unicode=True)
 
     def update_exif(self):
         exif_data = {}
@@ -80,10 +82,10 @@ class Image(models.Model):
                 if exif_data.get('Make', '') not in exif_data['Camera']:  # Work around for Canon
                     exif_data['Camera'] = "{0} {1}".format(exif_data['Make'].title(), exif_data['Model'])
                 if 'FNumber' in exif_data:
-                    exif_data['Aperture'] = str(exif_data['FNumber'][0] / exif_data['FNumber'][1])
+                    exif_data['Aperture'] = str(exif_data['FNumber'].numerator / exif_data['FNumber'].denominator)
                 if 'ExposureTime' in exif_data:
-                    exif_data['Exposure'] = "{0}/{1}".format(exif_data['ExposureTime'][0],
-                                                             exif_data['ExposureTime'][1])
+                    exif_data['Exposure'] = "{0}/{1}".format(exif_data['ExposureTime'].numerator,
+                                                             exif_data['ExposureTime'].denominator)
             img.close()
 
         self.exif_camera = exif_data.get('Camera')
@@ -97,15 +99,19 @@ class Image(models.Model):
         original_exif = exif_data.get('DateTimeOriginal')
         if original_exif:
             try:
-                self.exif_date_taken = datetime.strptime(original_exif, "%Y:%m:%d %H:%M:%S")
+                # EXIF is not timezone aware, but Django requires a timezone, so the best we can do is assume UTC
+                date_taken = datetime.strptime(original_exif, "%Y:%m:%d %H:%M:%S")
+                self.exif_date_taken = timezone.make_aware(date_taken, pytz.timezone('UTC'))
             except ValueError:  # Fall back to file modification time
                 pass
 
     @property
     def date_taken(self):
         if self.exif_date_taken:
-            return self.exif_date_taken
-        return self.date_uploaded  # Fall back to upload date if no date taken present
+            # Make sure Django doesn't try to mess with timezones as EXIF is not timezone aware
+            return timezone.make_naive(self.exif_date_taken, pytz.timezone('UTC'))
+        # But date_uploaded should be in current timezone
+        return timezone.make_naive(self.date_uploaded)  # Fall back to upload date if no date taken present
 
     def update_title(self):
         """ Derive a title from the original filename """
@@ -154,7 +160,7 @@ class Album(models.Model):
 
     @property
     def slug(self):
-        return slugify(self.title)
+        return slugify(self.title, allow_unicode=True)
 
     @property
     def display_highlight(self):
