@@ -3,10 +3,9 @@ Aplikacja WWW
 
 [![Python test](https://github.com/warsztatywww/aplikacjawww/workflows/Python%20test/badge.svg)](https://github.com/warsztatywww/aplikacjawww/actions?query=branch%3Amaster+workflow%3A%22Python+test%22)
 [![codecov](https://codecov.io/gh/warsztatywww/aplikacjawww/branch/master/graph/badge.svg?token=xqOEznDxRX)](https://codecov.io/gh/warsztatywww/aplikacjawww)
+[![Updates](https://pyup.io/repos/github/warsztatywww/aplikacjawww/shield.svg)](https://pyup.io/repos/github/warsztatywww/aplikacjawww/)
 
 Django-based application to manage registration of people for [scientific summer school](https://warsztatywww.pl/).
-
-[![Updates](https://pyup.io/repos/github/warsztatywww/aplikacjawww/shield.svg)](https://pyup.io/repos/github/warsztatywww/aplikacjawww/)
 
 ### Setup:
 - install `python3` and `pip3`
