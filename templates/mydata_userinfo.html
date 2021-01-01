@@ -1,0 +1,14 @@
+{% extends "mydata_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block mydata_page_content %}
+<form action="" method="post" class="form-horizontal">
+  {% csrf_token %}
+  {% crispy user_info_page_form %}
+</form>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  {{ user_info_page_form.media }}
+{% endblock %}
