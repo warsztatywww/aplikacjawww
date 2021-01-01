@@ -302,9 +302,9 @@ def workshop_page_view(request, year, name):
 
 
 @login_required()
-def workshop_edit_view(request, year=None, name=None):
+def workshop_edit_view(request, year, name=None):
     if name is None:
-        year = Camp.objects.latest()
+        year = get_object_or_404(Camp, pk=year)
         workshop = None
         title = 'Nowe warsztaty'
         has_perm_to_edit = year.are_proposals_open()
@@ -806,16 +806,21 @@ def article_name_list_view(request):
 
 @login_required()
 @permission_required('wwwapp.see_all_workshops', raise_exception=True)
-def all_workshops_view(request):
+def workshops_view(request, year):
     context = get_context(request)
-    workshops = Workshop.objects.all()
+    year = get_object_or_404(Camp.objects.prefetch_related(
+        'workshops',
+        'workshops__year',
+        'workshops__lecturer',
+        'workshops__lecturer__user',
+        'workshops__type',
+        'workshops__type__year',
+        'workshops__category',
+        'workshops__category__year',
+    ), pk=year)
 
-    years = Camp.objects.all().reverse()
-    context['workshops'] = [
-        {'year': year,
-         'workshops': [workshop for workshop in workshops if workshop.year == year]}
-        for year in years]
-    context['title'] = 'Wszystkie warsztaty'
+    context['workshops'] = year.workshops.all()
+    context['title'] = 'Warsztaty: %s' % year
 
     return render(request, 'listworkshop.html', context)
 
