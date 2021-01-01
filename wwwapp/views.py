@@ -60,14 +60,14 @@ def get_context(request):
 
     context['google_analytics_key'] = settings.GOOGLE_ANALYTICS_KEY
     context['articles_on_menubar'] = Article.objects.filter(on_menubar=True).all()
-    context['current_year'] = Camp.objects.latest()
+    context['current_year'] = Camp.current()
 
     return context
 
 
 def program_view(request, year=None):
     if year is None:
-        url = reverse('program', args=[Camp.objects.latest().pk])
+        url = reverse('program', args=[Camp.current().pk])
         args = request.META.get('QUERY_STRING', '')
         if args:
             url = "%s?%s" % (url, args)
@@ -113,7 +113,7 @@ def profile_view(request, user_id):
     can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
     context['can_qualify'] = can_qualify
     context['workshop_profile'] = WorkshopUserProfile.objects.filter(
-        user_profile=user.userprofile, year=Camp.objects.latest())
+        user_profile=user.userprofile, year=Camp.current())
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -121,7 +121,7 @@ def profile_view(request, user_id):
         if not can_qualify:
             return HttpResponseForbidden()
         (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
-            user_profile=user.userprofile, year=Camp.objects.latest())
+            user_profile=user.userprofile, year=Camp.current())
         if request.POST['qualify'] == 'accept':
             edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
             edition_profile.save()
@@ -230,7 +230,7 @@ def mydata_status_view(request):
         'lecturer_workshops',
         'lecturer_workshops__year',
     ).get(user=request.user)
-    current_year = Camp.objects.latest()
+    current_year = Camp.current()
 
     participation_data = user_profile.all_participation_data()
     for p in participation_data:
@@ -262,13 +262,13 @@ def mydata_user_info_view(request):
     context = get_context(request)
 
     if request.method == "POST":
-        user_info_page_form = UserInfoPageForm(request.POST, instance=request.user.userprofile.user_info)
+        user_info_page_form = UserInfoPageForm(request.POST, year=Camp.current(), instance=request.user.userprofile.user_info)
         if user_info_page_form.is_valid():
             user_info_page_form.save()
             messages.info(request, 'Zapisano.')
             return redirect('mydata_user_info')
     else:
-        user_info_page_form = UserInfoPageForm(instance=request.user.userprofile.user_info)
+        user_info_page_form = UserInfoPageForm(year=Camp.current(), instance=request.user.userprofile.user_info)
 
     context['user_info_page_form'] = user_info_page_form
     context['title'] = 'Mój profil'
@@ -354,15 +354,15 @@ def workshop_edit_view(request, year, name=None):
         workshop_template = Article.objects.get(
             name="template_for_workshop_page").content
 
+        if not workshop:
+            initial_workshop = Workshop()
+            initial_workshop.year = year
+        else:
+            initial_workshop = workshop
+
         if request.method == 'POST' and 'qualify' not in request.POST:
             if not has_perm_to_edit:
                 return HttpResponseForbidden()
-            if not workshop:
-                initial_workshop = Workshop()
-                initial_workshop.year = year
-            else:
-                initial_workshop = workshop
-
             form = WorkshopForm(request.POST, request.FILES, workshop_url=workshop_url,
                                 instance=initial_workshop, has_perm_to_edit=has_perm_to_edit,
                                 profile_warnings=profile_warnings)
@@ -385,7 +385,7 @@ def workshop_edit_view(request, year, name=None):
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
                 workshop.page_content = workshop_template
-            form = WorkshopForm(instance=workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit,
+            form = WorkshopForm(instance=initial_workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit,
                                 profile_warnings=profile_warnings)
     else:
         form = None
@@ -684,7 +684,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
             return default
         return date
 
-    current_year = Camp.objects.latest()
+    current_year = Camp.current()
     for user_type, profiles in [('Lecturer', lecturer_profiles_raw),
                                 ('Participant', participant_profiles_raw)]:
         for up in profiles:

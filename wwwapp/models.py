@@ -1,6 +1,7 @@
 import os
 import urllib.parse
 import datetime
+from functools import lru_cache
 from typing import Dict, Set, Optional, Collection
 
 from django.conf import settings
@@ -42,13 +43,22 @@ class Camp(models.Model):
             return self.are_workshops_editable()
 
     def are_workshops_editable(self) -> bool:
-        return self == Camp.objects.latest()
+        return self == Camp.current()
 
     def is_qualification_editable(self) -> bool:
         if self.start_date:
             return self.are_workshops_editable() and datetime.datetime.now().date() < self.start_date
         else:
             return self.are_workshops_editable()
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        Camp.current.cache_clear()
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def current():
+        return Camp.objects.latest()
 
 
 @receiver(pre_delete, sender=Camp)
@@ -60,6 +70,7 @@ def protect_last_camp(sender, instance, using, **kwargs):
     if not Camp.objects.exclude(pk=instance.pk).exists():
         # TODO: This does not display a nice message in the admin panel for some reason but who cares
         raise ValidationError('At least one Camp object must exist')
+    Camp.current.cache_clear()
 
 
 class UserProfile(models.Model):
