@@ -94,7 +94,7 @@
                   <li><a href="{% url 'lecturers' current_year.pk %}">Prowadzący</a></li>
                   {% endif %}
                   {% if perms.wwwapp.see_all_workshops %}
-                  <li><a href="{% url 'workshops' %}">Warsztaty</a></li>
+                  <li><a href="{% url 'workshops' current_year.pk %}">Warsztaty</a></li>
                   {% endif %}
                   {% if perms.wwwapp.see_all_users %}
                   <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>
@@ -135,7 +135,7 @@
                 <li><a href="{% url 'mydata_profile' %}">Twój profil</a></li>
                 <li><a href="{% url 'mydata_status' %}">Status kwalifikacji</a></li>
                 <li role="separator" class="divider"></li>
-                <li><a href="{% url 'workshops_add' %}">Zgłoś warsztaty!</a></li>
+                <li><a href="{% url 'workshops_add' current_year.pk %}">Zgłoś warsztaty!</a></li>
                 {% if has_workshops %}
                 <li><a href="{% url 'mydata_status' %}">Twoje warsztaty</a></li>
                 {% endif %}

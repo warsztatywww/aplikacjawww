@@ -95,7 +95,7 @@ class TestBasicViews(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Edytuj')
 
-    def test_participant_view_works(self):
+    def test_participants_view_works(self):
         response = self.client.get(reverse('participants', args=[self.year_2020.pk]))
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('participants', args=[self.year_2020.pk]))
 
@@ -111,7 +111,7 @@ class TestBasicViews(TestCase):
         response = self.client.get(reverse('participants', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
 
-    def test_lecturer_view_works(self):
+    def test_lecturers_view_works(self):
         response = self.client.get(reverse('lecturers', args=[self.year_2020.pk]))
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('lecturers', args=[self.year_2020.pk]))
 
@@ -143,18 +143,18 @@ class TestBasicViews(TestCase):
         response = self.client.get(reverse('all_people'))
         self.assertEqual(response.status_code, 200)
 
-    def test_all_workshops_view_works(self):
-        response = self.client.get(reverse('workshops'))
-        self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshops'))
+    def test_workshops_view_works(self):
+        response = self.client.get(reverse('workshops', args=[self.year_2020.pk]))
+        self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshops', args=[self.year_2020.pk]))
 
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('workshops'))
+        response = self.client.get(reverse('workshops', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 403)
 
         self.client.force_login(self.lecturer_user)
-        response = self.client.get(reverse('workshops'))
+        response = self.client.get(reverse('workshops', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 403)
 
         self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('workshops'))
+        response = self.client.get(reverse('workshops', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)

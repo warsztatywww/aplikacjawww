@@ -7,8 +7,6 @@
   <div class="container">
     <article class="col-sm-12 maincontent">
       <h1> {{ title }}</h1>
-      {% for entry in workshops %}
-        <h2>{{ entry.year }}</h2>
         <div class="table-responsive">
           <table class="table workshop-table" style="width:100%!important;" data-order='[[ 10, "desc" ]]'>
             <thead>
@@ -27,7 +25,7 @@
             </tr>
             </thead>
             <tbody>
-              {% for workshop in entry.workshops %}
+              {% for workshop in workshops %}
                 <tr>
                   <td>
                   </td>
@@ -110,7 +108,6 @@
             </tbody>
           </table>
         </div>
-      {% endfor %}
     </article>
   </div>
 {% endblock %}
