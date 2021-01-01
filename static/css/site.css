@@ -1,5 +1,6 @@
 .not-qualified {
     color: red;
+    font-weight: bolder;
 }
 
 .maybe-qualified {
@@ -7,8 +8,14 @@
     font-weight: bolder;
 }
 
+.waiting-qualified {
+    color: orange;
+    font-weight: bolder;
+}
+
 .qualified {
     color: green;
+    font-weight: bolder;
 }
 
 .inline {
