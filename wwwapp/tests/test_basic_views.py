@@ -103,22 +103,6 @@ class TestBasicViews(TestCase):
         response = self.client.get(reverse('all_people'))
         self.assertEqual(response.status_code, 200)
 
-    def test_your_workshops_view_works(self):
-        response = self.client.get(reverse('yourWorkshops'))
-        self.assertRedirects(response, reverse('login') + '?next=' + reverse('yourWorkshops'))
-
-        self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('yourWorkshops'))
-        self.assertEqual(response.status_code, 200)
-
-        self.client.force_login(self.lecturer_user)
-        response = self.client.get(reverse('yourWorkshops'))
-        self.assertEqual(response.status_code, 200)
-
-        self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('yourWorkshops'))
-        self.assertEqual(response.status_code, 200)
-
     def test_all_workshops_view_works(self):
         response = self.client.get(reverse('allWorkshops'))
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('allWorkshops'))

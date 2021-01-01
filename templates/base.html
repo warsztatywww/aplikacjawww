@@ -129,7 +129,7 @@
               <ul class="dropdown-menu">
                 <li><a href="{% url 'addWorkshop' %}">Zgłoś warsztaty!</a></li>
                 {% if has_workshops %}
-                  <li><a href="{% url 'yourWorkshops' %}">Twoje warsztaty</a></li>
+                  <li><a href="{% url 'mydata_status' %}">Twoje warsztaty</a></li>
                 {% endif %}
                 {% if perms.wwwapp.see_all_workshops %}
                   <li><a href="{% url 'allWorkshops' %}">Wszystkie warsztaty</a></li>
