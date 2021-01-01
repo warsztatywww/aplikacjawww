@@ -20,8 +20,6 @@ class UserProfilePageForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserProfilePageForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
             StrictButton('Zapisz', type='submit', css_class='btn-default'),
@@ -39,8 +37,6 @@ class UserCoverLetterForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserCoverLetterForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
             StrictButton('Zapisz', type='submit', css_class='btn-default'),
@@ -58,9 +54,8 @@ class UserInfoPageForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserInfoPageForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
+        self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-3'
         self.helper.field_class = 'col-lg-9'
         self.helper.layout.fields.append(FormActions(
@@ -113,9 +108,10 @@ class UserProfileForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserProfileForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
+        self.helper.form_tag = False  # We have to put two Forms in one <form> :(
+        self.helper.disable_csrf = True  # Already added by UserForm
         self.helper.include_media = False
+        self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
         self.helper.layout.fields.append(FormActions(
@@ -138,9 +134,9 @@ class UserForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
+        self.helper.form_tag = False  # We have to put two Forms in one <form> :(
         self.helper.include_media = False
+        self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
 
@@ -175,8 +171,6 @@ class ArticleForm(ModelForm):
     def __init__(self, user, article_url, *args, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
 
         mce_attrs = {}
@@ -209,6 +203,10 @@ class ArticleForm(ModelForm):
             StrictButton('Zapisz', type='submit', css_class='btn-default'),
         ))
         self.helper.layout = Layout(*layout)
+
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default')
+        ))
 
 
 class WorkshopForm(ModelForm):
@@ -244,8 +242,6 @@ class WorkshopForm(ModelForm):
     def __init__(self, *args, workshop_url, has_perm_to_edit=True, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
 
         # Disable fields that should be disabled

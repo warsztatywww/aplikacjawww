@@ -28,10 +28,7 @@
   <li>Tutaj możesz napisać cokolwiek, co nie mieści się w
   punktach 1-6.</li>
 </ol>
-<form action="" method="post" class="form-horizontal">
-  {% csrf_token %}
   {% crispy user_cover_letter_form %}
-</form>
 {% endblock %}
 
 {% block script %}
