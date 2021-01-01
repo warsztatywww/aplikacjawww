@@ -1,4 +1,4 @@
-from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText
+from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Button, Div, HTML
 from django.contrib.auth.models import User
@@ -239,7 +239,7 @@ class WorkshopForm(ModelForm):
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
         }
 
-    def __init__(self, *args, workshop_url, has_perm_to_edit=True, **kwargs):
+    def __init__(self, *args, workshop_url, has_perm_to_edit=True, profile_warnings=None, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.include_media = False
@@ -287,6 +287,9 @@ class WorkshopForm(ModelForm):
                 css_class='row'
             ),
         )
+        if profile_warnings:
+            for message in profile_warnings:
+                self.fieldset_general.fields.append(Alert(content=message, dismiss=False, css_class='alert-info'))
         self.fieldset_proposal = Fieldset(
             "Opis propozycji",
             'proposition_description',

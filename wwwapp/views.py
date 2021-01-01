@@ -24,6 +24,7 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
 from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template import Template, Context
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
@@ -311,6 +312,15 @@ def workshop_edit_view(request, year=None, name=None):
     workshop_url = workshop_url.split('SOMENAME')
     workshop_url[0:1] = workshop_url[0].split('9999')
 
+    profile_warnings = []
+    if not workshop or workshop.lecturer.filter(user=request.user).exists():  # The user is one of the lecturers for this workshop
+        if len(request.user.userprofile.profile_page) <= 50:  # The user does not have their profile page filled in
+            profile_warnings.append(Template("""
+                    <strong>Nie uzupełnił{% if user.userprofile.gender == 'F' %}aś{% else %}eś{% endif %} swojej
+                    <a target="_blank" href="{% url 'mydata_profile_page' %}">strony profilowej</a>.</strong>
+                    Powiedz potencjalnym uczestnikom coś więcej o sobie!
+                """).render(Context({'user': request.user})))
+
     if workshop or has_perm_to_edit:
         workshop_template = Article.objects.get(
             name="template_for_workshop_page").content
@@ -325,7 +335,8 @@ def workshop_edit_view(request, year=None, name=None):
                 initial_workshop = workshop
 
             form = WorkshopForm(request.POST, request.FILES, workshop_url=workshop_url,
-                                instance=initial_workshop, has_perm_to_edit=has_perm_to_edit)
+                                instance=initial_workshop, has_perm_to_edit=has_perm_to_edit,
+                                profile_warnings=profile_warnings)
             if form.is_valid():
                 new = workshop is None
                 workshop = form.save(commit=False)
@@ -345,7 +356,8 @@ def workshop_edit_view(request, year=None, name=None):
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
                 workshop.page_content = workshop_template
-            form = WorkshopForm(instance=workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit)
+            form = WorkshopForm(instance=workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit,
+                                profile_warnings=profile_warnings)
     else:
         form = None
 

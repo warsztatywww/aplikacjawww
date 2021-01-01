@@ -2,10 +2,13 @@
 {% load crispy_forms_tags %}
 
 {% block mydata_page_content %}
-<form method="post" class="form-horizontal">
-  {% crispy user_form %}
-  {% crispy user_profile_form %}
-</form>
+  <p>
+      Podstawowe informacje o Tobie, niezbędne w procesie kwalifikacji
+  </p>
+  <form method="post" class="form-horizontal">
+    {% crispy user_form %}
+    {% crispy user_profile_form %}
+  </form>
 {% endblock %}
 
 {% block script %}
