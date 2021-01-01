@@ -46,7 +46,6 @@ urlpatterns = [
     path('<int:year>/workshop/<slug:name>/unregister/', views.unregister_from_workshop_view, name='unregister_from_workshop'),
     path('savePoints/', views.save_points_view, name='save_points'),
     path('addWorkshop/', views.workshop_edit_view, name='addWorkshop'),
-    path('yourWorkshops/', views.your_workshops_view, name='yourWorkshops'),
     path('allWorkshops/', views.all_workshops_view, name='allWorkshops'),
     path('<int:year>/dataForPlan/', views.data_for_plan_view, name='dataForPlan'),
     path('<int:year>/participants/', views.participants_view, name='participants'),
