@@ -32,11 +32,7 @@
                   <td>
                   </td>
                   <td>
-                    {% if link_to_edit or not workshop.is_publicly_visible %}
-                      <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
-                    {% else %}
-                      <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
-                    {% endif %}
+                    <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
                   </td>
                   <td data-order="{% for lecturer in workshop.lecturer.all %}{{ lecturer.user.last_name }} {{ lecturer.user.first_name }} {% endfor %}">
                     {% for lecturer in workshop.lecturer.all %}
