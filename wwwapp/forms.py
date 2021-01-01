@@ -1,6 +1,6 @@
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Button, Div
+from crispy_forms.layout import Layout, Fieldset, Button, Div, HTML
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, DateInput
@@ -23,6 +23,10 @@ class UserProfilePageForm(ModelForm):
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.include_media = False
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+        ))
 
     class Meta:
         model = UserProfile
@@ -38,6 +42,10 @@ class UserCoverLetterForm(ModelForm):
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.include_media = False
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+        ))
 
     class Meta:
         model = UserProfile
@@ -55,6 +63,9 @@ class UserInfoPageForm(ModelForm):
         self.helper.include_media = False
         self.helper.label_class = 'col-lg-3'
         self.helper.field_class = 'col-lg-9'
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+        ))
 
         current_year = Camp.objects.latest()  # TODO: UserInfo should probably be bound to a particular year
         self.fields['start_date'].widget = DateInput(attrs={'data-default-date': current_year.start_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
@@ -107,6 +118,10 @@ class UserProfileForm(ModelForm):
         self.helper.include_media = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+        ))
 
     class Meta:
         model = UserProfile

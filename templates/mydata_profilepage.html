@@ -1,0 +1,19 @@
+{% extends "mydata_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block mydata_page_content %}
+<form action="" method="post" class="form-horizontal">
+  {% csrf_token %}
+  {% crispy user_profile_page_form %}
+</form>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  {{ user_profile_page_form.media }}
+
+  <script>
+  /* Fixes a bug in django-tinymce with TINYMCE_INCLUDE_JQUERY = False, see https://github.com/aljosa/django-tinymce/issues/234 */
+  var django = {jQuery: jQuery};
+  </script>
+{% endblock %}

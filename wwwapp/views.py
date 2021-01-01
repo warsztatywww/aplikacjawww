@@ -167,53 +167,83 @@ def profile_view(request, user_id):
 
 
 @login_required()
-def my_profile_edit_view(request):
+def mydata_profile_view(request):
     context = get_context(request)
-    user_profile = UserProfile.objects.get(user=request.user)
-
-    user_form = UserForm(instance=request.user)
-    user_profile_form = UserProfileForm(instance=user_profile)
-    user_profile_page_form = UserProfilePageForm(instance=user_profile)
-    user_cover_letter_form = UserCoverLetterForm(instance=user_profile)
-    user_info_page_form = UserInfoPageForm(instance=user_profile.user_info)
 
     if request.method == "POST":
-        page = request.POST['page']
-        if page == 'data':
-            user_form = UserForm(request.POST, instance=request.user)
-            user_profile_form = UserProfileForm(request.POST, instance=user_profile)
-            if user_form.is_valid() and user_profile_form.is_valid():
-                user_form.save()
-                user_profile_form.save()
-                messages.info(request, 'Zapisano.')
-        elif page == 'profile_page':
-            user_profile_page_form = UserProfilePageForm(request.POST, instance=user_profile)
-            if user_profile_page_form.is_valid():
-                user_profile_page_form.save()
-                messages.info(request, 'Zapisano.')
-        elif page == 'cover_letter':
-            user_cover_letter_form = UserCoverLetterForm(request.POST, instance=user_profile)
-            if user_cover_letter_form.is_valid():
-                user_cover_letter_form.save()
-                messages.info(request, 'Zapisano.')
-        elif page == 'user_info':
-            user_info_page_form = UserInfoPageForm(request.POST, instance=user_profile.user_info)
-            if user_info_page_form.is_valid():
-                user_info_page_form.save()
-                messages.info(request, 'Zapisano.')
-        else:
-            raise SuspiciousOperation('Invalid page')
+        user_form = UserForm(request.POST, instance=request.user)
+        user_profile_form = UserProfileForm(request.POST, instance=request.user.userprofile)
+        if user_form.is_valid() and user_profile_form.is_valid():
+            user_form.save()
+            user_profile_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_profile')
+    else:
+        user_form = UserForm(instance=request.user)
+        user_profile_form = UserProfileForm(instance=request.user.userprofile)
 
-    user_form.helper.form_tag = False
-    user_profile_form.helper.form_tag = False
     context['user_form'] = user_form
     context['user_profile_form'] = user_profile_form
+    context['title'] = 'Mój profil'
+
+    return render(request, 'mydata_profile.html', context)
+
+
+@login_required()
+def mydata_profile_page_view(request):
+    context = get_context(request)
+
+    if request.method == "POST":
+        user_profile_page_form = UserProfilePageForm(request.POST, instance=request.user.userprofile)
+        if user_profile_page_form.is_valid():
+            user_profile_page_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_profile_page')
+    else:
+        user_profile_page_form = UserProfilePageForm(instance=request.user.userprofile)
+
     context['user_profile_page_form'] = user_profile_page_form
+    context['title'] = 'Mój profil'
+
+    return render(request, 'mydata_profilepage.html', context)
+
+
+@login_required()
+def mydata_cover_letter_view(request):
+    context = get_context(request)
+
+    if request.method == "POST":
+        user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.userprofile)
+        if user_cover_letter_form.is_valid():
+            user_cover_letter_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_cover_letter')
+    else:
+        user_cover_letter_form = UserCoverLetterForm(instance=request.user.userprofile)
+
     context['user_cover_letter_form'] = user_cover_letter_form
+    context['title'] = 'Mój profil'
+
+    return render(request, 'mydata_coverletter.html', context)
+
+
+@login_required()
+def mydata_user_info_view(request):
+    context = get_context(request)
+
+    if request.method == "POST":
+        user_info_page_form = UserInfoPageForm(request.POST, instance=request.user.userprofile.user_info)
+        if user_info_page_form.is_valid():
+            user_info_page_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_user_info')
+    else:
+        user_info_page_form = UserInfoPageForm(instance=request.user.userprofile.user_info)
+
     context['user_info_page_form'] = user_info_page_form
     context['title'] = 'Mój profil'
 
-    return render(request, 'profileedit.html', context)
+    return render(request, 'mydata_userinfo.html', context)
 
 
 def can_edit_workshop(workshop, user):
