@@ -2,6 +2,16 @@
 {% load crispy_forms_tags %}
 
 {% block mydata_page_content %}
+  <p>
+      Tu możesz uzupełnić swoją stronę profilową. Powiedz coś o sobie -
+      kim jesteś, czym się interesujesz i jak znalazłeś się na WWW?
+  </p>
+  <p>
+      Pamiętaj, że twoja strona profilowa jest <b>publiczna</b> dla wszystkich
+      odwiedzających stronę.<br>
+      Uzupełnienie jej jest <b>nieobowiązkowe</b>, ale zalecane w przypadku
+      <b>prowadzących</b> - link do niej jest wyświetlany przy opisie warsztatów.
+  </p>
   {% crispy user_profile_page_form %}
 {% endblock %}
 

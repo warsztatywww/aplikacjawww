@@ -155,7 +155,7 @@
     {% if messages %}
       <div class="container">
         {% for message in messages %}
-          <div class="alert{% for tag in message.tags|split:" " %} alert-{{ tag }}{% endfor %}">
+          <div class="alert{% for tag in message.tags|split:" " %} alert-{{ tag }} alert-auto-dismiss{% endfor %}">
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
