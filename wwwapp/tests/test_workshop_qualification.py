@@ -321,7 +321,7 @@ class WorkshopQualificationViews(TestCase):
 
         # Check participant view
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('program', args=[2020]))
+        response = self.client.get(reverse('mydata_status'))
         self.assertContains(response, wwwtags.qualified_mark(True))
 
     @freeze_time('2020-05-01 12:00:00')
@@ -346,7 +346,7 @@ class WorkshopQualificationViews(TestCase):
 
         # Check participant view
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('program', args=[2020]))
+        response = self.client.get(reverse('mydata_status'))
         self.assertContains(response, wwwtags.qualified_mark(False))
 
     @freeze_time('2020-05-01 12:00:00')
@@ -371,5 +371,5 @@ class WorkshopQualificationViews(TestCase):
 
         # Check participant view
         self.client.force_login(self.participant_user)
-        response = self.client.get(reverse('program', args=[2020]))
+        response = self.client.get(reverse('mydata_status'))
         self.assertContains(response, wwwtags.qualified_mark(None))
