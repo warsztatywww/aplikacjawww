@@ -50,6 +50,7 @@ MIDDLEWARE = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'wwwapp.auth.CustomSocialAuthExceptionMiddleware',
+    'wwwapp.models.cache_latest_camp_middleware',
 )
 
 ROOT_URLCONF = 'wwwapp.urls'

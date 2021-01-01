@@ -42,13 +42,29 @@ class Camp(models.Model):
             return self.are_workshops_editable()
 
     def are_workshops_editable(self) -> bool:
-        return self == Camp.objects.latest()
+        return self == Camp.current()
 
     def is_qualification_editable(self) -> bool:
         if self.start_date:
             return self.are_workshops_editable() and datetime.datetime.now().date() < self.start_date
         else:
             return self.are_workshops_editable()
+
+    @staticmethod
+    def current():
+        if hasattr(Camp, '_latest'):
+            return Camp._latest
+        else:
+            return Camp.objects.latest()
+
+
+def cache_latest_camp_middleware(get_response):
+    def middleware(request):
+        Camp._latest = Camp.objects.latest()
+        response = get_response(request)
+        del Camp._latest
+        return response
+    return middleware
 
 
 @receiver(pre_delete, sender=Camp)

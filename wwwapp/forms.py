@@ -51,7 +51,7 @@ class UserCoverLetterForm(ModelForm):
 
 
 class UserInfoPageForm(ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, year, **kwargs):
         super(UserInfoPageForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.include_media = False
@@ -62,17 +62,16 @@ class UserInfoPageForm(ModelForm):
             StrictButton('Zapisz', type='submit', css_class='btn-default'),
         ))
 
-        current_year = Camp.objects.latest()  # TODO: UserInfo should probably be bound to a particular year
-        self.fields['start_date'].widget = DateInput(attrs={'data-default-date': current_year.start_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
-        self.fields['end_date'].widget = DateInput(attrs={'data-default-date': current_year.end_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
+        self.year = year
+        self.fields['start_date'].widget = DateInput(attrs={'data-default-date': year.start_date or '', 'data-start-date': year.start_date or '', 'data-end-date': year.end_date or ''})
+        self.fields['end_date'].widget = DateInput(attrs={'data-default-date': year.end_date or '', 'data-start-date': year.start_date or '', 'data-end-date': year.end_date or ''})
 
     def clean_start_date(self):
         if self.cleaned_data['start_date']:
-            current_year = Camp.objects.latest()
-            if self.cleaned_data['start_date'] < current_year.start_date:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(current_year.start_date))
-            if self.cleaned_data['start_date'] > current_year.end_date:
-                raise ValidationError('Warsztaty kończą się ' + str(current_year.end_date))
+            if self.cleaned_data['start_date'] < self.year.start_date:
+                raise ValidationError('Warsztaty rozpoczynają się ' + str(self.year.start_date))
+            if self.cleaned_data['start_date'] > self.year.end_date:
+                raise ValidationError('Warsztaty kończą się ' + str(self.year.end_date))
             if 'end_date' in self.cleaned_data and self.cleaned_data['end_date']:
                 if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                     raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
@@ -80,11 +79,10 @@ class UserInfoPageForm(ModelForm):
 
     def clean_end_date(self):
         if self.cleaned_data['end_date']:
-            current_year = Camp.objects.latest()
-            if self.cleaned_data['end_date'] < current_year.start_date:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(current_year.start_date))
-            if self.cleaned_data['end_date'] > current_year.end_date:
-                raise ValidationError('Warsztaty kończą się ' + str(current_year.end_date))
+            if self.cleaned_data['end_date'] < self.year.start_date:
+                raise ValidationError('Warsztaty rozpoczynają się ' + str(self.year.start_date))
+            if self.cleaned_data['end_date'] > self.year.end_date:
+                raise ValidationError('Warsztaty kończą się ' + str(self.year.end_date))
             if 'start_date' in self.cleaned_data and self.cleaned_data['start_date']:
                 if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                     raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
@@ -174,10 +172,10 @@ class ArticleForm(ModelForm):
         self.helper.include_media = False
 
         mce_attrs = {}
-        if kwargs['instance'] and kwargs['instance'].pk:
+        if self.instance and self.instance.pk:
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': self.instance.name})
         self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
         is_special = kwargs['instance'] and kwargs['instance'].pk and \
@@ -254,7 +252,9 @@ class WorkshopForm(ModelForm):
             self.fields['proposition_description'].disabled = True
 
         # Make sure only current category and type choices are displayed
-        year = self.instance.year if hasattr(self.instance, 'type') else Camp.objects.latest()
+        if self.instance is None:
+            raise ValueError('WorkshopForm must be provided with an instance with the .year field already set')
+        year = self.instance.year
         self.fields['category'].queryset = WorkshopCategory.objects.filter(year=year)
         self.fields['type'].queryset = WorkshopType.objects.filter(year=year)
 
@@ -264,9 +264,9 @@ class WorkshopForm(ModelForm):
         self.fields['proposition_description'].widget = TinyMCE(mce_attrs=mce_attrs)
 
         mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
-        if kwargs['instance'] and kwargs['instance'].pk:
+        if self.instance and self.instance.pk:
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('workshop_edit_upload', kwargs={'year': kwargs['instance'].year.pk, 'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('workshop_edit_upload', kwargs={'year': self.instance.year.pk, 'name': self.instance.name})
         mce_attrs['readonly'] = self.fields['page_content'].disabled  # does not seem to respect the Django field settings for some reason
         self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
