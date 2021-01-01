@@ -2,8 +2,7 @@
 {% load crispy_forms_tags %}
 
 {% block mydata_page_content %}
-<form action="" method="post" class="form-horizontal">
-  {% csrf_token %}
+<form method="post" class="form-horizontal">
   {% crispy user_form %}
   {% crispy user_profile_form %}
 </form>

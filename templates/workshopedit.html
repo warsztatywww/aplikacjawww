@@ -54,10 +54,7 @@
       Zgłoszenia warsztatów nie są obecnie aktywne
   {% else %}
     <div role="tabpanel">
-      <form action="" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% crispy form %}
-      </form>
+      {% crispy form %}
     </div>
   {% endif %}
 {% endblock %}
