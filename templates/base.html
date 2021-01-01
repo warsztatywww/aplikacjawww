@@ -85,13 +85,18 @@
               </li>
             {% endif %}
 
-            {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.export_workshop_registration %}
+            {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.see_all_workshops or perms.wwwapp.export_workshop_registration %}
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <b class="caret"></b></a>
                 <ul class="dropdown-menu">
                   {% if perms.wwwapp.see_all_users %}
                   <li><a href="{% url 'participants' current_year.pk %}">Uczestnicy</a></li>
                   <li><a href="{% url 'lecturers' current_year.pk %}">Prowadzący</a></li>
+                  {% endif %}
+                  {% if perms.wwwapp.see_all_workshops %}
+                  <li><a href="{% url 'workshops' %}">Warsztaty</a></li>
+                  {% endif %}
+                  {% if perms.wwwapp.see_all_users %}
                   <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>
                   <li><a href="{% url 'filter_emails' %}">Adresy email</a></li>
                   {% endif %}
@@ -125,19 +130,17 @@
             </li>
 
             <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Warsztaty<b class="caret"></b></a>
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Zgłoś się!<b class="caret"></b></a>
               <ul class="dropdown-menu">
-                <li><a href="{% url 'addWorkshop' %}">Zgłoś warsztaty!</a></li>
+                <li><a href="{% url 'mydata_profile' %}">Twój profil</a></li>
+                <li><a href="{% url 'mydata_status' %}">Status kwalifikacji</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="{% url 'workshops_add' %}">Zgłoś warsztaty!</a></li>
                 {% if has_workshops %}
-                  <li><a href="{% url 'mydata_status' %}">Twoje warsztaty</a></li>
-                {% endif %}
-                {% if perms.wwwapp.see_all_workshops %}
-                  <li><a href="{% url 'allWorkshops' %}">Wszystkie warsztaty</a></li>
+                <li><a href="{% url 'mydata_status' %}">Twoje warsztaty</a></li>
                 {% endif %}
               </ul>
             </li>
-
-            <li><a href="{% url 'mydata_profile' %}">Profil</a></li>
 
             {% if user.is_authenticated %}
               <li><a class="btn" href="{% url 'login' %}">{{ user.first_name }} {{ user.last_name }}</a></li>
