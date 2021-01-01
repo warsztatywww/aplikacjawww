@@ -87,12 +87,6 @@ def program_view(request, year=None):
     context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
                             in workshops]
 
-    if request.user.is_authenticated:
-        qualifications = WorkshopParticipant.objects.filter(participant__user=request.user, workshop__year=year).prefetch_related('workshop')
-        if not any(qualification.qualification_result is not None for qualification in qualifications):
-            qualifications = None
-        context['your_qualifications'] = qualifications
-
     return render(request, 'program.html', context)
 
 
@@ -226,6 +220,41 @@ def mydata_cover_letter_view(request):
     context['title'] = 'Mój profil'
 
     return render(request, 'mydata_coverletter.html', context)
+
+
+@login_required()
+def mydata_status_view(request):
+    context = get_context(request)
+    user_profile = UserProfile.objects.prefetch_related(
+        'workshop_profile',
+        'lecturer_workshops',
+        'lecturer_workshops__year',
+    ).get(user=request.user)
+    current_year = Camp.objects.latest()
+
+    participation_data = user_profile.all_participation_data()
+    for p in participation_data:
+        p['qualification_results'] = []
+
+    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).prefetch_related('workshop', 'workshop__year').all()
+    for q in qualifications:
+        participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
+        if participation_for_year is None:
+            participation_for_year = {'year': q.workshop.year, 'type': 'participant', 'status': None, 'qualification_results': []}
+            participation_data.append(participation_for_year)
+        participation_for_year['qualification_results'].append(q)
+    participation_data.sort(key=lambda x: x['year'].year, reverse=True)
+
+    current_status = next(filter(lambda x: x['year'] == current_year, participation_data), None)
+    past_status = list(filter(lambda x: x['year'] != current_year, participation_data))
+
+    context['title'] = 'Mój profil'
+    context['gender'] = user_profile.gender
+    context['has_cover_letter'] = len(user_profile.cover_letter) >= 50
+    context['current_status'] = current_status
+    context['past_status'] = past_status
+
+    return render(request, 'mydata_status.html', context)
 
 
 @login_required()

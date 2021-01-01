@@ -1,0 +1,86 @@
+{% load wwwtags %}
+
+<div class="visible-xs">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Warsztaty</th>
+        <th scope="col">Punkty</th>
+        <th scope="col">Zakwalifikowano</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for workshop_participant in your_qualifications %}
+      <tr>
+        <th scope="row">
+          <a href="{% url 'workshop_page' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}">
+            {{ workshop_participant.workshop.title }}
+          </a>
+        </th>
+        <td>
+          {% if workshop_participant.workshop.is_qualifying %}
+            {{ workshop_participant.qualification_result | default_if_none:'?' }} / {{ workshop_participant.workshop.max_points | default_if_none:'?' }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if workshop_participant.workshop.is_qualifying %}
+            {{ workshop_participant.is_qualified | qualified_mark }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+      </tr>
+      {% if workshop_participant.workshop.is_qualifying and workshop_participant.comment %}
+        <tr>
+          <td></td>
+          <td colspan="3">{{ workshop_participant.comment }}</td>
+        </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="hidden-xs">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Warsztaty</th>
+        <th scope="col">Punkty</th>
+        <th scope="col">Zakwalifikowano</th>
+        <th scope="col">Komentarz</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for workshop_participant in your_qualifications %}
+      <tr>
+        <th scope="row">
+          <a href="{% url 'workshop_page' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}">
+            {{ workshop_participant.workshop.title }}
+          </a>
+        </th>
+        <td>
+          {% if workshop_participant.workshop.is_qualifying %}
+            {{ workshop_participant.qualification_result | default_if_none:'?' }} / {{ workshop_participant.workshop.max_points | default_if_none:'?' }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if workshop_participant.workshop.is_qualifying %}
+            {{ workshop_participant.is_qualified | qualified_mark }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if workshop_participant.workshop.is_qualifying and workshop_participant.comment %}
+            {{ workshop_participant.comment }}
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

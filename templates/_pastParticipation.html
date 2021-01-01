@@ -1,18 +1,20 @@
 {% for participation in participation_data %}
-  {% if participation.status == 'Z' %}
-    <span class="qualified">✔
-  {% elif participation.status == 'O' %}
-    <span class="not-qualified">✘
-  {% elif participation.status == 'X' %}
-    <span class="maybe-qualified">😞
-  {% else %}
-    <span>{{ participation.status }}
-  {% endif %}
+  {% if participation.status %}
+    {% if participation.status == 'Z' %}
+      <span class="qualified">✔
+    {% elif participation.status == 'O' %}
+      <span class="not-qualified">✘
+    {% elif participation.status == 'X' %}
+      <span class="maybe-qualified">😞
+    {% else %}
+      <span>{{ participation.status }}
+    {% endif %}
 
-  {% if participation.workshops %}
-    <span data-toggle="tooltip" data-placement="bottom" title="<b>Prowadzący:</b>{% for workshop in participation.workshops %}<br/>{{ workshop.title }}{% if workshop.status != 'Z' %} <i>({{ workshop.get_status_display }})</i>{% endif %}{% endfor %}" style="text-decoration: underline;">{{ participation.year }}</span>
-  {% else %}
-    <span data-toggle="tooltip" data-placement="bottom" title="<b>Uczestnik</b>">{{ participation.year }}</span>
+    {% if participation.workshops %}
+      <span data-toggle="tooltip" data-placement="bottom" title="<b>Prowadzący:</b>{% for workshop in participation.workshops %}<br/>{{ workshop.title }}{% if workshop.status != 'Z' %} <i>({{ workshop.get_status_display }})</i>{% endif %}{% endfor %}" style="text-decoration: underline;">{{ participation.year }}</span>
+    {% else %}
+      <span data-toggle="tooltip" data-placement="bottom" title="<b>Uczestnik</b>">{{ participation.year }}</span>
+    {% endif %}
+    </span>
   {% endif %}
-  </span>
 {% endfor %}
