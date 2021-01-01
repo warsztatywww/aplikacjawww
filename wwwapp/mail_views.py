@@ -74,12 +74,12 @@ def _all_refused(year):
 @login_required()
 @permission_required('wwwapp.see_all_users', raise_exception=True)
 def filtered_emails_view(request, year=None, filter_id=''):
+    context = get_context(request)
     if year is None:
-        year = Camp.objects.latest()
+        year = Camp.current()
     else:
         year = get_object_or_404(Camp, pk=year)
 
-    context = get_context(request)
     context['title'] = 'Filtrowane emaile użytkowników'
     context['filtered_users'] = None
     if filter_id in _registered_filters:
