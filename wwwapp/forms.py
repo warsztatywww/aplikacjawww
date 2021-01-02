@@ -13,7 +13,7 @@ from tinymce.widgets import TinyMCE
 from django.conf import settings
 
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, UserInfo, WorkshopUserProfile, WorkshopParticipant, Camp
+    WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp
 
 
 class UserProfilePageForm(ModelForm):
@@ -48,58 +48,6 @@ class UserCoverLetterForm(ModelForm):
         fields = ['cover_letter']
         labels = {'cover_letter': "List motywacyjny"}
         widgets = {'cover_letter': TinyMCE()}
-
-
-class UserInfoPageForm(ModelForm):
-    def __init__(self, *args, year, **kwargs):
-        super(UserInfoPageForm, self).__init__(*args, **kwargs)
-        self.helper = FormHelper(self)
-        self.helper.include_media = False
-        self.helper.form_class = 'form-horizontal'
-        self.helper.label_class = 'col-lg-3'
-        self.helper.field_class = 'col-lg-9'
-        self.helper.layout.fields.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default'),
-        ))
-
-        self.year = year
-        self.fields['start_date'].widget = DateInput(attrs={'data-default-date': year.start_date or '', 'data-start-date': year.start_date or '', 'data-end-date': year.end_date or ''})
-        self.fields['end_date'].widget = DateInput(attrs={'data-default-date': year.end_date or '', 'data-start-date': year.start_date or '', 'data-end-date': year.end_date or ''})
-
-    def clean_start_date(self):
-        if self.cleaned_data['start_date']:
-            if self.cleaned_data['start_date'] < self.year.start_date:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(self.year.start_date))
-            if self.cleaned_data['start_date'] > self.year.end_date:
-                raise ValidationError('Warsztaty kończą się ' + str(self.year.end_date))
-            if 'end_date' in self.cleaned_data and self.cleaned_data['end_date']:
-                if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
-                    raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
-        return self.cleaned_data['start_date']
-
-    def clean_end_date(self):
-        if self.cleaned_data['end_date']:
-            if self.cleaned_data['end_date'] < self.year.start_date:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(self.year.start_date))
-            if self.cleaned_data['end_date'] > self.year.end_date:
-                raise ValidationError('Warsztaty kończą się ' + str(self.year.end_date))
-            if 'start_date' in self.cleaned_data and self.cleaned_data['start_date']:
-                if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
-                    raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
-        return self.cleaned_data['end_date']
-
-    class Meta:
-        model = UserInfo
-        fields = ['pesel', 'address', 'phone', 'start_date', 'end_date', 'tshirt_size', 'comments']
-        labels = {
-            'pesel': 'Pesel',
-            'address': 'Adres zameldowania',
-            'phone': 'Numer telefonu',
-            'start_date': 'Data przyjazdu :-)',
-            'end_date': 'Data wyjazdu :-(',
-            'tshirt_size': 'Rozmiar koszulki',
-            'comments': 'Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)',
-        }
 
 
 class UserProfileForm(ModelForm):

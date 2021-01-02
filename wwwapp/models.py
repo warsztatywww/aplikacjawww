@@ -13,8 +13,6 @@ from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.functional import cached_property
 
-from wwwforms.models import pesel_validate, pesel_extract_date
-
 
 _latest_camp = threading.local()
 
@@ -182,12 +180,6 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.get_or_create(user=instance)
 
 
-@receiver(post_save, sender=UserProfile)
-def create_user_info(sender, instance, created, **kwargs):
-    if created:
-        UserInfo.objects.get_or_create(user_profile=instance)
-
-
 class WorkshopUserProfile(models.Model):
     # for each year
     STATUS_ACCEPTED = 'Z'
@@ -210,48 +202,14 @@ class WorkshopUserProfile(models.Model):
 
 
 class PESELField(models.CharField):
-    """PESEL field, with checksum verification."""
-    default_validators = [pesel_validate]
-
-
-POSSIBLE_TSHIRT_SIZES = [
-    ('no_idea', 'Nie ogarniam'),
-    ("XS", "XS"),
-    ("S", "S"),
-    ("M", "M"),
-    ("L", "L"),
-    ("XL", "XL"),
-    ("XXL", "XXL"),
-]
-
-
-class UserInfo(models.Model):
-    """Info needed for camp, not for qualification."""
-    user_profile = models.OneToOneField('UserProfile', on_delete=models.CASCADE, related_name='user_info', editable=False)
-
-    pesel = PESELField(max_length=11, blank=True, default="")
-    address = models.TextField(max_length=1000, blank=True, default="")
-    phone = models.CharField(max_length=50, blank=True, default="")
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    tshirt_size = models.CharField(max_length=100, choices=POSSIBLE_TSHIRT_SIZES,
-                                   default='no_idea', blank=False, null=False)
-    comments = models.CharField(max_length=1000, blank=True, default="")
-
-    class Meta:
-        permissions = (('see_user_info', 'Can see user info'),)
-
-    def get_birth_date(self) -> datetime.date or None:
-        """
-        Retrieves the birth date from the provided PESEL number.
-        Returns a date class instance or None if the PESEL is malformed or not present.
-        """
-        if not self.pesel or len(self.pesel) < 6:
-            return None
-        return pesel_extract_date(self.pesel)
-
-    def __str__(self):
-        return "{0}".format(self.user_profile)
+    system_check_removed_details = {
+        'msg': (
+            'PESELField has been removed except for support in '
+            'historical migrations.'
+        ),
+        'hint': 'Use wwwforms.FormQuestion with PESEL data type instead.',
+        'id': 'wwwapp.E900',
+    }
 
 
 class ArticleContentHistory(models.Model):

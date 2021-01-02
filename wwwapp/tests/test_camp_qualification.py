@@ -158,20 +158,6 @@ class CampQualificationViews(TestCase):
         })
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('mydata_cover_letter'))
 
-        response = self.client.get(reverse('mydata_user_info'))
-        self.assertRedirects(response, reverse('login') + '?next=' + reverse('mydata_user_info'))
-
-        response = self.client.post(reverse('mydata_user_info'), {
-            'pesel': '98101672714',
-            'address': 'Test!',
-            'phone': '601123456',
-            'start_date': '03.07.2020',
-            'end_date': '15.07.2020',
-            'tshirt_size': 'XS',
-            'comments': 'to działa?',
-        })
-        self.assertRedirects(response, reverse('login') + '?next=' + reverse('mydata_user_info'))
-
     def test_edit_profile(self):
         self.client.force_login(self.participant_user)
 
@@ -205,23 +191,8 @@ class CampQualificationViews(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertEqual(list(messages)[0].message, 'Zapisano.')
 
-        response = self.client.post(reverse('mydata_user_info'), {
-            'pesel': '98101672714',
-            'address': 'Test!',
-            'phone': '601123456',
-            'start_date': '03.07.2020',
-            'end_date': '15.07.2020',
-            'tshirt_size': 'XS',
-            'comments': 'to działa?',
-        })
-        self.assertRedirects(response, reverse('mydata_user_info'))
-        messages = get_messages(response.wsgi_request)
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(list(messages)[0].message, 'Zapisano.')
-
         self.participant_user.refresh_from_db()
         self.participant_user.userprofile.refresh_from_db()
-        self.participant_user.userprofile.user_info.refresh_from_db()
         self.assertEqual(self.participant_user.first_name, 'Użytkownik')
         self.assertEqual(self.participant_user.last_name, 'Testowy')
         self.assertEqual(self.participant_user.email, 'test@example.com')
@@ -231,70 +202,6 @@ class CampQualificationViews(TestCase):
         self.assertEqual(self.participant_user.userprofile.how_do_you_know_about, 'GitHub')
         self.assertHTMLEqual(self.participant_user.userprofile.profile_page, '<p>mój profil</p>')
         self.assertHTMLEqual(self.participant_user.userprofile.cover_letter, '<p>mój list</p>')
-        self.assertEqual(self.participant_user.userprofile.user_info.pesel, '98101672714')
-        self.assertEqual(self.participant_user.userprofile.user_info.address, 'Test!')
-        self.assertEqual(self.participant_user.userprofile.user_info.phone, '601123456')
-        self.assertEqual(self.participant_user.userprofile.user_info.start_date.year, 2020)
-        self.assertEqual(self.participant_user.userprofile.user_info.start_date.month, 7)
-        self.assertEqual(self.participant_user.userprofile.user_info.start_date.day, 3)
-        self.assertEqual(self.participant_user.userprofile.user_info.end_date.year, 2020)
-        self.assertEqual(self.participant_user.userprofile.user_info.end_date.month, 7)
-        self.assertEqual(self.participant_user.userprofile.user_info.end_date.day, 15)
-        self.assertEqual(self.participant_user.userprofile.user_info.tshirt_size, 'XS')
-        self.assertEqual(self.participant_user.userprofile.user_info.comments, 'to działa?')
-
-    def test_pesel_validation(self):
-        self.client.force_login(self.participant_user)
-
-        response = self.client.post(reverse('mydata_user_info'), {
-            'pesel': '98101672710',
-            'address': '',
-            'phone': '',
-            'start_date': '',
-            'end_date': '',
-            'tshirt_size': 'no_idea',
-            'comments': '',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertFormError(response, 'user_info_page_form', 'pesel', 'Suma kontrolna PESEL się nie zgadza.')
-
-        response = self.client.post(reverse('mydata_user_info'), {
-            'pesel': '9810167271',
-            'address': '',
-            'phone': '',
-            'start_date': '',
-            'end_date': '',
-            'tshirt_size': 'no_idea',
-            'comments': '',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertFormError(response, 'user_info_page_form', 'pesel', 'Długość numeru PESEL jest niepoprawna (10).')
-
-        response = self.client.post(reverse('mydata_user_info'), {
-            'page': 'user_info',
-            'pesel': 'abcdefghijk',
-            'address': '',
-            'phone': '',
-            'start_date': '',
-            'end_date': '',
-            'tshirt_size': 'no_idea',
-            'comments': '',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertFormError(response, 'user_info_page_form', 'pesel', 'PESEL nie składa się z samych cyfr.')
-
-        response = self.client.post(reverse('mydata_user_info'), {
-            'page': 'user_info',
-            'pesel': '12345678903',
-            'address': '',
-            'phone': '',
-            'start_date': '',
-            'end_date': '',
-            'tshirt_size': 'no_idea',
-            'comments': '',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertFormError(response, 'user_info_page_form', 'pesel', 'Data urodzenia zawarta w numerze PESEL nie istnieje.')
 
     def test_unauthed_cannot_set_status(self):
         with mock.patch('wwwapp.models.WorkshopUserProfile.save', autospec=True, side_effect=WorkshopUserProfile.save) as save:
