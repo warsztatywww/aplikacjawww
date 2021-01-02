@@ -53,6 +53,7 @@ class Form(models.Model):
     class Meta:
         verbose_name = 'formularz'
         verbose_name_plural = 'formularze'
+        permissions = [('see_form_results', 'Can see form results')]
 
     @property
     def has_any_answers(self):
@@ -109,6 +110,14 @@ class FormQuestion(models.Model):
     @property
     def has_any_answers(self):
         return self.answers.count() > 0
+
+    @property
+    def is_searchable(self):
+        return self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_PESEL)
+
+    @property
+    def is_orderable(self):
+        return self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_NUMBER, FormQuestion.TYPE_DATE)
 
     def value_field_name(self):
         if self.data_type == FormQuestion.TYPE_NUMBER:
