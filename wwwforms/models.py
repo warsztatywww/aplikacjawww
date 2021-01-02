@@ -95,8 +95,10 @@ class FormQuestion(models.Model):
     title = models.CharField(max_length=150, blank=False, verbose_name='Tekst pytania')
     data_type = models.CharField(max_length=1, blank=False, choices=TYPE_CHOICES, verbose_name='Typ odpowiedzi')
     is_required = models.BooleanField(default=True, verbose_name='Wymagane?')
+    order = models.PositiveIntegerField(default=0, blank=False, null=False)
 
     class Meta:
+        ordering = ['order']
         verbose_name = 'pytanie'
         verbose_name_plural = 'pytania'
 

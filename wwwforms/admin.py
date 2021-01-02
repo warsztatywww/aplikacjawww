@@ -1,9 +1,10 @@
+from adminsortable2.admin import SortableInlineAdminMixin
 from django.contrib import admin
 
 from wwwforms.models import Form, FormQuestion, FormQuestionAnswer
 
 
-class FormQuestionInline(admin.TabularInline):
+class FormQuestionInline(SortableInlineAdminMixin, admin.TabularInline):
     model = FormQuestion
     extra = 0
     show_change_link = True
