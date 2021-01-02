@@ -1,5 +1,3 @@
-import logging
-
 from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.db.models.signals import post_save
@@ -9,9 +7,6 @@ from django.urls import reverse
 from social_core.pipeline.partial import partial_step
 from social_django.middleware import SocialAuthExceptionMiddleware
 from social_django.models import UserSocialAuth
-
-from .models import UserProfile
-from .views import get_context
 
 
 def login_view(request):
@@ -26,19 +21,9 @@ def login_view(request):
         request.session.pop(key, None)
 
     if request.user.is_authenticated:
-        # This should never happen if the login flow worked correctly but I'm leaving this here just in case there are any broken users in the database already
-        # (aka I'm too afraid to remove it)
-        user_profile, just_created = UserProfile.objects.get_or_create(user=request.user)
-        if just_created:
-            logging.getLogger('django.request').error(
-                'User profile was missing for %s. This should have never happened.', request.user,
-                extra={'request': request})
         return redirect(settings.LOGIN_REDIRECT_URL)
 
-    # Make sure to call get_context after UserInfo and UserProfile get created, since they are required
-    # to figure out what to show on the menu bar
-    context = get_context(request)
-    return render(request, 'login.html', context)
+    return render(request, 'login.html', {})
 
 
 @partial_step(save_to_session=False)
@@ -58,7 +43,7 @@ def merge_accounts(strategy, details, request, response, current_partial, user=N
             return
 
         new_backend = current_partial.backend
-        context = get_context(request)
+        context = {}
         context['allow_account_creation'] = True
         context['new_provider'] = new_backend
         match_users = []
