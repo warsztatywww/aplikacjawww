@@ -13,6 +13,8 @@ from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.functional import cached_property
 
+from wwwforms.models import pesel_validate, pesel_extract_date
+
 
 _latest_camp = threading.local()
 
@@ -209,44 +211,7 @@ class WorkshopUserProfile(models.Model):
 
 class PESELField(models.CharField):
     """PESEL field, with checksum verification."""
-
-    def validate(self, pesel: str, user_info: 'UserInfo') -> None:
-        super().validate(pesel, user_info)
-        # We accept empty PESEL (don't raise exception) for legacy reasons.
-        if not pesel:
-            return
-
-        # https://en.wikipedia.org/wiki/PESEL#Format
-        if len(pesel) != 11:
-            raise ValidationError('Długość numeru PESEL jest niepoprawna ({}).'.format(len(pesel)))
-        if not pesel.isdigit():
-            raise ValidationError('PESEL nie składa się z samych cyfr.')
-
-        pesel_digits = [int(digit) for digit in pesel]
-        checksum_mults = [1, 3, 7, 9] * 2 + [1, 3, 1]
-        if sum(x*y for x, y in zip(pesel_digits, checksum_mults)) % 10 != 0:
-            raise ValidationError('Suma kontrolna PESEL się nie zgadza.')
-
-        if not PESELField._extract_date(pesel):
-            raise ValidationError('Data urodzenia zawarta w numerze PESEL nie istnieje.')
-
-    @staticmethod
-    def _extract_date(pesel: str) -> datetime.date or None:
-        """
-        Takes PESEL (string that starts with at least 6 digits) and returns
-        birth date associated with it.
-        """
-        try:
-            year, month, day = [int(pesel[i:i+2]) for i in range(0, 6, 2)]
-        except ValueError:
-            return None
-        years_from_month = [1900, 2000, 2100, 2200, 1800]
-        count, month = divmod(month, 20)
-        year += years_from_month[count]
-        try:
-            return datetime.date(year, month, day)
-        except ValueError:
-            return None
+    default_validators = [pesel_validate]
 
 
 POSSIBLE_TSHIRT_SIZES = [
@@ -283,7 +248,7 @@ class UserInfo(models.Model):
         """
         if not self.pesel or len(self.pesel) < 6:
             return None
-        return PESELField._extract_date(self.pesel)
+        return pesel_extract_date(self.pesel)
 
     def __str__(self):
         return "{0}".format(self.user_profile)
