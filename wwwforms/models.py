@@ -113,6 +113,7 @@ class FormQuestion(models.Model):
     title = models.CharField(max_length=150, blank=False, verbose_name='Tekst pytania')
     data_type = models.CharField(max_length=1, blank=False, choices=TYPE_CHOICES, verbose_name='Typ odpowiedzi')
     is_required = models.BooleanField(default=True, verbose_name='Wymagane?')
+    is_locked = models.BooleanField(default=False, verbose_name='Edycja zablokowana?', help_text='Zablokuj możliwość edycji odpowiedzi na to pytanie')
     order = models.PositiveIntegerField(default=0, blank=False, null=False)
 
     class Meta:

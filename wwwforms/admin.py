@@ -18,7 +18,7 @@ class FormQuestionInline(SortableInlineAdminMixin, admin.TabularInline):
     extra = 0
     show_change_link = True
     can_delete = False
-    fields = ('title', 'data_type', 'is_required', 'reset_answers_or_delete_action')
+    fields = ('title', 'data_type', 'is_required', 'is_locked', 'reset_answers_or_delete_action')
     readonly_fields = ('form', 'reset_answers_or_delete_action')
 
     def reset_answers_or_delete_action(self, obj):
@@ -175,7 +175,7 @@ class FormQuestionAnswerInline(admin.TabularInline):
 class FormQuestionAdmin(admin.ModelAdmin):
     model = FormQuestion
     inlines = [FormQuestionAnswerInline]
-    fields = ('form_link', 'title', 'data_type', 'is_required', 'reset_answers_action')
+    fields = ('form_link', 'title', 'data_type', 'is_required', 'is_locked', 'reset_answers_action')
     readonly_fields = ('form_link', 'reset_answers_action')
 
     def form_link(self, obj):
