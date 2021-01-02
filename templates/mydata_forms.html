@@ -1,0 +1,24 @@
+{% extends "mydata_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block mydata_page_content %}
+  <p>
+    Tu znajdziesz formularze do wypełnienia udostępnione ci przez organizatorów.
+  </p>
+  {% if user_info_forms %}
+    <ul>
+      {% for form in user_info_forms %}
+        <li><a href="{% url 'form' form.name %}">{{ form.title }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <div class="alert alert-danger" role="alert">
+      Obecnie nie masz formularzy do wypełnienia. Prawdopodobnie zostaną Ci one udostępnione dopiero,
+      gdy zostaniesz zakwalifikowany.
+    </div>
+  {% endif %}
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+{% endblock %}
