@@ -32,6 +32,7 @@ urlpatterns = [
     path('me/status/', views.mydata_status_view, name='mydata_status'),
     path('me/user_info/', views.mydata_user_info_view, name='mydata_user_info'),
     path('form/<slug:name>/', wwwforms_views.form_view, name='form'),
+    path('form/<slug:name>/results/', wwwforms_views.form_results_view, name='form_results'),
     path('article/<slug:name>/', views.article_view, name='article'),
     path('article/<slug:name>/edit/', views.article_edit_view, name='article_edit'),
     path('article/<slug:name>/edit/upload/', views.article_edit_upload_file, name='article_edit_upload'),
