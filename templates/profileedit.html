@@ -60,12 +60,11 @@
             </form>
           </div>
           <div title="Informacje" id="user_info">
-            <form action="#user_info" method="post" class="form-horizontal">
-              <input type="hidden" name="page" value="user_info">
-              {% csrf_token %}
-              <button class="btn btn-default big-button">Zapisz</button>
-              {% crispy user_info_page_form %}
-            </form>
+            <ul>
+              {% for form in user_info_forms %}
+                <li><a href="{% url 'form' form.name %}">{{ form.title }}</a></li>
+              {% endfor %}
+            </ul>
           </div>
         </div>
     </div>

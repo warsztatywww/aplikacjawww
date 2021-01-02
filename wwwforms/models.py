@@ -1,4 +1,5 @@
 import datetime
+from typing import Optional
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -25,11 +26,14 @@ def pesel_validate(pesel: str) -> None:
         raise ValidationError('Data urodzenia zawarta w numerze PESEL nie istnieje.')
 
 
-def pesel_extract_date(pesel: str) -> datetime.date or None:
+def pesel_extract_date(pesel: Optional[str]) -> datetime.date or None:
     """
     Takes PESEL (string that starts with at least 6 digits) and returns
     birth date associated with it.
     """
+    if not pesel or len(pesel) < 6:
+        return None
+
     try:
         year, month, day = [int(pesel[i:i+2]) for i in range(0, 6, 2)]
     except ValueError:
