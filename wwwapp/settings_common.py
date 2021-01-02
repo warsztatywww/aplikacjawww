@@ -217,10 +217,6 @@ TINYMCE_DEFAULT_CONFIG_WITH_IMAGES = {  # Additional settings for editors where 
     'file_picker_callback': 'tinymce_local_file_picker',
 }
 
-CURRENT_YEAR = 2020
-WORKSHOPS_START_DATE = datetime.date(2020, 7, 3)
-WORKSHOPS_END_DATE = datetime.date(2020, 7, 15)
-
 COMPRESS_ENABLED = True
 
 INTERNAL_IPS = [
