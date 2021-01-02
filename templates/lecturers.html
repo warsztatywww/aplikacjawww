@@ -41,15 +41,10 @@
                   {% endfor %}
                 </td>
                 {% for answer in person.form_answers %}
-                  {% if answer.question.data_type == 'd' %}
-                    <td data-order="{{ answer.value_date | date:"U" }}">
-                      {{ answer.value_date }}
-                    </td>
-                  {% else %}
-                    <td>
-                      {{ answer.value }}
-                    </td>
-                  {% endif %}
+                  <td title="Ostatnia modyfikacja: {% if answer %}{{ answer.last_changed }}{% else %}Nigdy{% endif %}"
+                      {% if answer.question.data_type == 'd' %}data-order="{{ answer.value_date | date:"U" }}"{% endif %}>
+                    {{ answer.value }}
+                  </td>
                 {% endfor %}
               </tr>
             {% endfor %}

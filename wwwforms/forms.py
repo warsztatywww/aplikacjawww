@@ -108,7 +108,9 @@ class FormForm(forms.Form):
             field_name = self.field_name_for_question(question)
             if not self.fields[field_name].disabled:
                 if self.answers[field_name]:
-                    self.answers[field_name].value = self.cleaned_data[field_name]
-                    self.answers[field_name].save()
+                    if self.answers[field_name].value != self.cleaned_data[field_name]:
+                        # Call .save() only if the value actually changed to make sure last_updated updates correctly
+                        self.answers[field_name].value = self.cleaned_data[field_name]
+                        self.answers[field_name].save()
                 else:
                     self.answers[field_name] = FormQuestionAnswer.objects.create(question=question, user=self.user, value=self.cleaned_data[field_name])

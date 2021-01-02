@@ -159,8 +159,8 @@ class FormAdmin(admin.ModelAdmin):
 class FormQuestionAnswerInline(admin.TabularInline):
     model = FormQuestionAnswer
     extra = 0
-    fields = ('user',)
-    readonly_fields = ('user',)
+    fields = ('user', 'last_changed')
+    readonly_fields = ('user', 'last_changed')
     show_change_link = False
 
     def has_add_permission(self, request, obj=None):
