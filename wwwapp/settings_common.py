@@ -29,6 +29,7 @@ INSTALLED_APPS = (
     'social_django',
     'crispy_forms',
     'django_select2',
+    'adminsortable2',
     'django_bleach',
     'tinymce',
     'compressor',
