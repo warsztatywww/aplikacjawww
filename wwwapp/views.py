@@ -74,7 +74,7 @@ def program_view(request, year=None):
 
     year = get_object_or_404(Camp, pk=year)
 
-    context = get_context(request)
+    context = {}
     context['title'] = 'Program %s' % str(year)
 
     if request.user.is_authenticated:
@@ -100,7 +100,7 @@ def profile_view(request, user_id):
     This function allows to view other people's profile by id.
     However, to view them easily some kind of resolver might be needed as we don't have usernames.
     """
-    context = get_context(request)
+    context = {}
     user_id = int(user_id)
     user = get_object_or_404(User.objects.prefetch_related(
         'userprofile',
@@ -168,7 +168,7 @@ def profile_view(request, user_id):
 
 @login_required()
 def my_profile_edit_view(request):
-    context = get_context(request)
+    context = {}
     user_profile = UserProfile.objects.get(user=request.user)
 
     user_form = UserForm(instance=request.user)
@@ -231,7 +231,7 @@ def workshop_page_view(request, year, name):
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
-    context = get_context(request)
+    context = {}
     context['title'] = workshop.title
     context['workshop'] = workshop
     context['has_perm_to_edit'] = has_perm_to_edit
@@ -319,7 +319,7 @@ def workshop_edit_view(request, year=None, name=None):
     else:
         form = None
 
-    context = get_context(request)
+    context = {}
     context['title'] = title
     context['workshop'] = workshop
     context['has_perm_to_edit'] = has_perm_to_edit
@@ -355,7 +355,7 @@ def workshop_participants_view(request, year, name):
     if not (has_perm_to_edit or request.user.has_perm('wwwapp.see_all_workshops')):
         return HttpResponseForbidden()
 
-    context = get_context(request)
+    context = {}
     context['title'] = '%s - uczestnicy' % workshop.title
     context['workshop'] = workshop
     context['has_perm_to_edit'] = has_perm_to_edit
@@ -482,7 +482,7 @@ def participants_view(request, year=None):
 
     people = list(people.values())
 
-    context = get_context(request)
+    context = {}
     context['title'] = ('Uczestnicy: %s' % year) if year is not None else 'Wszyscy ludzie'
     context['people'] = people
     context['is_all_people'] = year is None
@@ -525,7 +525,7 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
 
     people_list = list(people.values())
 
-    context = get_context(request)
+    context = {}
     context['title'] = 'Prowadzący: %s' % year
     context['people'] = people_list
 
@@ -544,7 +544,7 @@ def register_to_workshop_view(request, year, name):
 
     _, created = WorkshopParticipant.objects.get_or_create(participant=UserProfile.objects.get(user=request.user), workshop=workshop)
 
-    context = get_context(request)
+    context = {}
     context['workshop'] = workshop
     context['registered'] = True
     content = render(request, '_programworkshop.html', context).content.decode()
@@ -572,7 +572,7 @@ def unregister_from_workshop_view(request, year, name):
 
         workshop_participant.delete()
 
-    context = get_context(request)
+    context = {}
     context['workshop'] = workshop
     context['registered'] = False
     content = render(request, '_programworkshop.html', context).content.decode()
@@ -663,7 +663,7 @@ def qualification_problems_view(request, year, name):
 
 
 def article_view(request, name):
-    context = get_context(request)
+    context = {}
 
     art = get_object_or_404(Article, name=name)
     title = art.title
@@ -684,7 +684,7 @@ def article_view(request, name):
 
 @login_required()
 def article_edit_view(request, name=None):
-    context = get_context(request)
+    context = {}
     new = (name is None)
     if new:
         art = None
@@ -741,7 +741,7 @@ def all_workshops_view(request):
 
 
 def render_workshops(request, title, link_to_edit, workshops):
-    context = get_context(request)
+    context = {}
 
     years = Camp.objects.all().reverse()
     context['workshops'] = [
