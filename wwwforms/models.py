@@ -54,6 +54,10 @@ class Form(models.Model):
         verbose_name = 'formularz'
         verbose_name_plural = 'formularze'
 
+    @property
+    def has_any_answers(self):
+        return FormQuestionAnswer.objects.filter(question__form=self).count()
+
     def clean(self):
         if self.arrival_date and self.arrival_date.form != self:
             raise ValidationError({'arrival_date': 'Musi być z tego formularza'})
@@ -130,7 +134,7 @@ class FormQuestion(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.form) + ': ' + self.title
+        return str(self.form) + ': "' + self.title + '"'
 
 
 class FormQuestionAnswer(models.Model):
@@ -184,6 +188,6 @@ class FormQuestionAnswer(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.question) + ' ' + str(self.user)
+        return str(self.question) + ' - ' + self.user.get_full_name()
 
 
