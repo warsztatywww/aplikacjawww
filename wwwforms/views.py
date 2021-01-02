@@ -9,7 +9,7 @@ from wwwforms.models import Form
 
 @login_required()
 def form_view(request, name):
-    form = get_object_or_404(Form.objects.prefetch_related('questions', 'arrival_date', 'departure_date'), name=name)
+    form = get_object_or_404(Form.visible_objects.prefetch_related('questions', 'arrival_date', 'departure_date'), name=name)
 
     if request.method == 'POST':
         formform = FormForm(form, request.user, request.POST)
@@ -29,7 +29,7 @@ def form_view(request, name):
 @login_required()
 @permission_required('wwwforms.see_form_results', raise_exception=True)
 def form_results_view(request, name):
-    form = get_object_or_404(Form.objects.prefetch_related('questions', 'questions__answers', 'questions__answers__user'), name=name)
+    form = get_object_or_404(Form.visible_objects.prefetch_related('questions', 'questions__answers', 'questions__answers__user'), name=name)
 
     all_questions = form.questions.all()
     all_answers = [answer for question in all_questions for answer in question.answers.all()]

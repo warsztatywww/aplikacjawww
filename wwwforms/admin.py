@@ -48,7 +48,7 @@ class FormAdmin(admin.ModelAdmin):
     inlines = [FormQuestionInline]
     fieldsets = (
         (None, {
-            'fields': ('name', 'title', 'reset_answers_action')
+            'fields': ('name', 'title', 'is_visible', 'reset_answers_action')
         }),
         ('Pola specjalne', {
             'description': 'Ustawienie tych parametrów spowoduje włączenie specjalnej obsługi tych pól',
