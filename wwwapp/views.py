@@ -270,7 +270,7 @@ def mydata_status_view(request):
 def mydata_forms_view(request):
     context = {}
 
-    context['user_info_forms'] = Form.objects.all()
+    context['user_info_forms'] = Form.visible_objects.all()
     context['title'] = 'Mój profil'
 
     return render(request, 'mydata_forms.html', context)
@@ -491,9 +491,9 @@ def participants_view(request, year=None):
 
     participants = participants.all()
 
-    all_forms = Form.objects.prefetch_related('questions').filter(questions__answers__user__in=[p.user for p in participants]).distinct()
+    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__in=[p.user for p in participants]).distinct()
     all_questions = [question for form in all_forms for question in form.questions.all()]
-    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__in=[p.user for p in participants]).all()
+    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__in=[p.user for p in participants], question__in=all_questions).all()
 
     people = {}
 
@@ -589,9 +589,9 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
 
     people_list = list(people.values())
 
-    all_forms = Form.objects.prefetch_related('questions').filter(questions__answers__user__in=[p['user'] for p in people_list]).distinct()
+    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__in=[p['user'] for p in people_list]).distinct()
     all_questions = [question for form in all_forms for question in form.questions.all()]
-    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__in=[p['user'] for p in people_list]).all()
+    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__in=[p['user'] for p in people_list], question__in=all_questions).all()
     for lecturer in people_list:
         lecturer['form_answers'] = [next(filter(lambda a: a.question == question and a.user == lecturer['user'], all_answers), None) for question in all_questions]
 
@@ -699,8 +699,8 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
 
     if year == current_year:
         # TODO: Form data is valid for the current year only
-        start_dates = {answer.user.userprofile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__userprofile').filter(question=F('question__form__arrival_date'), user__userprofile__in=user_ids, value_date__isnull=False)}
-        end_dates = {answer.user.userprofile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__userprofile').filter(question=F('question__form__departure_date'), user__userprofile__in=user_ids, value_date__isnull=False)}
+        start_dates = {answer.user.userprofile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__userprofile').filter(question=F('question__form__arrival_date'), question__form__is_visible=True, user__userprofile__in=user_ids, value_date__isnull=False)}
+        end_dates = {answer.user.userprofile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__userprofile').filter(question=F('question__form__departure_date'), question__form__is_visible=True, user__userprofile__in=user_ids, value_date__isnull=False)}
 
         for user in users:
             start_date = start_dates[user['uid']] if user['uid'] in start_dates else None

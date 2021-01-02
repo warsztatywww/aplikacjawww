@@ -47,12 +47,21 @@ def pesel_extract_date(pesel: Optional[str]) -> datetime.date or None:
         return None
 
 
+class VisibleManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_visible=True)
+
+
 class Form(models.Model):
     name = models.SlugField(max_length=50, blank=False, unique=True, verbose_name='Nazwa', help_text='(w URLach)')
     title = models.CharField(max_length=50, blank=False, verbose_name='Tytuł')
+    is_visible = models.BooleanField(default=True, verbose_name='Widoczny?')
 
     arrival_date = models.ForeignKey('FormQuestion', blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data przyjazdu')
     departure_date = models.ForeignKey('FormQuestion', blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data wyjazdu')
+
+    objects = models.Manager()
+    visible_objects = VisibleManager()
 
     class Meta:
         verbose_name = 'formularz'
@@ -82,7 +91,7 @@ class Form(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.title
+        return self.title + (' (ukryty)' if not self.is_visible else '')
 
 
 class FormQuestion(models.Model):
@@ -147,7 +156,7 @@ class FormQuestion(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.form) + ': "' + self.title + '"'
+        return str(self.form.title) + ': "' + self.title + '"'
 
 
 class FormQuestionAnswer(models.Model):
