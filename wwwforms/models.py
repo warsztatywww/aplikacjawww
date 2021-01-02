@@ -163,6 +163,7 @@ class FormQuestion(models.Model):
 class FormQuestionAnswer(models.Model):
     question = models.ForeignKey(FormQuestion, on_delete=models.CASCADE, editable=False, related_name='answers')
     user = models.ForeignKey(User, on_delete=models.CASCADE, editable=False, related_name='+')
+    last_changed = models.DateTimeField(blank=True, null=True, auto_now=True)
     value_number = models.IntegerField(blank=True, null=True)
     value_string = models.CharField(max_length=100000, blank=True, null=True)
     value_date = models.DateField(blank=True, null=True)
