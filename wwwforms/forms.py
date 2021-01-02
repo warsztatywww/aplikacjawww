@@ -46,7 +46,8 @@ class FormForm(forms.Form):
             self.answers[field_name] = next(filter(lambda x: x.question == question, answers_qs), None)
             value = self.answers[field_name].value if self.answers[field_name] is not None else None
 
-            self.fields[field_name] = field_type(label=question.title, required=question.is_required, initial=value)
+            self.fields[field_name] = field_type(label=question.title, required=question.is_required,
+                                                 initial=value, disabled=question.is_locked)
 
             if question.data_type == FormQuestion.TYPE_DATE:
                 if question == form.arrival_date:
@@ -105,8 +106,9 @@ class FormForm(forms.Form):
     def save(self):
         for question in self.questions:
             field_name = self.field_name_for_question(question)
-            if self.answers[field_name]:
-                self.answers[field_name].value = self.cleaned_data[field_name]
-                self.answers[field_name].save()
-            else:
-                self.answers[field_name] = FormQuestionAnswer.objects.create(question=question, user=self.user, value=self.cleaned_data[field_name])
+            if not self.fields[field_name].disabled:
+                if self.answers[field_name]:
+                    self.answers[field_name].value = self.cleaned_data[field_name]
+                    self.answers[field_name].save()
+                else:
+                    self.answers[field_name] = FormQuestionAnswer.objects.create(question=question, user=self.user, value=self.cleaned_data[field_name])
