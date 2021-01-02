@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
-from wwwapp.models import UserProfile, UserInfo, Article, ArticleContentHistory, Workshop, WorkshopCategory, \
+from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, WorkshopCategory, \
     WorkshopType, WorkshopParticipant, Camp
 from typing import Tuple, List, Union
 from faker import Faker
@@ -55,10 +55,10 @@ class Command(BaseCommand):
         user.userprofile.cover_letter = self.fake.text()
         user.userprofile.save()
 
-        user.userprofile.user_info.pesel = pesel=profile_data['ssn']
-        user.userprofile.user_info.address=profile_data['address']
-        user.userprofile.user_info.comments=self.fake.text(100)
-        user.userprofile.user_info.save()
+        # user.userprofile.user_info.pesel = pesel=profile_data['ssn']
+        # user.userprofile.user_info.address=profile_data['address']
+        # user.userprofile.user_info.comments=self.fake.text(100)
+        # user.userprofile.user_info.save()
 
         return user, user.userprofile
 

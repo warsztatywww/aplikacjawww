@@ -33,7 +33,7 @@ def login_view(request):
                 'User profile was missing for %s. This should have never happened.', request.user,
                 extra={'request': request})
 
-    # Make sure to call get_context after UserInfo and UserProfile get created, since they are required
+    # Make sure to call get_context after UserProfile gets created, since it is required
     # to figure out what to show on the menu bar
     context = get_context(request)
     return render(request, 'login.html', context)
