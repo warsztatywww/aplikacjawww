@@ -1,3 +1,5 @@
+import datetime
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -15,16 +17,19 @@ class ModelTest(TestCase):
         form.questions.create(title='Favorite number', data_type=FormQuestion.TYPE_NUMBER, is_required=True)
         form.questions.create(title='Favorite color', data_type=FormQuestion.TYPE_STRING, is_required=True)
         form.questions.create(title='Essay', data_type=FormQuestion.TYPE_TEXTBOX, is_required=False)
+        form.questions.create(title='Gimme a date', data_type=FormQuestion.TYPE_DATE, is_required=False)
 
     def test_answer_create(self):
         form = Form.objects.create(name='test_form', title='Test form')
         question1 = form.questions.create(title='Favorite number', data_type=FormQuestion.TYPE_NUMBER, is_required=True)
         question2 = form.questions.create(title='Favorite color', data_type=FormQuestion.TYPE_STRING, is_required=True)
         question3 = form.questions.create(title='Essay', data_type=FormQuestion.TYPE_TEXTBOX, is_required=False)
+        question4 = form.questions.create(title='Gimme a date', data_type=FormQuestion.TYPE_DATE, is_required=False)
 
         question1.answers.create(user=self.admin_user, value_number=42)
         question2.answers.create(user=self.admin_user, value_string='gold')
         question3.answers.create(user=self.admin_user, value_string='See, this is a very long answer. I am too lazy to write all of it though.')
+        question4.answers.create(user=self.admin_user, value_date=datetime.date(2021, 1, 1))
 
     def test_answer_create_invalid(self):
         form = Form.objects.create(name='test_form', title='Test form')
