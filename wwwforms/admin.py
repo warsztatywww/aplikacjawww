@@ -48,7 +48,7 @@ class FormAdmin(admin.ModelAdmin):
     inlines = [FormQuestionInline]
     fieldsets = (
         (None, {
-            'fields': ('name', 'title', 'is_visible', 'reset_answers_action')
+            'fields': ('name', 'title', 'description', 'is_visible', 'reset_answers_action')
         }),
         ('Pola specjalne', {
             'description': 'Ustawienie tych parametrów spowoduje włączenie specjalnej obsługi tych pól',
@@ -67,6 +67,7 @@ class FormAdmin(admin.ModelAdmin):
     def get_fieldsets(self, request, obj=None):
         fieldsets = super().get_fieldsets(request, obj)
         if not obj:
+            # Hide the special field settings (this is a new form, so no fields exist yet)
             fieldsets = [fieldsets[0]]
         return fieldsets
 

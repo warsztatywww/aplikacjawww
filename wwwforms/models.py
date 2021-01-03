@@ -55,6 +55,7 @@ class VisibleManager(models.Manager):
 class Form(models.Model):
     name = models.SlugField(max_length=50, blank=False, unique=True, verbose_name='Nazwa', help_text='(w URLach)')
     title = models.CharField(max_length=50, blank=False, verbose_name='Tytuł')
+    description = models.TextField(max_length=100000, blank=True, verbose_name='Opis', help_text='Krótki opis wyświetlany na górze formulaza')
     is_visible = models.BooleanField(default=True, verbose_name='Widoczny?')
 
     arrival_date = models.ForeignKey('FormQuestion', blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data przyjazdu')

@@ -8,6 +8,10 @@
         <h1>{{ title }}</h1>
       </header>
 
+      {% if description %}
+        <p>{{ description }}</p>
+      {% endif %}
+
       {% crispy form %}
     </article>
   </div>
