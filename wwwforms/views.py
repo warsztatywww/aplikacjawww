@@ -29,7 +29,7 @@ def form_view(request, name):
 @login_required()
 @permission_required('wwwforms.see_form_results', raise_exception=True)
 def form_results_view(request, name):
-    form = get_object_or_404(Form.visible_objects.prefetch_related('questions', 'questions__answers', 'questions__answers__user'), name=name)
+    form = get_object_or_404(Form.objects.prefetch_related('questions', 'questions__answers', 'questions__answers__user'), name=name)
 
     all_questions = form.questions.all()
     all_answers = [answer for question in all_questions for answer in question.answers.all()]
@@ -48,3 +48,12 @@ def form_results_view(request, name):
     context['questions'] = all_questions
     context['answers'] = user_answers
     return render(request, 'formresults.html', context)
+
+
+@login_required()
+@permission_required('wwwforms.see_form_results', raise_exception=True)
+def form_list_view(request):
+    context = {}
+    context['title'] = 'Formularze'
+    context['forms'] = Form.objects.all()
+    return render(request, 'formlist.html', context)
