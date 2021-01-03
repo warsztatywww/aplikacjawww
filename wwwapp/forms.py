@@ -107,7 +107,7 @@ class UserProfileForm(ModelForm):
         self.helper.include_media = False
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
-    
+
     class Meta:
         model = UserProfile
         fields = ['gender', 'school', 'matura_exam_year', 'how_do_you_know_about']
@@ -140,6 +140,13 @@ class UserForm(ModelForm):
 
 
 class ArticleForm(ModelForm):
+    # These articles have a special purpose - their names cannot be changed because they are used in code,
+    # and they are not supposed to ever have a title in the database or be placed on the menubar
+    SPECIAL_ARTICLES = {
+        'index': 'Strona główna',
+        'template_for_workshop_page': 'Szablon strony warsztatów'
+    }
+
     class Meta:
         model = Article
         fields = ['title', 'name', 'on_menubar', 'content']
@@ -150,20 +157,43 @@ class ArticleForm(ModelForm):
             'content': 'Treść',
         }
 
-    def __init__(self, user, *args, **kwargs):
+    def __init__(self, user, article_url, *args, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.disable_csrf = True
         self.helper.include_media = False
+
         mce_attrs = {}
         if kwargs['instance'] and kwargs['instance'].pk:
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
             mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': kwargs['instance'].name})
         self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
-        if not user.has_perm('wwwapp.can_put_on_menubar'):
+
+        is_special = kwargs['instance'] and kwargs['instance'].pk and \
+                     kwargs['instance'].name in ArticleForm.SPECIAL_ARTICLES.keys()
+
+        layout = []
+        if is_special:
+            del self.fields['name']
+            del self.fields['title']
             del self.fields['on_menubar']
+        else:
+            layout.append(PrependedAppendedText('name',
+                article_url[0],
+                article_url[1]
+            ))
+            layout.append('title')
+            layout.append('on_menubar')
+
+            if not user.has_perm('wwwapp.can_put_on_menubar'):
+                self.fields['on_menubar'].disabled = True
+        layout.append('content')
+        layout.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+        ))
+        self.helper.layout = Layout(*layout)
 
 
 class WorkshopForm(ModelForm):

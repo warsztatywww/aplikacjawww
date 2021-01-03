@@ -698,8 +698,14 @@ def article_edit_view(request, name=None):
     if not has_perm:
         return HttpResponseForbidden()
 
+    article_url = request.build_absolute_uri(
+        reverse('article', kwargs={'name': 'SOMENAME'}))
+    article_url = article_url.split('SOMENAME')
+    if art and art.name in ArticleForm.SPECIAL_ARTICLES.keys():
+        title = ArticleForm.SPECIAL_ARTICLES[art.name]
+
     if request.method == 'POST':
-        form = ArticleForm(request.user, request.POST, instance=art)
+        form = ArticleForm(request.user, article_url, request.POST, instance=art)
         if form.is_valid():
             article = form.save(commit=False)
             article.modified_by = request.user
@@ -708,7 +714,7 @@ def article_edit_view(request, name=None):
             messages.info(request, 'Zapisano.')
             return redirect('article', form.instance.name)
     else:
-        form = ArticleForm(request.user, instance=art)
+        form = ArticleForm(request.user, article_url, instance=art)
 
     context['title'] = title
     context['article'] = art
