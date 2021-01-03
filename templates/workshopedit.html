@@ -3,7 +3,7 @@
 
 {% block workshop_page_title %}
   {{ block.super }}
-  {% if workshop and perms.wwwapp.change_workshop_status %}
+  {% if workshop and perms.wwwapp.change_workshop_status and workshop.is_workshop_editable %}
     <form method="post" class="inline">
       {% csrf_token %}
       {% if workshop.status %}
@@ -54,10 +54,7 @@
       Zgłoszenia warsztatów nie są obecnie aktywne
   {% else %}
     <div role="tabpanel">
-      <form action="" method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% crispy form %}
-      </form>
+      {% crispy form %}
     </div>
   {% endif %}
 {% endblock %}

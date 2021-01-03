@@ -11,10 +11,7 @@
         </header>
       {% endif %}
       <div role="tabpanel">
-        <form action="" method="post">
-          {% csrf_token %}
-          {% crispy form %}
-        </form>
+        {% crispy form %}
       </div>
     </article>
   </div>

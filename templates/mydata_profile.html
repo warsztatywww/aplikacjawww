@@ -1,0 +1,18 @@
+{% extends "mydata_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block mydata_page_content %}
+  <p>
+      Podstawowe informacje o Tobie, niezbędne w procesie kwalifikacji
+  </p>
+  <form method="post" class="form-horizontal">
+    {% crispy user_form %}
+    {% crispy user_profile_form %}
+  </form>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  {{ user_form.media }}
+  {{ user_profile_form.media }}
+{% endblock %}

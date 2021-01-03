@@ -1,0 +1,42 @@
+{% extends "mydata_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block mydata_page_content %}
+<p>Napisz (w 50 - 1000 słowach) odnosząc się do każdego punktu w oddzielnym paragrafie:</p>
+<ol>
+  <li>Opisz swoje główne zainteresowania naukowe.
+  Mile widziany będzie szczegółowy opis (jeśli interesujesz się
+  matematyką - jaka dziedzina interesuje Cię najbardziej;
+  jeśli programowaniem - co i w czym programujesz etc.).</li>
+  <li>W jaki sposób rozwijasz zainteresowania z punktu 1.?
+  Napisz, jakie książki czytasz, jakiego typu zadania i problemy
+  rozwiązujesz itd. Jeśli masz własne projekty, prace,
+  przeprowadzasz doświadczenia, piszesz własne programy -
+  opisz je. Jeśli jesteś w Krajowym Funduszu na rzecz Dzieci,
+  opisz krótko, co robisz w ramach programu.</li>
+  <li>Jeśli interesujesz się czymś nie stricte naukowym
+  (spoza tematyki mat/fiz/inf) lub angażujesz się w inne
+  inicjatywy, opisz je pokrótce.</li>
+  <li>Jeśli bierzesz udział w konkursach lub olimpiadach,
+  opisz swoje dokonania (udział, nagrody).</li>
+  <li>O których ze swoich zainteresowań najchętniej
+  opowiedziałbyś innym?</li>
+  <li>Czego oczekujesz od swojego udziału w Warsztatach,
+  co skłoniło Cię do zgłoszenia się? Jeśli masz ochotę
+  wnieść coś do Warsztatów (zorganizować coś, wygłosić
+  wieczorny wykład itd.), opisz to.</li>
+  <li>Tutaj możesz napisać cokolwiek, co nie mieści się w
+  punktach 1-6.</li>
+</ol>
+  {% crispy user_cover_letter_form %}
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  {{ user_cover_letter_form.media }}
+
+  <script>
+  /* Fixes a bug in django-tinymce with TINYMCE_INCLUDE_JQUERY = False, see https://github.com/aljosa/django-tinymce/issues/234 */
+  var django = {jQuery: jQuery};
+  </script>
+{% endblock %}

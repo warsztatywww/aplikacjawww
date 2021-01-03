@@ -50,10 +50,10 @@ class WorkshopEditViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_create_proposal_unauthenticated(self):
-        response = self.client.get(reverse('addWorkshop'))
-        self.assertRedirects(response, reverse('login')+'?next='+reverse('addWorkshop'))
+        response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
+        self.assertRedirects(response, reverse('login')+'?next='+reverse('workshops_add', args=[self.year_2020.pk]))
 
-        response = self.client.post(reverse('addWorkshop'), {
+        response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
             'title': 'Fajne warsztaty',
             'name': 'fajne',
             'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -63,7 +63,7 @@ class WorkshopEditViews(TestCase):
             ],
             'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
         })
-        self.assertRedirects(response, reverse('login')+'?next='+reverse('addWorkshop'))
+        self.assertRedirects(response, reverse('login')+'?next='+reverse('workshops_add', args=[self.year_2020.pk]))
 
     @freeze_time('2020-05-01 12:00:00')
     def test_create_proposal_authenticated(self):
@@ -71,7 +71,7 @@ class WorkshopEditViews(TestCase):
 
         # Load the form
         self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('addWorkshop'))
+        response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Not this type')
         self.assertNotContains(response, 'Not this category')
@@ -82,7 +82,7 @@ class WorkshopEditViews(TestCase):
         self.assertContains(response, 'This category 3')
 
         # Submit
-        response = self.client.post(reverse('addWorkshop'), {
+        response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
             'title': 'Fajne warsztaty',
             'name': 'fajne',
             'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -113,7 +113,7 @@ class WorkshopEditViews(TestCase):
     def test_create_proposal_wrong_type_year(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('addWorkshop'), {
+            response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
                 'title': 'Fajne warsztaty',
                 'name': 'fajne',
                 'type': WorkshopType.objects.get(year=self.year_2019, name='Not this type').pk,
@@ -131,7 +131,7 @@ class WorkshopEditViews(TestCase):
     def test_create_proposal_wrong_category_year(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('addWorkshop'), {
+            response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
                 'title': 'Fajne warsztaty',
                 'name': 'fajne',
                 'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -174,7 +174,7 @@ class WorkshopEditViews(TestCase):
     def test_create_proposal_duplicate_slug(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('addWorkshop'), {
+            response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
                 'title': 'Kolejne bardzo fajne warsztaty',
                 'name': 'bardzofajne',
                 'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -195,7 +195,7 @@ class WorkshopEditViews(TestCase):
 
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('addWorkshop'), {
+            response = self.client.post(reverse('workshops_add', args=[year_2021.pk]), {
                 'title': 'Kolejne bardzo fajne warsztaty',
                 'name': 'bardzofajne',
                 'type': type.pk,
@@ -220,13 +220,13 @@ class WorkshopEditViews(TestCase):
 
         # Load the form
         self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('addWorkshop'))
+        response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
 
         # Submit
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('addWorkshop'), {
+            response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
                 'title': 'Fajne warsztaty',
                 'name': 'fajne',
                 'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -247,13 +247,13 @@ class WorkshopEditViews(TestCase):
 
         # Load the form
         self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('addWorkshop'))
+        response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
 
         # Submit
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
-            response = self.client.post(reverse('addWorkshop'), {
+            response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
                 'title': 'Fajne warsztaty',
                 'name': 'fajne',
                 'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -804,7 +804,7 @@ class WorkshopEditViews(TestCase):
 
         self.client.force_login(self.admin_user)
         # Add proposal
-        response = self.client.post(reverse('addWorkshop'), {
+        response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
             'title': 'Fajne warsztaty',
             'name': 'fajne',
             'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
@@ -850,7 +850,7 @@ class WorkshopEditViews(TestCase):
 
         self.client.force_login(self.admin_user)
         # Add proposal
-        response = self.client.post(reverse('addWorkshop'), {
+        response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
             'title': 'Fajne warsztaty',
             'name': 'fajne',
             'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,

@@ -1,6 +1,6 @@
-from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText
+from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Button, Div
+from crispy_forms.layout import Layout, Fieldset, Button, Div, HTML
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, DateInput
@@ -20,9 +20,11 @@ class UserProfilePageForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserProfilePageForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+        ))
 
     class Meta:
         model = UserProfile
@@ -35,9 +37,11 @@ class UserCoverLetterForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserCoverLetterForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+        ))
 
     class Meta:
         model = UserProfile
@@ -47,26 +51,27 @@ class UserCoverLetterForm(ModelForm):
 
 
 class UserInfoPageForm(ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, year, **kwargs):
         super(UserInfoPageForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
+        self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-3'
         self.helper.field_class = 'col-lg-9'
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+        ))
 
-        current_year = Camp.objects.latest()  # TODO: UserInfo should probably be bound to a particular year
-        self.fields['start_date'].widget = DateInput(attrs={'data-default-date': current_year.start_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
-        self.fields['end_date'].widget = DateInput(attrs={'data-default-date': current_year.end_date or '', 'data-start-date': current_year.start_date or '', 'data-end-date': current_year.end_date or ''})
+        self.year = year
+        self.fields['start_date'].widget = DateInput(attrs={'data-default-date': year.start_date or '', 'data-start-date': year.start_date or '', 'data-end-date': year.end_date or ''})
+        self.fields['end_date'].widget = DateInput(attrs={'data-default-date': year.end_date or '', 'data-start-date': year.start_date or '', 'data-end-date': year.end_date or ''})
 
     def clean_start_date(self):
         if self.cleaned_data['start_date']:
-            current_year = Camp.objects.latest()
-            if self.cleaned_data['start_date'] < current_year.start_date:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(current_year.start_date))
-            if self.cleaned_data['start_date'] > current_year.end_date:
-                raise ValidationError('Warsztaty kończą się ' + str(current_year.end_date))
+            if self.cleaned_data['start_date'] < self.year.start_date:
+                raise ValidationError('Warsztaty rozpoczynają się ' + str(self.year.start_date))
+            if self.cleaned_data['start_date'] > self.year.end_date:
+                raise ValidationError('Warsztaty kończą się ' + str(self.year.end_date))
             if 'end_date' in self.cleaned_data and self.cleaned_data['end_date']:
                 if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                     raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
@@ -74,11 +79,10 @@ class UserInfoPageForm(ModelForm):
 
     def clean_end_date(self):
         if self.cleaned_data['end_date']:
-            current_year = Camp.objects.latest()
-            if self.cleaned_data['end_date'] < current_year.start_date:
-                raise ValidationError('Warsztaty rozpoczynają się ' + str(current_year.start_date))
-            if self.cleaned_data['end_date'] > current_year.end_date:
-                raise ValidationError('Warsztaty kończą się ' + str(current_year.end_date))
+            if self.cleaned_data['end_date'] < self.year.start_date:
+                raise ValidationError('Warsztaty rozpoczynają się ' + str(self.year.start_date))
+            if self.cleaned_data['end_date'] > self.year.end_date:
+                raise ValidationError('Warsztaty kończą się ' + str(self.year.end_date))
             if 'start_date' in self.cleaned_data and self.cleaned_data['start_date']:
                 if self.cleaned_data['start_date'] > self.cleaned_data['end_date']:
                     raise ValidationError('Nie możesz wyjechać wcześniej niż przyjechać! :D')
@@ -102,11 +106,16 @@ class UserProfileForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserProfileForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
+        self.helper.form_tag = False  # We have to put two Forms in one <form> :(
+        self.helper.disable_csrf = True  # Already added by UserForm
         self.helper.include_media = False
+        self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+        ))
 
     class Meta:
         model = UserProfile
@@ -123,9 +132,9 @@ class UserForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
+        self.helper.form_tag = False  # We have to put two Forms in one <form> :(
         self.helper.include_media = False
+        self.helper.form_class = 'form-horizontal'
         self.helper.label_class = 'col-lg-2'
         self.helper.field_class = 'col-lg-10'
 
@@ -160,15 +169,13 @@ class ArticleForm(ModelForm):
     def __init__(self, user, article_url, *args, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
 
         mce_attrs = {}
-        if kwargs['instance'] and kwargs['instance'].pk:
+        if self.instance and self.instance.pk:
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': self.instance.name})
         self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
         is_special = kwargs['instance'] and kwargs['instance'].pk and \
@@ -194,6 +201,10 @@ class ArticleForm(ModelForm):
             StrictButton('Zapisz', type='submit', css_class='btn-default'),
         ))
         self.helper.layout = Layout(*layout)
+
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', css_class='btn-default')
+        ))
 
 
 class WorkshopForm(ModelForm):
@@ -226,11 +237,9 @@ class WorkshopForm(ModelForm):
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
         }
 
-    def __init__(self, *args, workshop_url, has_perm_to_edit=True, **kwargs):
+    def __init__(self, *args, workshop_url, has_perm_to_edit=True, profile_warnings=None, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.disable_csrf = True
         self.helper.include_media = False
 
         # Disable fields that should be disabled
@@ -243,7 +252,9 @@ class WorkshopForm(ModelForm):
             self.fields['proposition_description'].disabled = True
 
         # Make sure only current category and type choices are displayed
-        year = self.instance.year if hasattr(self.instance, 'type') else Camp.objects.latest()
+        if self.instance is None:
+            raise ValueError('WorkshopForm must be provided with an instance with the .year field already set')
+        year = self.instance.year
         self.fields['category'].queryset = WorkshopCategory.objects.filter(year=year)
         self.fields['type'].queryset = WorkshopType.objects.filter(year=year)
 
@@ -253,9 +264,9 @@ class WorkshopForm(ModelForm):
         self.fields['proposition_description'].widget = TinyMCE(mce_attrs=mce_attrs)
 
         mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
-        if kwargs['instance'] and kwargs['instance'].pk:
+        if self.instance and self.instance.pk:
             mce_attrs['automatic_uploads'] = True
-            mce_attrs['images_upload_url'] = reverse('workshop_edit_upload', kwargs={'year': kwargs['instance'].year.pk, 'name': kwargs['instance'].name})
+            mce_attrs['images_upload_url'] = reverse('workshop_edit_upload', kwargs={'year': self.instance.year.pk, 'name': self.instance.name})
         mce_attrs['readonly'] = self.fields['page_content'].disabled  # does not seem to respect the Django field settings for some reason
         self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
@@ -276,6 +287,9 @@ class WorkshopForm(ModelForm):
                 css_class='row'
             ),
         )
+        if profile_warnings:
+            for message in profile_warnings:
+                self.fieldset_general.fields.append(Alert(content=message, dismiss=False, css_class='alert-info'))
         self.fieldset_proposal = Fieldset(
             "Opis propozycji",
             'proposition_description',

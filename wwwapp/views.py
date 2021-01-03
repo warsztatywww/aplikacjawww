@@ -24,6 +24,7 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
 from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template import Template, Context
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
@@ -59,14 +60,14 @@ def get_context(request):
 
     context['google_analytics_key'] = settings.GOOGLE_ANALYTICS_KEY
     context['articles_on_menubar'] = Article.objects.filter(on_menubar=True).all()
-    context['current_year'] = Camp.objects.latest()
+    context['current_year'] = Camp.current()
 
     return context
 
 
 def program_view(request, year=None):
     if year is None:
-        url = reverse('program', args=[Camp.objects.latest().pk])
+        url = reverse('program', args=[Camp.current().pk])
         args = request.META.get('QUERY_STRING', '')
         if args:
             url = "%s?%s" % (url, args)
@@ -85,12 +86,6 @@ def program_view(request, year=None):
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
     context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
                             in workshops]
-
-    if request.user.is_authenticated:
-        qualifications = WorkshopParticipant.objects.filter(participant__user=request.user, workshop__year=year).prefetch_related('workshop')
-        if not any(qualification.qualification_result is not None for qualification in qualifications):
-            qualifications = None
-        context['your_qualifications'] = qualifications
 
     return render(request, 'program.html', context)
 
@@ -118,7 +113,7 @@ def profile_view(request, user_id):
     can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
     context['can_qualify'] = can_qualify
     context['workshop_profile'] = WorkshopUserProfile.objects.filter(
-        user_profile=user.userprofile, year=Camp.objects.latest())
+        user_profile=user.userprofile, year=Camp.current())
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
@@ -126,7 +121,7 @@ def profile_view(request, user_id):
         if not can_qualify:
             return HttpResponseForbidden()
         (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
-            user_profile=user.userprofile, year=Camp.objects.latest())
+            user_profile=user.userprofile, year=Camp.current())
         if request.POST['qualify'] == 'accept':
             edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
             edition_profile.save()
@@ -167,53 +162,118 @@ def profile_view(request, user_id):
 
 
 @login_required()
-def my_profile_edit_view(request):
+def mydata_profile_view(request):
     context = get_context(request)
-    user_profile = UserProfile.objects.get(user=request.user)
-
-    user_form = UserForm(instance=request.user)
-    user_profile_form = UserProfileForm(instance=user_profile)
-    user_profile_page_form = UserProfilePageForm(instance=user_profile)
-    user_cover_letter_form = UserCoverLetterForm(instance=user_profile)
-    user_info_page_form = UserInfoPageForm(instance=user_profile.user_info)
 
     if request.method == "POST":
-        page = request.POST['page']
-        if page == 'data':
-            user_form = UserForm(request.POST, instance=request.user)
-            user_profile_form = UserProfileForm(request.POST, instance=user_profile)
-            if user_form.is_valid() and user_profile_form.is_valid():
-                user_form.save()
-                user_profile_form.save()
-                messages.info(request, 'Zapisano.')
-        elif page == 'profile_page':
-            user_profile_page_form = UserProfilePageForm(request.POST, instance=user_profile)
-            if user_profile_page_form.is_valid():
-                user_profile_page_form.save()
-                messages.info(request, 'Zapisano.')
-        elif page == 'cover_letter':
-            user_cover_letter_form = UserCoverLetterForm(request.POST, instance=user_profile)
-            if user_cover_letter_form.is_valid():
-                user_cover_letter_form.save()
-                messages.info(request, 'Zapisano.')
-        elif page == 'user_info':
-            user_info_page_form = UserInfoPageForm(request.POST, instance=user_profile.user_info)
-            if user_info_page_form.is_valid():
-                user_info_page_form.save()
-                messages.info(request, 'Zapisano.')
-        else:
-            raise SuspiciousOperation('Invalid page')
+        user_form = UserForm(request.POST, instance=request.user)
+        user_profile_form = UserProfileForm(request.POST, instance=request.user.userprofile)
+        if user_form.is_valid() and user_profile_form.is_valid():
+            user_form.save()
+            user_profile_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_profile')
+    else:
+        user_form = UserForm(instance=request.user)
+        user_profile_form = UserProfileForm(instance=request.user.userprofile)
 
-    user_form.helper.form_tag = False
-    user_profile_form.helper.form_tag = False
     context['user_form'] = user_form
     context['user_profile_form'] = user_profile_form
+    context['title'] = 'Mój profil'
+
+    return render(request, 'mydata_profile.html', context)
+
+
+@login_required()
+def mydata_profile_page_view(request):
+    context = get_context(request)
+
+    if request.method == "POST":
+        user_profile_page_form = UserProfilePageForm(request.POST, instance=request.user.userprofile)
+        if user_profile_page_form.is_valid():
+            user_profile_page_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_profile_page')
+    else:
+        user_profile_page_form = UserProfilePageForm(instance=request.user.userprofile)
+
     context['user_profile_page_form'] = user_profile_page_form
+    context['title'] = 'Mój profil'
+
+    return render(request, 'mydata_profilepage.html', context)
+
+
+@login_required()
+def mydata_cover_letter_view(request):
+    context = get_context(request)
+
+    if request.method == "POST":
+        user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.userprofile)
+        if user_cover_letter_form.is_valid():
+            user_cover_letter_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_cover_letter')
+    else:
+        user_cover_letter_form = UserCoverLetterForm(instance=request.user.userprofile)
+
     context['user_cover_letter_form'] = user_cover_letter_form
+    context['title'] = 'Mój profil'
+
+    return render(request, 'mydata_coverletter.html', context)
+
+
+@login_required()
+def mydata_status_view(request):
+    context = get_context(request)
+    user_profile = UserProfile.objects.prefetch_related(
+        'workshop_profile',
+        'lecturer_workshops',
+        'lecturer_workshops__year',
+    ).get(user=request.user)
+    current_year = Camp.current()
+
+    participation_data = user_profile.all_participation_data()
+    for p in participation_data:
+        p['qualification_results'] = []
+
+    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).prefetch_related('workshop', 'workshop__year').all()
+    for q in qualifications:
+        participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
+        if participation_for_year is None:
+            participation_for_year = {'year': q.workshop.year, 'type': 'participant', 'status': None, 'qualification_results': []}
+            participation_data.append(participation_for_year)
+        participation_for_year['qualification_results'].append(q)
+    participation_data.sort(key=lambda x: x['year'].year, reverse=True)
+
+    current_status = next(filter(lambda x: x['year'] == current_year, participation_data), None)
+    past_status = list(filter(lambda x: x['year'] != current_year, participation_data))
+
+    context['title'] = 'Mój profil'
+    context['gender'] = user_profile.gender
+    context['has_cover_letter'] = len(user_profile.cover_letter) >= 50
+    context['current_status'] = current_status
+    context['past_status'] = past_status
+
+    return render(request, 'mydata_status.html', context)
+
+
+@login_required()
+def mydata_user_info_view(request):
+    context = get_context(request)
+
+    if request.method == "POST":
+        user_info_page_form = UserInfoPageForm(request.POST, year=Camp.current(), instance=request.user.userprofile.user_info)
+        if user_info_page_form.is_valid():
+            user_info_page_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('mydata_user_info')
+    else:
+        user_info_page_form = UserInfoPageForm(year=Camp.current(), instance=request.user.userprofile.user_info)
+
     context['user_info_page_form'] = user_info_page_form
     context['title'] = 'Mój profil'
 
-    return render(request, 'profileedit.html', context)
+    return render(request, 'mydata_userinfo.html', context)
 
 
 def can_edit_workshop(workshop, user):
@@ -242,9 +302,9 @@ def workshop_page_view(request, year, name):
 
 
 @login_required()
-def workshop_edit_view(request, year=None, name=None):
+def workshop_edit_view(request, year, name=None):
     if name is None:
-        year = Camp.objects.latest()
+        year = get_object_or_404(Camp, pk=year)
         workshop = None
         title = 'Nowe warsztaty'
         has_perm_to_edit = year.are_proposals_open()
@@ -281,21 +341,31 @@ def workshop_edit_view(request, year=None, name=None):
     workshop_url = workshop_url.split('SOMENAME')
     workshop_url[0:1] = workshop_url[0].split('9999')
 
+    profile_warnings = []
+    if not workshop or workshop.lecturer.filter(user=request.user).exists():  # The user is one of the lecturers for this workshop
+        if len(request.user.userprofile.profile_page) <= 50:  # The user does not have their profile page filled in
+            profile_warnings.append(Template("""
+                    <strong>Nie uzupełnił{% if user.userprofile.gender == 'F' %}aś{% else %}eś{% endif %} swojej
+                    <a target="_blank" href="{% url 'mydata_profile_page' %}">strony profilowej</a>.</strong>
+                    Powiedz potencjalnym uczestnikom coś więcej o sobie!
+                """).render(Context({'user': request.user})))
+
     if workshop or has_perm_to_edit:
         workshop_template = Article.objects.get(
             name="template_for_workshop_page").content
 
+        if not workshop:
+            initial_workshop = Workshop()
+            initial_workshop.year = year
+        else:
+            initial_workshop = workshop
+
         if request.method == 'POST' and 'qualify' not in request.POST:
             if not has_perm_to_edit:
                 return HttpResponseForbidden()
-            if not workshop:
-                initial_workshop = Workshop()
-                initial_workshop.year = year
-            else:
-                initial_workshop = workshop
-
             form = WorkshopForm(request.POST, request.FILES, workshop_url=workshop_url,
-                                instance=initial_workshop, has_perm_to_edit=has_perm_to_edit)
+                                instance=initial_workshop, has_perm_to_edit=has_perm_to_edit,
+                                profile_warnings=profile_warnings)
             if form.is_valid():
                 new = workshop is None
                 workshop = form.save(commit=False)
@@ -315,7 +385,8 @@ def workshop_edit_view(request, year=None, name=None):
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
                 workshop.page_content = workshop_template
-            form = WorkshopForm(instance=workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit)
+            form = WorkshopForm(instance=initial_workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit,
+                                profile_warnings=profile_warnings)
     else:
         form = None
 
@@ -613,7 +684,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
             return default
         return date
 
-    current_year = Camp.objects.latest()
+    current_year = Camp.current()
     for user_type, profiles in [('Lecturer', lecturer_profiles_raw),
                                 ('Participant', participant_profiles_raw)]:
         for up in profiles:
@@ -734,28 +805,22 @@ def article_name_list_view(request):
 
 
 @login_required()
-def your_workshops_view(request):
-    workshops = Workshop.objects.filter(lecturer__user=request.user)
-    return render_workshops(request, 'Twoje warsztaty', True, workshops)
-
-
-@login_required()
 @permission_required('wwwapp.see_all_workshops', raise_exception=True)
-def all_workshops_view(request):
-    workshops = Workshop.objects.all()
-    return render_workshops(request, 'Wszystkie warsztaty', False, workshops)
-
-
-def render_workshops(request, title, link_to_edit, workshops):
+def workshops_view(request, year):
     context = get_context(request)
+    year = get_object_or_404(Camp.objects.prefetch_related(
+        'workshops',
+        'workshops__year',
+        'workshops__lecturer',
+        'workshops__lecturer__user',
+        'workshops__type',
+        'workshops__type__year',
+        'workshops__category',
+        'workshops__category__year',
+    ), pk=year)
 
-    years = Camp.objects.all().reverse()
-    context['workshops'] = [
-        {'year': year,
-         'workshops': [workshop for workshop in workshops if workshop.year == year]}
-        for year in years]
-    context['title'] = title
-    context['link_to_edit'] = link_to_edit
+    context['workshops'] = year.workshops.all()
+    context['title'] = 'Warsztaty: %s' % year
 
     return render(request, 'listworkshop.html', context)
 

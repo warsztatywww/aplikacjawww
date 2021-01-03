@@ -42,13 +42,29 @@ class Camp(models.Model):
             return self.are_workshops_editable()
 
     def are_workshops_editable(self) -> bool:
-        return self == Camp.objects.latest()
+        return self == Camp.current()
 
     def is_qualification_editable(self) -> bool:
         if self.start_date:
             return self.are_workshops_editable() and datetime.datetime.now().date() < self.start_date
         else:
             return self.are_workshops_editable()
+
+    @staticmethod
+    def current():
+        if hasattr(Camp, '_latest'):
+            return Camp._latest
+        else:
+            return Camp.objects.latest()
+
+
+def cache_latest_camp_middleware(get_response):
+    def middleware(request):
+        Camp._latest = Camp.objects.latest()
+        response = get_response(request)
+        del Camp._latest
+        return response
+    return middleware
 
 
 @receiver(pre_delete, sender=Camp)
@@ -86,14 +102,15 @@ class UserProfile(models.Model):
         """
         Returns the participation data from UserWorkshopProfile joined with data about lectures
         """
-        participant_data = [p for p in self.workshop_profile.all() if p.status is not None]
-        lecturer_data = [p for p in self.lecturer_workshops.all() if p.status is not None]
+        participant_data = [p for p in self.workshop_profile.all()]
+        lecturer_data = [p for p in self.lecturer_workshops.all()]
         years = set([profile.year for profile in participant_data] + [workshop.year for workshop in lecturer_data])
         data = []
         for year in sorted(years, key=lambda x: x.year):
             profile = next(iter([x for x in participant_data if x.year == year]), None)
             workshops = [x for x in lecturer_data if x.year == year]
             status = None
+            participation_type = 'participant'
             # If the user was a participant, their participation status takes precedence
             if profile:
                 status = profile.status
@@ -106,9 +123,12 @@ class UserProfile(models.Model):
                     status = 'Z'
                 elif any([workshop.status == 'X' for workshop in workshops]):
                     status = 'X'
-                else:
+                elif all([workshop.status for workshop in workshops]):
                     status = 'O'
-            data.append({'year': year, 'status': status, 'workshops': workshops})
+                else:
+                    status = None
+                participation_type = 'lecturer'
+            data.append({'year': year, 'status': status, 'type': participation_type, 'workshops': workshops})
         return data
 
     def all_participation_years(self) -> Set[Camp]:
@@ -132,11 +152,11 @@ class UserProfile(models.Model):
         """
         return set([workshop.year for workshop in self.lecturer_workshops.filter(status='Z')])
 
-    def participant_status_for(self, year: Camp):
+    def participant_status_for(self, year: Camp) -> Optional[str]:
         profile = self.workshop_profile_for(year)
         return profile.status if profile else None
 
-    def workshop_profile_for(self, year: Camp):
+    def workshop_profile_for(self, year: Camp) -> Optional['WorkshopUserProfile']:
         try:
             return self.workshop_profile.get(year=year)
         except WorkshopUserProfile.DoesNotExist:
@@ -370,10 +390,10 @@ class Workshop(models.Model):
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
 
     def is_workshop_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.year.are_workshops_editable()
+        return self.year.are_workshops_editable()
 
     def is_qualification_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.year.is_qualification_editable()
+        return self.year.is_qualification_editable()
 
     def clean(self):
         super(Workshop, self).clean()

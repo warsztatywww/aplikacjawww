@@ -1,0 +1,45 @@
+{% load wwwtags %}
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col" style="width: 50%">Warsztaty</th>
+      <th scope="col" style="width: 50%">Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for workshop in your_workshops %}
+    <tr>
+      <th scope="row" style="width: 50%">
+        <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">
+          {{ workshop.title }}
+        </a>
+      </th>
+      <td style="width: 50%">
+        {% if workshop.status == 'Z' %}
+          <span class="qualified"> {{ workshop.get_status_display }} </span>
+          {% if workshop.is_workshop_editable %}
+            {% if not workshop.page_content_is_public %}
+              <br><span class="waiting-qualified">Uzupełnij stronę warsztatów!</span>
+            {% endif %}
+            {% if workshop.is_qualifying and not workshop.qualification_problems %}
+              <br><span class="waiting-qualified">Uzupełnij zadania kwalifikacyjne!</span>
+            {% endif %}
+            {% if workshop.is_qualifying and not workshop.qualification_threshold %}
+              <br><span class="waiting-qualified">Sprawdzaj rozwiązania zadań, i uzupełnij próg kwalifikacji!</span>
+            {% endif %}
+          {% endif %}
+        {% elif workshop.status == 'O' %}
+          <span class="not-qualified"> {{ workshop.get_status_display }} </span>
+        {% elif workshop.status == 'X' %}
+          <span class="maybe-qualified"> {{ workshop.get_status_display }} </span>
+        {% elif not workshop.status %}
+          <span class="waiting-qualified"> Zgłoszone </span>
+        {% else %}
+          {{ workshop.get_status_display }}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
