@@ -1,3 +1,4 @@
+import django.forms.widgets
 from adminsortable2.admin import SortableInlineAdminMixin
 from django.contrib import admin, messages
 from django.contrib.admin.exceptions import DisallowedModelAdminToField
@@ -48,7 +49,7 @@ class FormAdmin(admin.ModelAdmin):
     inlines = [FormQuestionInline]
     fieldsets = (
         (None, {
-            'fields': ('name', 'title', 'is_visible', 'reset_answers_action')
+            'fields': ('name', 'title', 'description', 'is_visible', 'reset_answers_action')
         }),
         ('Pola specjalne', {
             'description': 'Ustawienie tych parametrów spowoduje włączenie specjalnej obsługi tych pól',
@@ -56,6 +57,12 @@ class FormAdmin(admin.ModelAdmin):
         }),
     )
     readonly_fields = ('reset_answers_action',)
+
+    def formfield_for_dbfield(self, db_field, **kwargs):
+        formfield = super().formfield_for_dbfield(db_field, **kwargs)
+        if db_field.name == 'description':
+            formfield.widget = django.forms.widgets.Textarea(attrs=formfield.widget.attrs)
+        return formfield
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
@@ -67,6 +74,7 @@ class FormAdmin(admin.ModelAdmin):
     def get_fieldsets(self, request, obj=None):
         fieldsets = super().get_fieldsets(request, obj)
         if not obj:
+            # Hide the special field settings (this is a new form, so no fields exist yet)
             fieldsets = [fieldsets[0]]
         return fieldsets
 

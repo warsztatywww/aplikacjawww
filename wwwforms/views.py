@@ -22,6 +22,7 @@ def form_view(request, name):
 
     context = {}
     context['title'] = form.title
+    context['description'] = form.description
     context['form'] = formform
     return render(request, 'form.html', context)
 
