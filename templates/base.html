@@ -85,7 +85,7 @@
               </li>
             {% endif %}
 
-            {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.see_all_workshops or perms.wwwapp.export_workshop_registration %}
+            {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.see_all_workshops or perms.wwwforms.see_form_results or perms.wwwapp.export_workshop_registration %}
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <b class="caret"></b></a>
                 <ul class="dropdown-menu">
@@ -95,6 +95,9 @@
                   {% endif %}
                   {% if perms.wwwapp.see_all_workshops %}
                   <li><a href="{% url 'workshops' current_year.pk %}">Warsztaty</a></li>
+                  {% endif %}
+                  {% if perms.wwwforms.see_form_results %}
+                  <li><a href="{% url 'form_list' %}">Formularze</a></li>
                   {% endif %}
                   {% if perms.wwwapp.see_all_users %}
                   <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="container">
+    <article class="col-sm-12 maincontent">
+      <header>
+        <h1>{{ title }}</h1>
+      </header>
+
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col" style="width: 50%">Nazwa</th>
+            <th scope="col" style="width: 50%">Akcje</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for form in forms %}
+          <tr>
+            <td scope="row" style="width: 50%">
+              {% if form.is_visible %}
+                <b><a href="{% url 'form' form.name %}">{{ form.title }}</a></b><br>
+                <i><i class="fa fa-eye"></i> widoczny</i>
+              {% else %}
+                <b>{{ form.title }}</b><br>
+                <i><i class="fa fa-eye-slash"></i> ukryty</i>
+              {% endif %}
+            </td>
+            <td style="width: 50%">
+              <a href="{% url 'form_results' form.name %}" role="button" class="btn btn-info"><i class="fa fa-file"></i> Wyniki</a>
+              {% if user.is_staff and perms.wwwforms.change_form %}
+              <a href="{% url 'admin:wwwforms_form_change' form.pk %}" role="button" class="btn btn-danger"><i class="fa fa-pencil"></i> Edytuj</a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% if user.is_staff and perms.wwwforms.add_form %}
+            <tr>
+              <td></td>
+              <td colspan="2">
+                <a href="{% url 'admin:wwwforms_form_add' %}" role="button" class="btn btn-action"><i class="fa fa-plus"></i> Dodaj</a>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </article>
+  </div>
+{% endblock %}
