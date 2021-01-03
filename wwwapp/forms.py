@@ -202,10 +202,6 @@ class ArticleForm(ModelForm):
         ))
         self.helper.layout = Layout(*layout)
 
-        self.helper.layout.fields.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default')
-        ))
-
 
 class WorkshopForm(ModelForm):
     # Note that the querysets for category and type are overwritten in __init__, but the argument is required here
