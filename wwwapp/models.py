@@ -390,10 +390,10 @@ class Workshop(models.Model):
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
 
     def is_workshop_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.year.are_workshops_editable()
+        return self.year.are_workshops_editable()
 
     def is_qualification_editable(self) -> bool:
-        return not hasattr(self, 'type') or self.year.is_qualification_editable()
+        return self.year.is_qualification_editable()
 
     def clean(self):
         super(Workshop, self).clean()
