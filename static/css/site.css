@@ -18,6 +18,22 @@
     font-weight: bolder;
 }
 
+.label-not-qualified {
+    background-color: red;
+}
+
+.label-maybe-qualified {
+    background-color: purple;
+}
+
+.label-waiting-qualified {
+    background-color: orange;
+}
+
+.label-qualified {
+    background-color: green;
+}
+
 .inline {
 	display: inline;
 }
