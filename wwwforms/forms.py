@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
 from wwwapp.models import Camp
-from wwwforms.models import FormQuestion, FormQuestionAnswer, pesel_validate, Form
+from wwwforms.models import FormQuestion, FormQuestionAnswer, pesel_validate, Form, FormQuestionOption
 
 
 class TextareaField(forms.CharField):
@@ -16,6 +16,18 @@ class PESELField(forms.CharField):
     default_validators = [pesel_validate]
 
 
+class SelectChoiceField(forms.ModelChoiceField):
+    widget = forms.widgets.Select
+
+
+class RadioChoiceField(forms.ModelChoiceField):
+    widget = forms.widgets.RadioSelect
+
+
+class CheckboxMultipleChoiceField(forms.ModelMultipleChoiceField):
+    widget = forms.widgets.CheckboxSelectMultiple
+
+
 class FormForm(forms.Form):
     FIELD_TYPES = {
         FormQuestion.TYPE_NUMBER: forms.IntegerField,
@@ -23,6 +35,9 @@ class FormForm(forms.Form):
         FormQuestion.TYPE_TEXTBOX: TextareaField,
         FormQuestion.TYPE_PESEL: PESELField,
         FormQuestion.TYPE_DATE: forms.DateField,
+        FormQuestion.TYPE_CHOICE: RadioChoiceField,
+        FormQuestion.TYPE_MULTIPLE_CHOICE: CheckboxMultipleChoiceField,
+        FormQuestion.TYPE_SELECT: SelectChoiceField,
     }
 
     def field_name_for_question(self, question):
@@ -46,8 +61,14 @@ class FormForm(forms.Form):
             self.answers[field_name] = next(filter(lambda x: x.question == question, answers_qs), None)
             value = self.answers[field_name].value if self.answers[field_name] is not None else None
 
+            field_kwargs = {}
+            if question.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_MULTIPLE_CHOICE, FormQuestion.TYPE_SELECT):
+                field_kwargs['queryset'] = question.options.all()
+                field_kwargs['blank'] = not question.is_required
+
             self.fields[field_name] = field_type(label=question.title, required=question.is_required,
-                                                 initial=value, disabled=question.is_locked)
+                                                 initial=value, disabled=question.is_locked,
+                                                 **field_kwargs)
 
             if question.data_type == FormQuestion.TYPE_DATE:
                 if question == form.arrival_date:
@@ -113,4 +134,6 @@ class FormForm(forms.Form):
                         self.answers[field_name].value = self.cleaned_data[field_name]
                         self.answers[field_name].save()
                 else:
-                    self.answers[field_name] = FormQuestionAnswer.objects.create(question=question, user=self.user, value=self.cleaned_data[field_name])
+                    self.answers[field_name] = FormQuestionAnswer.objects.create(question=question, user=self.user)
+                    self.answers[field_name].value = self.cleaned_data[field_name]
+                    self.answers[field_name].save()

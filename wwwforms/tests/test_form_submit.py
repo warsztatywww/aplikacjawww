@@ -135,3 +135,5 @@ class FormSubmitTest(TestCase):
             'question_{}'.format(self.question4.pk): '2021-01-01',
         })
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('form', args=[self.form.name]))
+
+    # TODO: Test is_required validation
