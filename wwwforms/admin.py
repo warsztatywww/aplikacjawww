@@ -195,8 +195,8 @@ class FormQuestionOptionInline(SortableInlineAdminMixin, admin.TabularInline):
 
 class FormQuestionAdmin(admin.ModelAdmin):
     model = FormQuestion
-    fields = ('form_link', 'title', 'data_type', 'is_required', 'is_locked', 'reset_answers_action')
-    readonly_fields = ('form_link', 'reset_answers_action')
+    fields = ('form', 'title', 'data_type', 'is_required', 'is_locked', 'reset_answers_action')
+    readonly_fields = ('reset_answers_action',)
 
     def get_inlines(self, request, obj):
         if not obj:
@@ -205,12 +205,6 @@ class FormQuestionAdmin(admin.ModelAdmin):
             return [FormQuestionOptionInline, FormQuestionAnswerInline]
         else:
             return [FormQuestionAnswerInline]
-
-    def form_link(self, obj):
-        return Template(
-            '<a href="{% url "admin:wwwforms_form_change" obj.pk %}">{{ obj }}</a>'
-        ).render(Context({'obj': obj.form}))
-    form_link.short_description = 'Formularz'
 
     def reset_answers_action(self, obj):
         return Template(

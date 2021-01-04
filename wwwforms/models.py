@@ -116,7 +116,7 @@ class FormQuestion(models.Model):
         (TYPE_PESEL, 'PESEL'),
     ]
 
-    form = models.ForeignKey(Form, on_delete=models.CASCADE, editable=False, related_name='questions')
+    form = models.ForeignKey(Form, on_delete=models.CASCADE, related_name='questions', verbose_name='Formularz')
     title = models.CharField(max_length=150, blank=False, verbose_name='Tekst pytania')
     data_type = models.CharField(max_length=1, blank=False, choices=TYPE_CHOICES, verbose_name='Typ odpowiedzi')
     is_required = models.BooleanField(default=True, verbose_name='Wymagane?')
