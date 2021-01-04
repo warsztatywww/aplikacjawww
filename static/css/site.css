@@ -18,6 +18,22 @@
     font-weight: bolder;
 }
 
+.label-not-qualified {
+    background-color: red;
+}
+
+.label-maybe-qualified {
+    background-color: purple;
+}
+
+.label-waiting-qualified {
+    background-color: orange;
+}
+
+.label-qualified {
+    background-color: green;
+}
+
 .inline {
 	display: inline;
 }
@@ -28,6 +44,12 @@
 
 .big {
     font-size: larger;
+}
+
+@media (max-width: 1199px) {
+    .small-on-md {
+        font-size: 65%;
+    }
 }
 
 /* Formularz logowania */
