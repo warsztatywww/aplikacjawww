@@ -56,7 +56,7 @@
 .navbar-fixed-top,
 .navbar-fixed-bottom { border-radius: 0; }
 
-
+nav { padding-bottom: 10px; }
 
 
 /*******************************/
@@ -74,12 +74,6 @@
 	.btn-default:focus { color:rgba(50,50,50,.8); -webkit-box-shadow:inset 0px 0px 0px 3px rgba(50,50,50,.8); -moz-box-shadow:inset 0px 0px 0px 3px rgba(50,50,50,.8); box-shadow:inset 0px 0px 0px 3px rgba(50,50,50,.8); background: transparent; }
 	.btn-default:active,
 	.btn-default.active { color:#333; -webkit-box-shadow:inset 0px 0px 0px 3px #333; -moz-box-shadow:inset 0px 0px 0px 3px #333; box-shadow:inset 0px 0px 0px 3px #333; background: transparent; }
-	
-.btn-action,
-.btn-primary { color:#FFEFD7; background-image: -webkit-linear-gradient(top, #FF9B22 0%, #FF8C00 100%); background-image: linear-gradient(to bottom, #FF9B22 0%, #FF8C00 100%); filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffFF9B22', endColorstr='#ffFF8C00', GradientType=0); filter: progid:DXImageTransform.Microsoft.gradient(enabled = false); background-repeat: repeat-x; border:0 none; }
-	.btn-action:hover,
-	.btn-action:focus { color:#fff; background: #FF9B22; }
-	.btn-action:active {	background: #FF8C00; }
 
 
 /*******************************/
