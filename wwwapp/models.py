@@ -1,4 +1,5 @@
 import os
+import threading
 import urllib.parse
 import datetime
 from typing import Dict, Set, Optional, Collection
@@ -11,6 +12,9 @@ from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.functional import cached_property
+
+
+_latest_camp = threading.local()
 
 
 class Camp(models.Model):
@@ -60,9 +64,9 @@ class Camp(models.Model):
 
 def cache_latest_camp_middleware(get_response):
     def middleware(request):
-        Camp._latest = Camp.objects.latest()
+        _latest_camp.v = Camp.objects.latest()
         response = get_response(request)
-        del Camp._latest
+        del _latest_camp.v
         return response
     return middleware
 
