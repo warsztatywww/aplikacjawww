@@ -86,6 +86,13 @@ def program_view(request, year=None):
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
     context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
                             in workshops]
+    if request.user.is_authenticated:
+        context['has_results'] = any([
+            participation.qualification_result for participation
+            in WorkshopParticipant.objects.filter(participant=request.user.userprofile).all()
+        ])
+    else:
+        context['has_results'] = False
 
     return render(request, 'program.html', context)
 
