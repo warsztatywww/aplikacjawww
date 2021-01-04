@@ -44,14 +44,6 @@ class ModelTest(TestCase):
         self.assertRaises(ValidationError, lambda: question2.answers.create(user=self.admin_user, value_number=1337, value_string='BBBBBBBB'))
         self.assertRaises(ValidationError, lambda: question3.answers.create(user=self.admin_user, value_number=1337, value_string='BBBBBBBB'))
 
-    def test_answer_required(self):
-        form = Form.objects.create(name='test_form', title='Test form')
-        question1 = form.questions.create(title='Favorite number', data_type=FormQuestion.TYPE_NUMBER, is_required=True)
-        question2 = form.questions.create(title='Least favorite number', data_type=FormQuestion.TYPE_NUMBER, is_required=False)
-
-        self.assertRaises(ValidationError, lambda: question1.answers.create(user=self.admin_user))
-        question2.answers.create(user=self.admin_user, value_number=1337)
-
     def test_form_edit_question_with_answers(self):
         form = Form.objects.create(name='test_form', title='Test form')
         question = form.questions.create(title='Favorite number', data_type=FormQuestion.TYPE_NUMBER, is_required=False)

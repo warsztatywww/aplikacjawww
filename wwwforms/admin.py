@@ -5,12 +5,13 @@ from django.contrib.admin.options import csrf_protect_m, TO_FIELD_VAR, IS_POPUP_
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import PermissionDenied
 from django.db import transaction, router
+from django import forms
 from django.http.response import HttpResponseRedirect
 from django.template import Template, Context
 from django.urls import path, reverse
 from django.utils.translation import gettext_lazy as _
 
-from wwwforms.models import Form, FormQuestion, FormQuestionAnswer
+from wwwforms.models import Form, FormQuestion, FormQuestionAnswer, FormQuestionOption
 
 
 class FormQuestionInline(SortableInlineAdminMixin, admin.TabularInline):
@@ -157,7 +158,19 @@ class FormAdmin(admin.ModelAdmin):
             return self.render_delete_form(request, context)
 
 
+class FormQuestionAnswerInlineForm(forms.ModelForm):
+    value_choices = forms.ModelMultipleChoiceField(widget=forms.widgets.CheckboxSelectMultiple, queryset=FormQuestionOption.objects.none())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields[self.instance.question.value_field_name()].required = self.instance.question.is_required
+            if self.instance.question.value_field_name() == 'value_choices':
+                self.fields['value_choices'].queryset = self.instance.question.options.all()
+
+
 class FormQuestionAnswerInline(admin.TabularInline):
+    form = FormQuestionAnswerInlineForm
     model = FormQuestionAnswer
     extra = 0
     fields = ('user', 'last_changed')
@@ -173,11 +186,25 @@ class FormQuestionAnswerInline(admin.TabularInline):
         return fields
 
 
+class FormQuestionOptionInline(SortableInlineAdminMixin, admin.TabularInline):
+    model = FormQuestionOption
+    extra = 0
+    fields = ('title',)
+    show_change_link = False
+
+
 class FormQuestionAdmin(admin.ModelAdmin):
     model = FormQuestion
-    inlines = [FormQuestionAnswerInline]
     fields = ('form_link', 'title', 'data_type', 'is_required', 'is_locked', 'reset_answers_action')
     readonly_fields = ('form_link', 'reset_answers_action')
+
+    def get_inlines(self, request, obj):
+        if not obj:
+            return []
+        elif obj.value_field_name() == 'value_choices':
+            return [FormQuestionOptionInline, FormQuestionAnswerInline]
+        else:
+            return [FormQuestionAnswerInline]
 
     def form_link(self, obj):
         return Template(
@@ -270,11 +297,6 @@ class FormQuestionAdmin(admin.ModelAdmin):
 
             return self.render_delete_form(request, context)
 
-    def get_inlines(self, request, obj):
-        if not obj:
-            return []
-        return super().get_inlines(request, obj)
-
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(super().get_readonly_fields(request, obj))
         if obj.has_any_answers:
@@ -288,6 +310,18 @@ class FormQuestionAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+    # After editing a question, return to the form editor, not question list
+    def _response_post_save(self, request, obj):
+        return HttpResponseRedirect(
+            reverse('admin:wwwforms_form_change', args=[obj.form.pk],
+                    current_app=self.admin_site.name))
+
+    def response_post_save_add(self, request, obj):
+        return self._response_post_save(request, obj)
+
+    def response_post_save_change(self, request, obj):
+        return self._response_post_save(request, obj)
 
 
 admin.site.register(Form, FormAdmin)

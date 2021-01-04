@@ -7,6 +7,7 @@ def forwards_func(apps, schema_editor):
     UserInfo = apps.get_model('wwwapp', 'UserInfo')
     Form = apps.get_model('wwwforms', 'Form')
     FormQuestion = apps.get_model('wwwforms', 'FormQuestion')
+    FormQuestionOption = apps.get_model('wwwforms', 'FormQuestionOption')
     FormQuestionAnswer = apps.get_model('wwwforms', 'FormQuestionAnswer')
 
     if not UserInfo.objects.all().exists():
@@ -15,13 +16,16 @@ def forwards_func(apps, schema_editor):
     try:
         form_userinfo = Form.objects.get(name='user_info')
     except Form.DoesNotExist:
-        form_userinfo = Form.objects.create(name='user_info', title='Informacje wyjazdowe')
+        form_userinfo = Form.objects.create(name='user_info', title='Informacje wyjazdowe', description='Te informacje będą nam potrzebne dopiero, gdy zostaniesz zakwalifikowany na warsztaty.')
     question_pesel = form_userinfo.questions.create(title='PESEL', data_type='P', is_required=True, order=0)
     question_address = form_userinfo.questions.create(title='Adres zameldowania', data_type='t', is_required=True, order=1)
     question_phone = form_userinfo.questions.create(title='Numer telefonu', data_type='s', is_required=True, order=2)
     question_start_date = form_userinfo.questions.create(title='Data przyjazdu :-)', data_type='d', is_required=True, order=3)
     question_end_date = form_userinfo.questions.create(title='Data wyjazdu :-(', data_type='d', is_required=True, order=4)
-    question_tshirt_size = form_userinfo.questions.create(title='Rozmiar koszulki', data_type='s', is_required=False, order=5)
+    question_tshirt_size = form_userinfo.questions.create(title='Rozmiar koszulki', data_type='C', is_required=False, order=5)
+    tshirt_sizes = {}
+    for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL']:
+        tshirt_sizes[size] = question_tshirt_size.options.create(title=size)
     question_comments = form_userinfo.questions.create(title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)', data_type='t', is_required=False, order=6)
     form_userinfo.arrival_date = question_start_date
     form_userinfo.departure_date = question_end_date
@@ -40,9 +44,12 @@ def forwards_func(apps, schema_editor):
         if userinfo.end_date:
             question_end_date.answers.create(user=user, value_date=userinfo.end_date)
         if userinfo.tshirt_size and userinfo.tshirt_size != 'no_idea':
-            question_tshirt_size.answers.create(user=user, value_string=userinfo.tshirt_size)
+            question_tshirt_size.answers.create(user=user).value_choices.set([tshirt_sizes[userinfo.tshirt_size]])
         if userinfo.comments:
             question_comments.answers.create(user=user, value_string=userinfo.comments)
+
+    # The values which already existed should have last_changed set to NULL
+    FormQuestionAnswer.objects.filter(question__form=form_userinfo).update(last_changed=None)
 
     UserInfo.objects.all().delete()
 
@@ -59,6 +66,7 @@ def reverse_func(apps, schema_editor):
     UserInfo = apps.get_model('wwwapp', 'UserInfo')
     Form = apps.get_model('wwwforms', 'Form')
     FormQuestion = apps.get_model('wwwforms', 'FormQuestion')
+    FormQuestionOption = apps.get_model('wwwforms', 'FormQuestionOption')
     FormQuestionAnswer = apps.get_model('wwwforms', 'FormQuestionAnswer')
 
     form_userinfo = None
@@ -76,7 +84,7 @@ def reverse_func(apps, schema_editor):
         question_phone = get_or_none(form_userinfo.questions.filter(title='Numer telefonu', data_type='s'))
         question_start_date = get_or_none(form_userinfo.questions.filter(title='Data przyjazdu :-)', data_type='d'))
         question_end_date = get_or_none(form_userinfo.questions.filter(title='Data wyjazdu :-(', data_type='d'))
-        question_tshirt_size = get_or_none(form_userinfo.questions.filter(title='Rozmiar koszulki', data_type='s'))
+        question_tshirt_size = get_or_none(form_userinfo.questions.filter(title='Rozmiar koszulki', data_type='C'))
         question_comments = get_or_none(form_userinfo.questions.filter(title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)', data_type='t'))
     except Form.DoesNotExist:
         pass
@@ -93,7 +101,12 @@ def reverse_func(apps, schema_editor):
         userinfo.phone = answers[question_phone].value_string if question_phone in answers else ''
         userinfo.start_date = answers[question_start_date].value_date if question_start_date in answers else None
         userinfo.end_date = answers[question_end_date].value_date if question_end_date in answers else None
-        userinfo.tshirt_size = answers[question_tshirt_size].value_string if question_tshirt_size in answers else 'no_idea'
+        userinfo.tshirt_size = 'no_idea'
+        if question_tshirt_size in answers:
+            try:
+                userinfo.tshirt_size = answers[question_tshirt_size].value_choices.get().title
+            except FormQuestionOption.DoesNotExist:
+                pass
         userinfo.comments = answers[question_comments].value_string if question_comments in answers else ''
         userinfo.save()
 
@@ -119,7 +132,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('wwwapp', '0068_workshop_year'),
-        ('wwwforms', '0003_add_see_results_permission'),
+        ('wwwforms', '0008_add_select'),
     ]
 
     operations = [

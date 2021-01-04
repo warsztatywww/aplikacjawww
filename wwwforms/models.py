@@ -100,6 +100,9 @@ class FormQuestion(models.Model):
     TYPE_STRING = 's'
     TYPE_TEXTBOX = 't'
     TYPE_DATE = 'd'
+    TYPE_CHOICE = 'c'
+    TYPE_MULTIPLE_CHOICE = 'm'
+    TYPE_SELECT = 'C'
     TYPE_PESEL = 'P'
 
     TYPE_CHOICES = [
@@ -107,6 +110,9 @@ class FormQuestion(models.Model):
         (TYPE_STRING, 'Tekst'),
         (TYPE_TEXTBOX, 'Tekst (wiele linii)'),
         (TYPE_DATE, 'Data'),
+        (TYPE_SELECT, 'Lista rozwijana'),
+        (TYPE_CHOICE, 'Wybór jednokrotny'),
+        (TYPE_MULTIPLE_CHOICE, 'Wybór wielokrotny'),
         (TYPE_PESEL, 'PESEL'),
     ]
 
@@ -141,6 +147,8 @@ class FormQuestion(models.Model):
             return 'value_string'
         elif self.data_type == FormQuestion.TYPE_DATE:
             return 'value_date'
+        elif self.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_MULTIPLE_CHOICE, FormQuestion.TYPE_SELECT):
+            return 'value_choices'
         else:
             raise ValueError('Invalid data type: ' + self.data_type)
 
@@ -155,10 +163,34 @@ class FormQuestion(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
+        if self.value_field_name() != 'value_choices':
+            self.options.all().delete()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return str(self.form.title) + ': "' + self.title + '"'
+
+
+class FormQuestionOption(models.Model):
+    question = models.ForeignKey(FormQuestion, on_delete=models.CASCADE, editable=False, related_name='options')
+    title = models.CharField(max_length=150, blank=False, verbose_name='Tekst opcji')
+    order = models.PositiveIntegerField(default=0, blank=False, null=False)
+
+    def clean(self):
+        if self.question.value_field_name() != 'value_choices':
+            raise ValidationError('This question type does not take answers')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'opcja'
+        verbose_name_plural = 'opcje'
+
+    def __str__(self):
+        return self.title
 
 
 class FormQuestionAnswer(models.Model):
@@ -168,8 +200,9 @@ class FormQuestionAnswer(models.Model):
     value_number = models.IntegerField(blank=True, null=True)
     value_string = models.CharField(max_length=100000, blank=True, null=True)
     value_date = models.DateField(blank=True, null=True)
+    value_choices = models.ManyToManyField(FormQuestionOption, blank=True, related_name='+')
 
-    ALL_VALUE_FIELDS = ['value_number', 'value_string', 'value_date']
+    ALL_VALUE_FIELDS = ['value_number', 'value_string', 'value_date', 'value_choices']
 
     class Meta:
         verbose_name = 'odpowiedź'
@@ -178,29 +211,47 @@ class FormQuestionAnswer(models.Model):
 
     @property
     def value(self):
-        return getattr(self, self.question.value_field_name())
+        field_name = self.question.value_field_name()
+        if field_name == 'value_choices':
+            if self.question.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_SELECT):
+                try:
+                    return getattr(self, field_name).get()
+                except FormQuestionOption.DoesNotExist:
+                    return None
+            else:
+                return getattr(self, field_name).all()
+        else:
+            return getattr(self, field_name)
 
     @value.setter
     def value(self, value):
         for field_name in self.ALL_VALUE_FIELDS:
-            setattr(self, field_name, None)
-        setattr(self, self.question.value_field_name(), value)
+            if field_name == self.question.value_field_name():
+                continue
+            if field_name == 'value_choices':
+                getattr(self, field_name).set([])
+            else:
+                setattr(self, field_name, None)
+
+        field_name = self.question.value_field_name()
+        if field_name == 'value_choices':
+            options = value
+            if self.question.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_SELECT):
+                options = [options] if options else []
+            getattr(self, field_name).set(options)
+        else:
+            setattr(self, field_name, value)
 
     def clean(self):
         must_be_empty = self.ALL_VALUE_FIELDS.copy()
         must_be_empty.remove(self.question.value_field_name())
-        must_be_set = []
-        if self.question.is_required:
-            must_be_set.append(self.question.value_field_name())
+        if 'value_choices' in must_be_empty:
+            must_be_empty.remove('value_choices')
 
         for field_name in must_be_empty:
             field = getattr(self, field_name)
             if field:
-                raise ValidationError({field_name: 'Must be empty'})
-        for field_name in must_be_set:
-            field = getattr(self, field_name)
-            if not field:
-                raise ValidationError({field_name: 'Must be filled'})
+                raise ValidationError({field_name: 'Must be empty for data of this type'})
 
         if self.question.data_type == FormQuestion.TYPE_PESEL:
             try:
@@ -214,5 +265,3 @@ class FormQuestionAnswer(models.Model):
 
     def __str__(self):
         return str(self.question) + ' - ' + self.user.get_full_name()
-
-
