@@ -3,31 +3,23 @@
 
 {% block content %}
   <div class="container signin-container">
-    {% if user.is_authenticated %}
-      <h2 class="heading">Zalogowany jako {{ user.first_name }} {{ user.last_name }}</h2>
-      <div class="user-info">
-        <a class="btn btn-default" href="{% url 'mydata_profile' %}">Edytuj mój profil</a>
-        <a class="btn btn-default" href="{% url 'logout' %}">Wyloguj</a>
+    <h2 class="heading">Wybierz metodę logowania: </h2>
+    <div class="row">
+      <div class="col-md-6" style="padding-bottom: 2em;">
+        {% include "_socialButton.html" with provider="facebook" next=request.GET.next only %}
       </div>
-    {% else %}
-      <h2 class="heading">Wybierz metodę logowania: </h2>
-      <div class="row">
-        <div class="col-md-6" style="padding-bottom: 2em;">
-          {% include "_socialButton.html" with provider="facebook" next=request.GET.next only %}
-        </div>
-        <div class="col-md-6" style="padding-bottom: 2em;">
-          {% include "_socialButton.html" with provider="google-oauth2" next=request.GET.next only %}
-        </div>
-        {% if debug %}
-        <div class="col-md-6" style="padding-bottom: 2em;">
-          <a href="{% url 'admin:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="btn btn-default" role="button" style="display: block; box-sizing: border-box; height: 46px; padding: 11px;">
-            <div style="height: 24px; line-height: 24px; vertical-align: middle;">
-              <span style="display: inline-block; vertical-align: middle; padding-left: 42px; padding-right: 42px;">{{ "Django" | provider_signin_text }}</span>
-            </div>
-            </a>
-        </div>
-        {% endif %}
+      <div class="col-md-6" style="padding-bottom: 2em;">
+        {% include "_socialButton.html" with provider="google-oauth2" next=request.GET.next only %}
       </div>
-    {% endif %}
+      {% if debug %}
+      <div class="col-md-6" style="padding-bottom: 2em;">
+        <a href="{% url 'admin:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="btn btn-default" role="button" style="display: block; box-sizing: border-box; height: 46px; padding: 11px;">
+          <div style="height: 24px; line-height: 24px; vertical-align: middle;">
+            <span style="display: inline-block; vertical-align: middle; padding-left: 42px; padding-right: 42px;">{{ "Django" | provider_signin_text }}</span>
+          </div>
+          </a>
+      </div>
+      {% endif %}
+    </div>
   </div>
 {% endblock %}

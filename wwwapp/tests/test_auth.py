@@ -1,4 +1,5 @@
 import mock
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -37,9 +38,9 @@ class AuthViews(TestCase):
             self.assertTrue("href=\"{}\"".format(reverse('social:begin', kwargs={'backend': backend})) in content, msg=backend)
 
     def login_page_user(self, first_name, last_name):
-        response = self.client.get(reverse('login'))
-        self.assertContains(response, 'Zalogowany jako {} {}'.format(first_name, last_name),
-                            status_code=200)
+        response = self.client.get(reverse('index'))
+        self.assertContains(response, '{} {}'.format(first_name, last_name),
+                            status_code=200)  # Check for name on status bar
 
     def test_login_page_anonymous(self):
         self.login_page_anonymous()
@@ -69,7 +70,7 @@ class AuthViews(TestCase):
                     self.assertTemplateUsed(response, 'loginMerge.html')
                 else:
                     self.assertEqual(response.status_code, 302)
-                    self.assertEqual(response.url, reverse('login'))
+                    self.assertEqual(response.url, settings.LOGIN_REDIRECT_URL)
 
                     if test_login:
                         self.login_page_user(first_name, last_name)
@@ -101,7 +102,7 @@ class AuthViews(TestCase):
                 else:
                     if test_login:
                         self.assertEqual(response.status_code, 302)
-                        self.assertEqual(response.url, reverse('login'))
+                        self.assertEqual(response.url, settings.LOGIN_REDIRECT_URL)
                         self.login_page_user(first_name, last_name)
                 return response
 
@@ -196,7 +197,7 @@ class AuthViews(TestCase):
                             '.set_expiry', side_effect=[OverflowError, None]):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, 302)
-                self.assertEqual(response.url, reverse('login'))
+                self.assertEqual(response.url, settings.LOGIN_REDIRECT_URL)
 
     def test_account_merging(self):
         start = len(User.objects.all())

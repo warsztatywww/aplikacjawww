@@ -95,11 +95,11 @@ BLEACH_STRIP_COMMENTS = False
 
 # Logging and authentication
 
-LOGIN_URL = '/login/'
+LOGIN_URL = '/accounts/login/'
 
-LOGIN_REDIRECT_URL = '/login/'
+LOGIN_REDIRECT_URL = '/me/status/'
 
-LOGIN_ERROR_URL = '/login/'
+LOGIN_ERROR_URL = '/accounts/login/'
 
 AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend',
                            'social_core.backends.google.GoogleOAuth2',
