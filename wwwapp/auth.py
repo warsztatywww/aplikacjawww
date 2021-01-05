@@ -32,6 +32,7 @@ def login_view(request):
             logging.getLogger('django.request').error(
                 'User profile was missing for %s. This should have never happened.', request.user,
                 extra={'request': request})
+        return redirect('mydata_status')
 
     # Make sure to call get_context after UserInfo and UserProfile get created, since they are required
     # to figure out what to show on the menu bar
