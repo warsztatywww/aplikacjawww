@@ -6,8 +6,9 @@ from django.test.testcases import TestCase
 from django.urls import reverse
 from freezegun import freeze_time
 
+from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, \
+    WorkshopParticipant, Camp
 from wwwapp.templatetags import wwwtags
-from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant, Camp
 
 
 class WorkshopQualificationViews(TestCase):
@@ -23,6 +24,8 @@ class WorkshopQualificationViews(TestCase):
             username='lecturer', email='lecturer@example.com', password='user123')
         self.participant_user = User.objects.create_user(
             username='participant', email='participant@example.com', password='user123')
+        self.participant_user2 = User.objects.create_user(
+            username='participant2', email='participant2@example.com', password='user2_123')
 
         WorkshopType.objects.create(year=self.year_2019, name='Not this type')
         WorkshopType.objects.create(year=self.year_2020, name='This type')
@@ -35,7 +38,9 @@ class WorkshopQualificationViews(TestCase):
             year=self.year_2020,
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>Testowy opis</p>',
-            status=Workshop.STATUS_ACCEPTED
+            status=Workshop.STATUS_ACCEPTED,
+            qualification_threshold=5,
+            max_points=10,
         )
         self.workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
         self.workshop.lecturer.add(self.lecturer_user.userprofile)
@@ -301,9 +306,6 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_mark_accepted(self):
-        self.workshop.qualification_threshold = 5
-        self.workshop.max_points = 10
-        self.workshop.save()
         participant = WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
 
         # Check save response
@@ -326,9 +328,6 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_mark_rejected(self):
-        self.workshop.qualification_threshold = 5
-        self.workshop.max_points = 10
-        self.workshop.save()
         participant = WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
 
         # Check save response
@@ -373,3 +372,61 @@ class WorkshopQualificationViews(TestCase):
         self.client.force_login(self.participant_user)
         response = self.client.get(reverse('mydata_status'))
         self.assertContains(response, wwwtags.qualified_mark(None))
+
+    def assertUsersSeeOnlyTheirOwn(self, url, users_and_data):
+        all_data = []
+        for _, data in users_and_data:
+            all_data += data
+
+        for user, data in users_and_data:
+            self.client.force_login(user)
+            response = self.client.get(url)
+            for el in data:
+                self.assertContains(response, el)
+            for el in all_data:
+                if el not in data:
+                    self.assertNotContains(response, el)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_user_can_see_grade(self):
+        WorkshopParticipant.objects.create(workshop=self.workshop,
+                                           participant=self.participant_user.userprofile,
+                                           qualification_result=4,
+                                           comment="No mogło być lepiej...")
+
+        wp2 = WorkshopParticipant.objects.create(workshop=self.workshop,
+                                                 participant=self.participant_user2.userprofile)
+        user1_data = (self.participant_user, [
+                "4,0 / 10,0",
+                "No mogło być lepiej...",
+                wwwtags.qualified_mark(False)
+            ])
+        self.assertUsersSeeOnlyTheirOwn(reverse('mydata_status'), [
+            user1_data,
+            (self.participant_user2, [wwwtags.qualified_mark(None)]),
+        ])
+        wp2.qualification_result=12
+        wp2.comment="Świetnie!!! Poza skalą!"
+        wp2.save()
+        self.assertUsersSeeOnlyTheirOwn(reverse('mydata_status'), [
+            user1_data,
+            (self.participant_user2, [
+                "12,0 / 10,0",
+                "Świetnie!!! Poza skalą!",
+                wwwtags.qualified_mark(True)
+            ]),
+        ])
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_user_can_see_grade_notification_on_program_page(self):
+        self.client.force_login(self.participant_user)
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertNotContains(response, "Sprawdź wyniki w zakładce")
+        WorkshopParticipant.objects.create(workshop=self.workshop,
+                                           participant=self.participant_user.userprofile,
+                                           qualification_result=4,
+                                           comment="No mogło być lepiej...")
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertContains(response, "Sprawdź wyniki w zakładce")
+        response = self.client.get(reverse('program', args=[2019]))
+        self.assertNotContains(response, "Sprawdź wyniki w zakładce")
