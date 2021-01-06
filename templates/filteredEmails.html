@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="container">
     {% if filtered_users %}
     <div class="form-group">
       <label for="emails"><h2 class="heading">Filtr "{{ chosen_filter_name }}" dla roku {{ chosen_year }}</h2></label>
@@ -28,7 +27,6 @@
         <button type="button" class="btn btn-default" onclick="use_filter()">Filtruj</button>
       </form>
     </div>
-  </div>
 {% endblock %}
 
 {% block script %}

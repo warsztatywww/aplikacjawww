@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
+    <article class="col-sm-12">
       <h1>{{ title }}</h1>
       <ul class="pagination">
           <li class="{% if request.resolver_match.view_name == 'mydata_profile' %}active{% endif %}"><a href="{% url 'mydata_profile' %}">Dane ogólne</a></li>
@@ -15,5 +14,4 @@
       {% block mydata_page_content %}
       {% endblock %}
     </article>
-  </div>
 {% endblock %}

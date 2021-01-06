@@ -155,8 +155,8 @@
 
     <header id="head" class="secondary"></header>
 
-    {% if messages %}
-      <div class="container">
+    <main role="main" class="container {% if selected_year %}with-footer-margin{% endif %}">
+      {% if messages %}
         {% for message in messages %}
           <div class="alert{% for tag in message.tags|split:" " %} alert-{{ tag }} alert-auto-dismiss{% endfor %}">
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
@@ -165,16 +165,44 @@
             {{ message }}
           </div>
         {% endfor %}
-      </div>
-    {% endif %}
+      {% endif %}
 
-    {% block content %}{% endblock %}
+      {% block content %}{% endblock %}
+    </main>
+
+    {% if selected_year %}
+    <footer class="footer">
+      <div class="container">
+        <nav class="year-navigation">
+          <ul class="pagination">
+            {% if request.resolver_match.view_name == 'program' %}
+              <li>
+                <a href="{% url 'article' 'historia' %}">&laquo; Starsze</a>
+              </li>
+            {% endif %}
+
+            {% for year in years %}
+            <li class="{% if year == selected_year %}active{% endif %}">
+              <a href="{% url request.resolver_match.view_name year.pk %}">
+                {% if year == current_year %}
+                  <b>{{ year }}</b>
+                {% else %}
+                  {{ year }}
+                {% endif %}
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </nav>
+      </div>
+    </footer>
+    {% endif %}
 
     <div id="csrftoken" style="display: none;">
       {% csrf_token %}
     </div>
 
-    {% include "analytics.html" %}
+    {% include "_analytics.html" %}
 
     {% compress js %}
       <script src="{% static 'js/jquery.min.js' %}"></script>

@@ -5,8 +5,7 @@
 {% load l10n %}
 
 {% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
+    <article class="col-sm-12">
       <h1>{{ title }}</h1>
       <div class="table-responsive">
         <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people %}[[ 1, "asc" ]]{% else %}[[ 11, "desc" ], [ 1, "asc" ]]{% endif %}'>
@@ -122,7 +121,6 @@
         </table>
       </div>
     </article>
-  </div>
 {% endblock %}
 
 {% block script %}

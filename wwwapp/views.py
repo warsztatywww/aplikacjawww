@@ -60,6 +60,7 @@ def get_context(request):
 
     context['google_analytics_key'] = settings.GOOGLE_ANALYTICS_KEY
     context['articles_on_menubar'] = Article.objects.filter(on_menubar=True).all()
+    context['years'] = Camp.objects.all()
     context['current_year'] = Camp.current()
 
     return context
@@ -87,6 +88,7 @@ def program_view(request, year=None):
     context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
                             in workshops]
 
+    context['selected_year'] = year
     return render(request, 'program.html', context)
 
 
@@ -558,6 +560,7 @@ def participants_view(request, year=None):
     context['people'] = people
     context['is_all_people'] = year is None
 
+    context['selected_year'] = year
     return render(request, 'participants.html', context)
 
 
@@ -600,6 +603,7 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     context['title'] = 'Prowadzący: %s' % year
     context['people'] = people_list
 
+    context['selected_year'] = year
     return render(request, 'lecturers.html', context)
 
 
@@ -822,6 +826,7 @@ def workshops_view(request, year):
     context['workshops'] = year.workshops.all()
     context['title'] = 'Warsztaty: %s' % year
 
+    context['selected_year'] = year
     return render(request, 'listworkshop.html', context)
 
 
