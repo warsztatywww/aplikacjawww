@@ -98,7 +98,7 @@
                   {% endif %}
                   {% if perms.wwwapp.see_all_users %}
                   <li><a href="{% url 'all_people' %}">Wszyscy ludzie</a></li>
-                  <li><a href="{% url 'filter_emails' %}">Adresy email</a></li>
+                  <li><a href="{% url 'emails' current_year.pk %}">Adresy email</a></li>
                   {% endif %}
                   {% if request.user.is_staff or perms.wwwapp.export_workshop_registration or perms.wwwapp.change_article %}
                     <li role="separator" class="divider"></li>
