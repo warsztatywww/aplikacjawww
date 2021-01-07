@@ -83,7 +83,13 @@
   </div>
 {% endblock %}
 
+{% block styles %}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
+{% endblock %}
+
 {% block script %}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+
   <script>
     $(document).ready(() => {
       const table = $('#lecturers-table').DataTable(gen_datatables_config({}));

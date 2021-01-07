@@ -8,9 +8,11 @@ Aplikacja WWW
 Django-based application to manage registration of people for [scientific summer school](https://warsztatywww.pl/).
 
 ### Setup:
-- install `python3` and `pip3`
+- install `python3`, `pip3` and `npm`
 - `python3 -m venv venv` - create a virtual python environment for the app
 - `source venv/bin/activate` - activate venv
+- `npm install` - download js/css dependencies
+- `npm run build` - run webpack to build the static js/css files (you can use `build-dev` instead during development - it's faster and doesn't minify)
 - `./manage.py migrate` - apply DB migrations
 - `./manage.py createsuperuser` - script to create a superuser that can modify DB contents via admin panel
 - `./manage.py populate_with_test_data` - script to populate the database with data for development
