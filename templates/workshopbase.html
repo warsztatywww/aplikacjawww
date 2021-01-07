@@ -1,8 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
+    <article class="col-sm-12">
       <h1>{% block workshop_page_title %}{{ title }}{% endblock %}</h1>
 
       {% if workshop %}
@@ -29,5 +28,4 @@
       {% block workshop_page_content %}
       {% endblock %}
     </article>
-  </div>
 {% endblock %}
