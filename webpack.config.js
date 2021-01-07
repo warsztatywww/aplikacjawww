@@ -3,7 +3,6 @@ const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const MomentLocalesPlugin = require('moment-locales-webpack-plugin');
-const CopyPlugin = require("copy-webpack-plugin");
 const GoogleFontsPlugin = require("@beyonk/google-fonts-webpack-plugin");
 
 module.exports = {
@@ -11,6 +10,10 @@ module.exports = {
     'main': './frontend/index.ts',
     'datatables': {
       'import': './frontend/datatables.ts',
+      'dependOn': 'main',
+    },
+    'tinymce': {
+      'import': './frontend/tinymce.ts',
       'dependOn': 'main',
     },
   },
@@ -59,12 +62,6 @@ module.exports = {
       jQuery: 'jquery',
       $: 'jquery',
       moment: 'moment',
-    }),
-    new CopyPlugin({
-      patterns: [
-        { from: "node_modules/tinymce", to: "tinymce" },
-        { from: "node_modules/tinymce-i18n/langs5", to: "tinymce/langs" },
-      ],
     }),
   ],
   optimization: {
