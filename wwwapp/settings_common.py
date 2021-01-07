@@ -59,7 +59,7 @@ ROOT_URLCONF = 'wwwapp.urls'
 WSGI_APPLICATION = 'wwwapp.wsgi.application'
 
 # Set cripsy forms template pack
-CRISPY_TEMPLATE_PACK = 'bootstrap3'
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 SELECT2_BOOTSTRAP = True
 
 # Which HTML tags are allowed

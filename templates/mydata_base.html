@@ -2,19 +2,17 @@
 
 {% block content %}
   <h1>{{ title }}</h1>
-  <nav class="nav">
-    <div class="container-fluid">
-      <ul class="nav navbar-nav navbar-right">
-        <li><a class="btn btn-default">Wyloguj <span class="glyphicon glyphicon-log-out" aria-hidden="true"></span></a></li>
-      </ul>
-      <ul class="nav navbar-nav nav-pills">
-        <li class="{% if request.resolver_match.view_name == 'mydata_status' %}active{% endif %}"><a href="{% url 'mydata_status' %}">Status kwalifikacji</a></li>
-        <li class="{% if request.resolver_match.view_name == 'mydata_profile' %}active{% endif %}"><a href="{% url 'mydata_profile' %}">Dane ogólne</a></li>
-        <li class="{% if request.resolver_match.view_name == 'mydata_cover_letter' %}active{% endif %}"><a href="{% url 'mydata_cover_letter' %}">List motywacyjny</a></li>
-        <li class="{% if request.resolver_match.view_name == 'mydata_profile_page' %}active{% endif %}"><a href="{% url 'mydata_profile_page' %}">Strona profilowa</a></li>
-        <li class="{% if request.resolver_match.view_name == 'mydata_forms' %}active{% endif %}"><a href="{% url 'mydata_forms' %}">Formularze</a></li>
-      </ul>
-    </div>
+  <nav class="mb-3">
+    <ul class="nav float-md-right my-3 my-md-0 mx-3 justify-content-center">
+      <li><a role="button" class="btn btn-outline-primary" href="{% url 'logout' %}">Wyloguj <span class="fas fa-sign-out-alt" aria-hidden="true"></span></a></li>
+    </ul>
+    <ul class="nav nav-pills nav-fill">
+      <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_status' %}active{% endif %}" href="{% url 'mydata_status' %}">Status kwalifikacji</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_profile' %}active{% endif %}" href="{% url 'mydata_profile' %}">Dane ogólne</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_cover_letter' %}active{% endif %}" href="{% url 'mydata_cover_letter' %}">List motywacyjny</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_profile_page' %}active{% endif %}" href="{% url 'mydata_profile_page' %}">Strona profilowa</a></li>
+      <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_forms' %}active{% endif %}" href="{% url 'mydata_forms' %}">Formularze</a></li>
+    </ul>
   </nav>
   <article class="col-sm-12">
     {% block mydata_page_content %}

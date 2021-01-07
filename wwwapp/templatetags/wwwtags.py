@@ -7,17 +7,17 @@ register = template.Library()
 @register.filter
 def qualified_mark(value):
     if value is None:
-        return mark_safe('<span class="maybe-qualified">?</span>')
+        return mark_safe('<span class="text-warning"><i class="fas fa-question-circle"></i></span>')
     elif value is True:
-        return mark_safe('<span class="qualified">✔</span> TAK')
+        return mark_safe('<span class="text-success"><i class="fas fa-check-circle"></i> TAK</span>')
     else:
-        return mark_safe('<span class="not-qualified">✘</span> NIE')
+        return mark_safe('<span class="text-danger"><i class="fas fa-minus-circle"></i> NIE</span>')
 
 
 @register.filter
 def question_mark_on_none_value(value):
     if value is None:
-        return mark_safe('<span class="maybe-qualified">?</span>')
+        return mark_safe('<span class="text-warning font-weight-bolder">?</span>')
     return value
 
 
