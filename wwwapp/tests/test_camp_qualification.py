@@ -250,7 +250,7 @@ class CampQualificationViews(TestCase):
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_ACCEPTED)
 
-        self.assertContains(response, '<span class="qualified">✔')
+        self.assertContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
 
     def test_admin_can_reject(self):
         self.client.force_login(self.admin_user)
@@ -260,7 +260,7 @@ class CampQualificationViews(TestCase):
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_REJECTED)
 
-        self.assertContains(response, '<span class="not-qualified">✘')
+        self.assertContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
 
     def test_admin_can_cancel(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_ACCEPTED)
@@ -271,7 +271,7 @@ class CampQualificationViews(TestCase):
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_CANCELLED)
 
-        self.assertContains(response, '<span class="maybe-qualified">😞')
+        self.assertContains(response, '<span class="text-info">😞')
 
     def test_admin_can_delete_status(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_ACCEPTED)
@@ -281,9 +281,9 @@ class CampQualificationViews(TestCase):
 
         self.assertFalse(WorkshopUserProfile.objects.filter(year=self.year_2020, user_profile=self.participant_user.userprofile).exists())
 
-        self.assertNotContains(response, '<span class="qualified">✔')
-        self.assertNotContains(response, '<span class="not-qualified">✘')
-        self.assertNotContains(response, '<span class="maybe-qualified">😞')
+        self.assertNotContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
+        self.assertNotContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
+        self.assertNotContains(response, '<span class="text-info">😞')
 
     def test_admin_cannot_double_accept(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_ACCEPTED)
@@ -294,7 +294,7 @@ class CampQualificationViews(TestCase):
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_ACCEPTED)
 
-        self.assertContains(response, '<span class="qualified">✔')
+        self.assertContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
 
     def test_admin_cannot_double_reject(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_REJECTED)
@@ -305,7 +305,7 @@ class CampQualificationViews(TestCase):
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_REJECTED)
 
-        self.assertContains(response, '<span class="not-qualified">✘')
+        self.assertContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
 
     def test_admin_cannot_double_delete_status(self):
         self.client.force_login(self.admin_user)
@@ -314,6 +314,6 @@ class CampQualificationViews(TestCase):
 
         self.assertFalse(WorkshopUserProfile.objects.filter(year=self.year_2020, user_profile=self.participant_user.userprofile).exists())
 
-        self.assertNotContains(response, '<span class="qualified">✔')
-        self.assertNotContains(response, '<span class="not-qualified">✘')
-        self.assertNotContains(response, '<span class="maybe-qualified">😞')
+        self.assertNotContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
+        self.assertNotContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
+        self.assertNotContains(response, '<span class="text-info">😞')

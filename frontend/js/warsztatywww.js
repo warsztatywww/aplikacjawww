@@ -28,17 +28,17 @@ function send_points(elem, save_btn, workshop_participant_id) {
 
     var mark_changed = function () {
         save_btn.attr('disabled', false);
-        save_btn.find('.glyphicon').removeClass('glyphicon-floppy-open glyphicon-floppy-saved').addClass('glyphicon-floppy-disk');
+        save_btn.find(':first-child').removeClass('fa-cloud-upload-alt fa-check-circle').addClass('fa-save');
     };
 
     var mark_saving = function () {
         save_btn.attr('disabled', true);
-        save_btn.find('.glyphicon').removeClass('glyphicon-floppy-disk glyphicon-floppy-saved').addClass('glyphicon-floppy-open');
+        save_btn.find(':first-child').removeClass('fa-save fa-check-circle').addClass('fa-cloud-upload-alt');
     };
 
     var mark_saved = function () {
         save_btn.attr('disabled', true);
-        save_btn.find('.glyphicon').removeClass('glyphicon-floppy-disk glyphicon-floppy-open').addClass('glyphicon-floppy-saved');
+        save_btn.find(':first-child').removeClass('fa-save fa-cloud-upload-alt').addClass('fa-check-circle');
     };
 
     mark_saved();

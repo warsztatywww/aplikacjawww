@@ -5,7 +5,7 @@
   {% crispy form %}
 
   {% if show_results %}
-    <h3>{{ chosen_filter_name|capfirst }} w edycji {{ selected_year }}</h3>
+    <h3 class="pt-5">{{ chosen_filter_name|capfirst }} w edycji {{ selected_year }}</h3>
     {% if filtered_users %}
       <textarea class="form-control" rows="8">{% for user in filtered_users %}{{ user.email }}, {% endfor %}</textarea>
     {% else %}

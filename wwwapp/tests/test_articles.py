@@ -101,7 +101,7 @@ class TestArticleViews(TestCase):
         self.assertContains(response, 'Nazwa')
         self.assertContains(response, 'Tytuł')
         self.assertContains(response, 'Umieść w menu')
-        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput" id="id_on_menubar"')
+        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput custom-control-input" id="id_on_menubar"')
         self.assertContains(response, 'Treść')
 
         response = self.client.post(reverse('article_add'), {
@@ -135,7 +135,7 @@ class TestArticleViews(TestCase):
         self.assertContains(response, 'Nazwa')
         self.assertContains(response, 'Tytuł')
         self.assertContains(response, 'Umieść w menu')
-        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput" disabled id="id_on_menubar"')  # Exists, but is disabled
+        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput custom-control-input" disabled id="id_on_menubar"')  # Exists, but is disabled
         self.assertContains(response, 'Treść')
 
         response = self.client.post(reverse('article_add'), {
@@ -197,7 +197,7 @@ class TestArticleViews(TestCase):
         self.assertContains(response, 'Nazwa')
         self.assertContains(response, 'Tytuł')
         self.assertContains(response, 'Umieść w menu')
-        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput" id="id_on_menubar"')
+        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput custom-control-input" id="id_on_menubar"')
         self.assertContains(response, 'Treść')
 
         response = self.client.post(reverse('article_edit', args=['test_article']), {
@@ -234,7 +234,7 @@ class TestArticleViews(TestCase):
         self.assertContains(response, 'Nazwa')
         self.assertContains(response, 'Tytuł')
         self.assertContains(response, 'Umieść w menu')
-        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput" disabled id="id_on_menubar"')  # Exists, but is disabled
+        self.assertContains(response, '<input type="checkbox" name="on_menubar" class="checkboxinput custom-control-input" disabled id="id_on_menubar"')  # Exists, but is disabled
         self.assertContains(response, 'Treść')
 
         response = self.client.post(reverse('article_edit', args=['test_article']), {

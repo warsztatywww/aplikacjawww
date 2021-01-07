@@ -3,21 +3,21 @@
 {% load wwwtags %}
 
 {% block content %}
-    <article class="col-sm-12">
+    <article>
       {% if workshops %}
       <h1>{{ title }}</h1>
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
-      <div class="panel-group">
+
         {% for workshop, registered in workshops %}
-          <div class="panel panel-default" id="{{ workshop.name }}" data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}" data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">
-            <div class="panel-heading">
+          <div class="card mb-3 w-100" id="{{ workshop.name }}" data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}" data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">
+            <div class="card-header">
               <div class="row" style="font-size: 16pt;">
                 <div class="col-sm-8">
                   {% if workshop.page_content_is_public %}
                     {% if workshop.status == 'X' %}(ODWOŁANE) {% endif %}
-                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}"><span class="big">{{ workshop.title }}</span></a>
+                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}"><span class="big"><b>{{ workshop.title }}</b></span></a>
                   {% else %}
                     <span class="big">{{ workshop.title }}</span>
                   {% endif %}
@@ -25,23 +25,18 @@
                 <div class="col-sm-4 text-right">
                   {% for lecturer in workshop.lecturer.all %}
                     <span style="display: inline-block;"> <!-- this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name -->
-                      <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %},{% endif %}
+                      <a href="{% url 'profile' lecturer.user.id %}"><b>{{ lecturer }}</b></a>{% if not forloop.last %},{% endif %}
                     </span>
                   {% endfor %}
                 </div>
               </div>
             </div>
-            <div class="panel-body" style="margin-bottom: -20px">
-              <div class="col-sm-2 hidden-xs">
-                <div class="well">
-                  <img class="center-block " style="width: 66%; max-width: 128px;" src="{% static 'images/logo_w.png' %}" srcset="{% static 'images/logo_w.svg' %}" />
-                </div>
-              </div>
-              <div class="col-sm-8">
-                <table class="table table-condensed" style="table-layout: fixed;">
-                  <tr>
-                    <td class="col-sm-3" style="border: none; height: 38px;">Zadania kwalifikacyjne:</td>
-                    <td class="col-sm-9" style="border: none; height: 38px;">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-10">
+                  <div class="row my-3 my-md-2">
+                    <div class="col-6 col-lg-4" style="border: none; height: 38px;">Zadania kwalifikacyjne:</div>
+                    <div class="col-6 col-lg-8" style="border: none; height: 38px;">
                       {% if workshop.is_qualifying and workshop.qualification_problems %}
                         <a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}"> Link </a>
                       {% elif workshop.is_qualifying %}
@@ -49,23 +44,23 @@
                       {% else %}
                         Na te warsztaty nie ma kwalifikacji. Nie liczą się do puli wymaganych zgłoszeń.
                       {% endif %}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="col-sm-3" style="border: none; height: 38px;">Kategorie:</td>
-                    <td class="col-sm-9" style="border: none; height: 38px;">
+                    </div>
+                  </div>
+
+                  <div class="row my-3 my-md-2">
+                    <div class="col-6 col-lg-4" style="border: none; height: 38px;">Kategorie:</div>
+                    <div class="col-6 col-lg-8" style="border: none; height: 38px;">
                       {% for category in workshop.category.all %}
-                      <span class="badge">{{ category.name }}</span>
+                      <span class="badge badge-secondary">{{ category.name }}</span>
                       {% endfor %}
-                    </td>
-                  </tr>
-                </table>
+                    </div>
+                  </div>
+                </div>
+                {% include '_programworkshop.html' %}
               </div>
-              {% include '_programworkshop.html' %}
             </div>
           </div>
         {% endfor %}
-      </div>
       {% else %}
         Warsztaty pojawią się w odpowiednim momencie.
       {% endif %}
