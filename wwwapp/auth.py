@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -32,7 +33,7 @@ def login_view(request):
             logging.getLogger('django.request').error(
                 'User profile was missing for %s. This should have never happened.', request.user,
                 extra={'request': request})
-        return redirect('mydata_status')
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
     # Make sure to call get_context after UserInfo and UserProfile get created, since they are required
     # to figure out what to show on the menu bar
