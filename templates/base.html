@@ -179,28 +179,5 @@
     <script src="{% static 'dist/main.js' %}"></script>
 
     {% block script %}{% endblock %}
-
-    <script>
-      /* This code needs to be after "block script", as the tinymce JS is inserted there if needed */
-      /* Show a notification when an autosave exists for a TinyMCE editor */
-      if (typeof tinymce !== 'undefined') {
-        tinymce.on('addeditor', function(event) {
-          var editor = event.editor;
-          editor.on('init', function(e) {
-            var notification = null;
-            if (editor.plugins.autosave.hasDraft()) {
-              notification = editor.notificationManager.open({
-                text: 'Możesz przywrócić swoje niezapisane zmiany wybierając "Plik > Przywróć ostatni szkic"',
-                type: 'info'
-              });
-            }
-            editor.on('RestoreDraft', function(e) {
-              if (notification != null)
-                notification.close();
-            });
-          });
-        }, true );
-      }
-    </script>
   </body>
 </html>

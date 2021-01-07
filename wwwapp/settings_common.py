@@ -191,10 +191,10 @@ TEMPLATES = [
 SELECT2_JS = ''
 SELECT2_CSS = ''
 
-TINYMCE_JS_URL = os.path.join(STATIC_URL, "dist/tinymce/tinymce.js")
-TINYMCE_JS_ROOT = os.path.join(STATIC_URL, "dist/tinymce")
-TINYMCE_INCLUDE_JQUERY = False
+TINYMCE_JS_URL = os.path.join(STATIC_URL, "dist/tinymce.js")
+TINYMCE_JS_ROOT = None
 TINYMCE_DEFAULT_CONFIG = {
+    'language': 'pl',
     'theme': 'silver',
     'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount textpattern emoticons autosave',
     'removed_menuitems': 'newdocument',
