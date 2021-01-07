@@ -89,7 +89,8 @@ class FormForm(forms.Form):
         self.helper.field_class = 'col-lg-9'
 
         self.helper.layout.fields.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default')
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            css_class='text-right row',
         ))
 
     def clean(self):
