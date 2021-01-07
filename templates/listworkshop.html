@@ -61,9 +61,9 @@
                   <td>
                     {% if workshop.is_qualifying and workshop.is_publicly_visible %}
                       {% if workshop.qualification_threshold %}
-                        <span class="qualified">✔</span> TAK
+                        <span class="text-success"><i class="fas fa-check-circle"></i></span> TAK
                       {% else %}
-                        <span class="not-qualified">✘</span> NIE
+                        <span class="text-danger"><i class="fas fa-times-circle"></i></span> NIE
                       {% endif %}
                     {% else %}
                       <p>-</p>
@@ -72,9 +72,9 @@
                   <td>
                     {% if workshop.is_qualifying and workshop.is_publicly_visible %}
                       {% if workshop.qualification_problems %}
-                        <span class="qualified">✔</span> TAK
+                        <span class="text-success"><i class="fas fa-check-circle"></i></span> TAK
                       {% else %}
-                        <span class="not-qualified">✘</span> NIE
+                        <span class="text-danger"><i class="fas fa-times-circle"></i></span> NIE
                       {% endif %}
                     {% else %}
                       <p>-</p>
@@ -83,9 +83,9 @@
                   <td>
                     {% if workshop.is_publicly_visible %}
                       {% if workshop.page_content_is_public %}
-                        <span class="qualified">✔</span> TAK
+                        <span class="text-success"><i class="fas fa-check-circle"></i></span> TAK
                       {% else %}
-                        <span class="not-qualified">✘</span> NIE
+                        <span class="text-danger"><i class="fas fa-times-circle"></i></span> NIE
                       {% endif %}
                     {% else %}
                       <p>-</p>
@@ -93,13 +93,13 @@
                   </td>
                   <td>
                     {% if workshop.status == 'Z' %}
-                      <span class="qualified"> {{ workshop.get_status_display }} </span>
+                      <span class="text-success font-weight-bolder"> {{ workshop.get_status_display }} </span>
                     {% elif workshop.status == 'O' %}
-                      <span class="not-qualified"> {{ workshop.get_status_display }} </span>
+                      <span class="text-danger font-weight-bolder"> {{ workshop.get_status_display }} </span>
                     {% elif workshop.status == 'X' %}
-                      <span class="maybe-qualified"> {{ workshop.get_status_display }} </span>
+                      <span class="text-info font-weight-bolder"> {{ workshop.get_status_display }} </span>
                     {% else %}
-                      {{ workshop.get_status_display|default_if_none:"Brak" }}
+                      <span class="font-weight-bolder"> {{ workshop.get_status_display|default_if_none:"Brak" }} </span>
                     {% endif %}
                   </td>
                 </tr>

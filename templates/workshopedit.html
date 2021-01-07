@@ -5,12 +5,12 @@
 {% block workshop_page_title %}
   {{ block.super }}
   {% if workshop and perms.wwwapp.change_workshop_status and workshop.is_workshop_editable %}
-    <form method="post" class="inline">
+    <form method="post" class="d-inline">
       {% csrf_token %}
       {% if workshop.status %}
         {% if workshop.status == 'Z' %}
         <span class="btn-group-sm" role="group">
-          <button type="submit" class="btn btn-default"
+          <button type="submit" class="btn btn-outline-primary"
                   name="qualify" value="cancel"
                   onclick="return confirm('Czy na pewno chcesz odwołać warsztaty?');">
             😞 Odwołaj warsztaty
@@ -18,7 +18,7 @@
         </span>
         {% elif workshop.status == 'X' %}
         <span class="btn-group-sm" role="group">
-          <button type="submit" class="btn btn-default"
+          <button type="submit" class="btn btn-outline-primary"
                   name="qualify" value="accept"
                   onclick="return confirm('Czy na pewno chcesz odwołać odwołanie warsztatów?');">
             😊 Jednak będą
@@ -26,7 +26,7 @@
         </span>
         {% endif %}
         <span class="btn-group-sm" role="group">
-          <button type="submit" class="btn btn-default"
+          <button type="submit" class="btn btn-outline-primary"
                   name="qualify" value="delete"
                   onclick="return confirm('Czy na pewno chcesz usunąć status warsztatów?');">
             Usuń status
@@ -34,15 +34,15 @@
         </span>
       {% else %}
         <span class="btn-group-sm" role="group">
-        <button type="submit" class="btn btn-default"
+        <button type="submit" class="btn btn-outline-primary"
                 name="qualify" value="accept"
                 onclick="return confirm('Czy na pewno chcesz zaakceptować?');">
-          ✔ Zaakceptuj
+          <i class="fas fa-check-circle"></i> Zaakceptuj
         </button>
-        <button type="submit" class="btn btn-default"
+        <button type="submit" class="btn btn-outline-primary"
                 name="qualify" value="reject"
                 onclick="return confirm('Czy na pewno chcesz odrzucić?');">
-          ✘ Odrzuć
+          <i class="fas fa-minus-circle"></i> Odrzuć
         </button>
         </span>
       {% endif %}

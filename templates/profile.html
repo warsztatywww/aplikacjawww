@@ -2,8 +2,15 @@
 {% load bleach_tags %}
 
 {% block content %}
-    <div id="profile_content" class="col-sm-12" style="display: block;">
-      <h1>{{ title }}</h1>
+    <article>
+      <h1>
+        {{ title }}
+        {% if is_my_profile %}
+          <a class="btn btn-outline-primary btn-sm" role="button" href="{% url 'mydata_profile' %}">
+            Edytuj mój profil
+          </a>
+        {% endif %}
+      </h1>
 
         {% if profile %}
           <table class="table">
@@ -13,44 +20,44 @@
                 <td>
                   {% include '_pastParticipation.html' with participation_data=participation_data only %}
                   {% if perms.wwwapp.change_workshop_user_profile %}
-                    <form method="post" class="inline">
+                    <form method="post" class="d-inline">
                       {% csrf_token %}
                       {% if workshop_profile %}
                         {% if workshop_profile.status == 'Z' %}
-                        <span class="btn-group-xs" role="group">
-                          <button type="submit" class="btn btn-default"
+                        <span class="btn-group-sm" role="group">
+                          <button type="submit" class="btn btn-outline-primary"
                                   name="qualify" value="cancel"
                                   onclick="return confirm('Czy na pewno chcesz odwołać przyjazd?');">
                             😞 Odwołaj przyjazd
                           </button>
                         </span>
                         {% elif workshop_profile.status == 'X' %}
-                        <span class="btn-group-xs" role="group">
-                          <button type="submit" class="btn btn-default"
+                        <span class="btn-group-sm" role="group">
+                          <button type="submit" class="btn btn-outline-primary"
                                   name="qualify" value="accept"
                                   onclick="return confirm('Czy na pewno chcesz odwołać odwołanie przyjazdu?');">
                             😊 Jednak przyjedzie
                           </button>
                         </span>
                         {% endif %}
-                        <span class="btn-group-xs" role="group">
-                          <button type="submit" class="btn btn-default"
+                        <span class="btn-group-sm" role="group">
+                          <button type="submit" class="btn btn-outline-primary"
                                   name="qualify" value="delete"
                                   onclick="return confirm('Czy na pewno chcesz usunąć kwalifikację?');">
                             Usuń kwalifikację
                           </button>
                         </span>
                       {% else %}
-                        <span class="btn-group-xs" role="group">
-                        <button type="submit" class="btn btn-default"
+                        <span class="btn-group-sm" role="group">
+                        <button type="submit" class="btn btn-outline-primary"
                                 name="qualify" value="accept"
                                 onclick="return confirm('Czy na pewno chcesz zakwalifikować?');">
-                          ✔ Zakwalifikuj
+                          <i class="fas fa-check-circle"></i> Zakwalifikuj
                         </button>
-                        <button type="submit" class="btn btn-default"
+                        <button type="submit" class="btn btn-outline-primary"
                                 name="qualify" value="reject"
                                 onclick="return confirm('Czy na pewno chcesz odrzucić?');">
-                          ✘ Odrzuć
+                          <i class="fas fa-minus-circle"></i> Odrzuć
                         </button>
                       </span>
                       {% endif %}
@@ -80,12 +87,6 @@
               </tr>
             </tbody>
           </table>
-
-          {% if is_my_profile %}
-            <a class="btn btn-default pull-right big-button" role=button href="{% url 'mydata_profile' %}">
-              Edytuj
-            </a>
-          {% endif %}
         {% endif %}
 
         {% if lecturer_workshops %}
@@ -98,17 +99,25 @@
                   {% if workshop.page_content_is_public %}
                     <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
                   {% else %}
-                    {% if can_see_all_workshops %}
-                      <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
-                    {% else %}
-                      {{ workshop.title }}
-                    {% endif %}
+                      {% if can_see_all_workshops %}
+                        <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
+                      {% else %}
+                        {{ workshop.title }}
+                      {% endif %}
                   {% endif %}
                 {% else %}
-                  <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
+                  <del><i><a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a></i></del>
                 {% endif %}
                 {% if workshop.status != 'Z' %}
-                    <small>({{ workshop.get_status_display | default_if_none:"Propozycja" }})</small>
+                  {% if workshop.status == 'O' %}
+                    <span class="badge badge-danger">{{ workshop.get_status_display }}</span>
+                  {% elif workshop.status == 'X' %}
+                    <span class="badge badge-info">{{ workshop.get_status_display }}</span>
+                  {% elif not workshop.status %}
+                    <span class="badge badge-warning">Propozycja</span>
+                  {% else %}
+                    <span class="badge badge-secondary">{{ workshop.get_status_display }}</span>
+                  {% endif %}
                 {% endif %}
               </li>
             {% endfor %}
@@ -136,7 +145,7 @@
             <em>Twoje szczegółowe dane oraz list motywacyjny są widoczne tylko dla administratorów. Strona profilowa jest publiczna.</em>
           </p>
         {% endif %}
-    </div>
+    </article>
 {% endblock %}
 
 {% block script %}
