@@ -1,21 +1,25 @@
 {% load wwwtags %}
 
 <table class="table table-striped">
+  <colgroup>
+    <col style="width: 40%;">
+    <col style="width: 60%;">
+  </colgroup>
   <thead>
     <tr>
-      <th scope="col" style="width: 50%">Warsztaty</th>
-      <th scope="col" style="width: 50%">Status</th>
+      <th scope="col">Warsztaty</th>
+      <th scope="col">Status</th>
     </tr>
   </thead>
   <tbody>
     {% for workshop in your_workshops %}
     <tr>
-      <th scope="row" style="width: 50%">
+      <th scope="row">
         <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">
           {{ workshop.title }}
         </a>
       </th>
-      <td style="width: 50%">
+      <td>
         {% if workshop.status == 'Z' %}
           <span class="qualified"> {{ workshop.get_status_display }} </span>
           {% if workshop.is_workshop_editable %}

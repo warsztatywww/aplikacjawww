@@ -2,10 +2,11 @@
 {% load crispy_forms_tags %}
 
 {% block mydata_page_content %}
-  <div class="tabpanel">
-    <h2 style="margin-top: 1em;">Twój status w edycji {{ current_year }}:</h2>
+  <div class="jumbotron">
+    <h2>Edycja {{ current_year }}
+      <span class="small-on-md">{% include '_statusLabel.html' with status=current_status %}</span>
+    </h2>
     {% if not current_status %}
-      <div style="font-size: 300%;">Nie zgłoszono</div>
       <div>
         Nie zgłosiłeś się na żadne warsztaty. Przejdź do zakładki <a href="{% url 'program' current_year.pk %}">Program</a>,
         zapisz się na interesujące Cię tematy i rozwiąż na nie zadania kwalifikacyjne. Wypełnij także swój
@@ -13,121 +14,94 @@
       </div>
     {% else %}
       {% if current_status.type == 'lecturer' %}
-        {% if current_status.status == 'Z' %}
-          <div style="font-size: 300%;"><span class="qualified">Zaakceptowano jako prowadzącego</span></div>
-          <div>
-            Twoje warsztaty zostały zaakceptowane. Czekaj na dalsze informacje.
-          </div>
-        {% elif current_status.status == 'O' %}
-          <div style="font-size: 300%;"><span class="not-qualified">Odrzucono jako prowadzącego</span></div>
-          <div>
-            Twoje warsztaty zostały odrzucone
-          </div>
-        {% elif current_status.status == 'X' %}
-          <div style="font-size: 300%;"><span class="maybe-qualified">Odwołano przyjazd prowadzącego</span></div>
-          <div>
-            Twoje warsztaty były zaakceptowane, ale zostały odwołane
-          </div>
-        {% elif not current_status.status %}
-          <div style="font-size: 300%;"><span class="waiting-qualified">Zgłoszono prowadzącego</span></div>
-          <div>
-            Twoje warsztaty zostały zarejestrowane w systemie. Poczekaj na decyzję organizatorów.
-          </div>
-        {% endif %}
+        <p>
+          {% if current_status.status == 'Z' %}
+              Twoje warsztaty zostały zaakceptowane. Czekaj na dalsze informacje.
+          {% elif current_status.status == 'O' %}
+              Twoje warsztaty zostały odrzucone.
+          {% elif current_status.status == 'X' %}
+              Twoje warsztaty były zaakceptowane, ale zostały odwołane.
+          {% elif not current_status.status %}
+              Twoje warsztaty zostały zarejestrowane w systemie. Poczekaj na decyzję organizatorów.
+          {% endif %}
+        </p>
       {% else %}
         {% if current_status.status == 'Z' %}
-          <div style="font-size: 300%;"><span class="qualified">Zaakceptowano</span></div>
-          <div>
+          <p>
             {% if gender == 'F' %}
               Zostałaś zakwalifikowana na warsztaty. Czekaj na dalsze informacje.
             {% else %}
               Zostałeś zakwalifikowany na warsztaty. Czekaj na dalsze informacje.
             {% endif %}
-          </div>
+          </p>
         {% elif current_status.status == 'O' %}
-          <div style="font-size: 300%;"><span class="not-qualified">Odrzucono</span></div>
-          <div>
+          <p>
             Niestety, nie mogliśmy przyjąć Cię na warsztaty w tym roku.
-          </div>
+          </p>
         {% elif current_status.status == 'X' %}
-          <div style="font-size: 300%;"><span class="maybe-qualified">Odwołano przyjazd</span></div>
-          <div>
+          <p>
             {% if gender == 'F' %}
               Zostałaś zakwalifikowana na warsztaty, ale odwołałaś swój przyjazd.
             {% else %}
               Zostałeś zakwalifikowany na warsztaty, ale odwołałeś swój przyjazd.
             {% endif %}
-          </div>
+          </p>
         {% elif not current_status.status %}
           {% if not has_cover_letter %}
-            <div style="font-size: 300%;">Brak listu motywacyjnego</div>
-            <div>
+            <p style="font-size: 300%;">Brak listu motywacyjnego</p>
+            <p>
                 Uzupełnij swój <a href="{% url 'mydata_cover_letter' %}">list motywacyjny</a>.
-            </div>
+            </p>
           {% else %}
-            <div style="font-size: 300%;"><span class="waiting-qualified">Zgłoszono</span></div>
-            <div>
+            <p>
               {% if gender == 'F' %}
                 Zgłosiłaś się na warsztaty.
               {% else %}
                 Zgłosiłeś się na warsztaty.
               {% endif %}
               Rozwiąż zadania kwalifikacyjne na wybrane przez Ciebie warsztaty, i czekaj na wyniki.
-            </div>
+            </p>
           {% endif %}
         {% endif %}
       {% endif %}
     {% endif %}
+  </div>
 
     {% if current_status.workshops %}
-      <h4 style="margin-top: 2em;">Twoje warsztaty</h4>
-      {% include '_workshopStatusTable.html' with your_workshops=current_status.workshops %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">Twoje warsztaty</h4>
+        </div>
+        {% include '_workshopStatusTable.html' with your_workshops=current_status.workshops %}
+      </div>
     {% endif %}
 
     {% if current_status.qualification_results %}
-      <h4 style="margin-top: 2em;">Wyniki kwalifikacji</h4>
-      {% include '_qualificationsTable.html' with your_qualifications=current_status.qualification_results %}
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <h4 class="panel-title">Wyniki kwalifikacji</h4>
+        </div>
+        {% include '_qualificationsTable.html' with your_qualifications=current_status.qualification_results %}
+      </div>
     {% endif %}
 
     {% if past_status %}
-      <h3 style="margin-top: 5em;">Poprzednie edycje</h3>
-
+      <hr>
+      <h3>Poprzednie edycje</h3>
       {% for status in past_status %}
-        <h4>{{ status.year }}</h4>
-        {% if not status %}
-          Nie zgłoszono
-        {% else %}
-          {% if status.type == 'lecturer' %}
-            {% if status.status == 'Z' %}
-              <span class="qualified">Zaakceptowano jako prowadzącego</span>
-            {% elif status.status == 'O' %}
-              <span class="not-qualified">Odrzucono jako prowadzącego</span>
-            {% elif status.status == 'X' %}
-              <span class="maybe-qualified">Odwołano przyjazd prowadzącego</span>
-            {% elif not status.status %}
-              <span class="waiting-qualified">Zgłoszono prowadzącego</span>
-            {% endif %}
-          {% else %}
-            {% if status.status == 'Z' %}
-              <span class="qualified">Zaakceptowano</span>
-            {% elif status.status == 'O' %}
-              <span class="not-qualified">Odrzucono</span>
-            {% elif status.status == 'X' %}
-              <span class="maybe-qualified">Odwołano przyjazd</span>
-            {% elif not status.status %}
-              <span class="waiting-qualified">Zgłoszono</span>
-            {% endif %}
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title">{{ status.year }}
+              {% include '_statusLabel.html' with status=status %}
+            </h4>
+          </div>
+          {% if status.workshops %}
+            {% include '_workshopStatusTable.html' with your_workshops=status.workshops %}
           {% endif %}
-        {% endif %}
-
-        {% if status.workshops %}
-          {% include '_workshopStatusTable.html' with your_workshops=status.workshops %}
-        {% endif %}
-
-        {% if status.qualification_results %}
-          {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results %}
-        {% endif %}
+          {% if status.qualification_results %}
+            {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results %}
+          {% endif %}
+        </div>
       {% endfor %}
     {% endif %}
-  </div>
 {% endblock %}

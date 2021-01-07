@@ -1,0 +1,25 @@
+{% if not status %}
+  <span class="label label-default">Nie zgłoszono</span>
+{% else %}
+  {% if status.type == 'lecturer' %}
+    {% if status.status == 'Z' %}
+      <span class="label label-qualified">Zaakceptowano jako prowadzącego</span>
+    {% elif status.status == 'O' %}
+      <span class="label label-not-qualified">Odrzucono jako prowadzącego</span>
+    {% elif status.status == 'X' %}
+      <span class="label label-maybe-qualified">Odwołano przyjazd prowadzącego</span>
+    {% elif not status.status %}
+      <span class="label label-waiting-qualified">Zgłoszono prowadzącego</span>
+    {% endif %}
+  {% else %}
+    {% if status.status == 'Z' %}
+      <span class="label label-qualified">Zaakceptowano</span>
+    {% elif status.status == 'O' %}
+      <span class="label label-not-qualified">Odrzucono</span>
+    {% elif status.status == 'X' %}
+      <span class="label label-maybe-qualified">Odwołano przyjazd</span>
+    {% elif not status.status %}
+      <span class="label label-waiting-qualified">Zgłoszono</span>
+    {% endif %}
+  {% endif %}
+{% endif %}
