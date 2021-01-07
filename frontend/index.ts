@@ -10,6 +10,8 @@ import 'headroom.js/dist/jQuery.headroom.js';
 
 // Select2 (type/category in workshop editor)
 import 'select2';
+import 'select2/dist/js/i18n/pl';
+$.fn.select2.defaults.set("language", "pl");
 import 'select2/dist/css/select2.css';
 import './vendor/django_select2';
 
