@@ -176,6 +176,9 @@ class ArticleForm(ModelForm):
             mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
             mce_attrs['automatic_uploads'] = True
             mce_attrs['images_upload_url'] = reverse('article_edit_upload', kwargs={'name': self.instance.name})
+        if self.instance and self.instance.name == 'index':
+            # Allow iframe on main page for Facebook embed
+            mce_attrs['valid_elements'] = settings.TINYMCE_DEFAULT_CONFIG['valid_elements'] + ',iframe'
         self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
 
         is_special = kwargs['instance'] and kwargs['instance'].pk and \
