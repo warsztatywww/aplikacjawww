@@ -435,7 +435,7 @@ def workshop_participants_view(request, year, name):
         return HttpResponseForbidden()
 
     context = {}
-    context['title'] = '%s - uczestnicy' % workshop.title
+    context['title'] = workshop.title
     context['workshop'] = workshop
     context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit

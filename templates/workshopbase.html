@@ -1,25 +1,44 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <article class="col-sm-12">
+    <article>
       <h1>{% block workshop_page_title %}{{ title }}{% endblock %}</h1>
 
       {% if workshop %}
-        {% if has_perm_to_view_details and workshop.is_publicly_visible %}
-          <div>
-            <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">Strona warsztatów</a> |
-            <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">Edycja warsztatów</a> |
-            {% if workshop.is_qualifying %}
-              <a href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">Uczestnicy i ocenianie</a>
-            {% else %}
-              <a href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">Uczestnicy</a>
-            {% endif %}
-          </div>
-        {% endif %}
-
         <h3>Prowadzący: {% for lecturer in workshop.lecturer.all %}<a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</h3>
         {% if workshop.status == 'X' %}
           <h3 style="color: red;">Te warsztaty są odwołane!</h3>
+        {% endif %}
+
+        {% if has_perm_to_view_details and workshop.is_publicly_visible %}
+          <nav class="mb-3">
+            <ul class="nav nav-pills nav-fill">
+              <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_page' %}active{% endif %}"
+                   href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
+                  Strona warsztatów
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_edit' %}active{% endif %}"
+                   href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">
+                  Edycja warsztatów
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_participants' %}active{% endif %}"
+                   href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">
+                  {% if workshop.is_qualifying %}
+                    Uczestnicy i ocenianie
+                  {% else %}
+                    Uczestnicy
+                  {% endif %}
+                </a>
+              </li>
+            </ul>
+          </nav>
         {% endif %}
 
         <hr>

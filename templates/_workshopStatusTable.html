@@ -1,6 +1,6 @@
 {% load wwwtags %}
 
-<table class="table table-striped">
+<table class="table table-striped m-0">
   <colgroup>
     <col style="width: 40%;">
     <col style="width: 60%;">
@@ -21,24 +21,24 @@
       </th>
       <td>
         {% if workshop.status == 'Z' %}
-          <span class="qualified"> {{ workshop.get_status_display }} </span>
+          <span class="text-success font-weight-bolder"> {{ workshop.get_status_display }} </span>
           {% if workshop.is_workshop_editable %}
             {% if not workshop.page_content_is_public %}
-              <br><span class="waiting-qualified">Uzupełnij stronę warsztatów!</span>
+              <br><span class="text-warning"><i class="fas fa-exclamation-circle"></i> Uzupełnij stronę warsztatów!</span>
             {% endif %}
             {% if workshop.is_qualifying and not workshop.qualification_problems %}
-              <br><span class="waiting-qualified">Uzupełnij zadania kwalifikacyjne!</span>
+              <br><span class="text-warning"><i class="fas fa-exclamation-circle"></i> Uzupełnij zadania kwalifikacyjne!</span>
             {% endif %}
             {% if workshop.is_qualifying and not workshop.qualification_threshold %}
-              <br><span class="waiting-qualified">Sprawdzaj rozwiązania zadań, i uzupełnij próg kwalifikacji!</span>
+              <br><span class="text-warning"><i class="fas fa-exclamation-circle"></i> Sprawdzaj rozwiązania zadań, i uzupełnij próg kwalifikacji!</span>
             {% endif %}
           {% endif %}
         {% elif workshop.status == 'O' %}
-          <span class="not-qualified"> {{ workshop.get_status_display }} </span>
+          <span class="text-danger font-weight-bolder"> {{ workshop.get_status_display }} </span>
         {% elif workshop.status == 'X' %}
-          <span class="maybe-qualified"> {{ workshop.get_status_display }} </span>
+          <span class="text-info font-weight-bolder"> {{ workshop.get_status_display }} </span>
         {% elif not workshop.status %}
-          <span class="waiting-qualified"> Zgłoszone </span>
+          <span class="text-warning font-weight-bolder"> Zgłoszone </span>
         {% else %}
           {{ workshop.get_status_display }}
         {% endif %}

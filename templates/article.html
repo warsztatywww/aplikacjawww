@@ -3,15 +3,22 @@
 {% load bleach_tags %}
 
 {% block content %}
-    <article class="col-sm-12">
+    <article>
       {% if article.title %}
         <header>
-          <h1>{{ article.title }}</h1>
+          <h1>
+            {{ article.title }}
+            {% if can_edit %}
+              <a class="btn btn-outline-primary btn-sm" role="button" href="{% url 'article_edit' article.name %}">
+                Edytuj
+              </a>
+            {% endif %}
+          </h1>
         </header>
       {% endif %}
       {{ article_content_clean }}
-      {% if can_edit %}
-        <a href="{% url 'article_edit' article.name %}" class="btn btn-default">
+      {% if can_edit and not article.title %}
+        <a class="btn btn-outline-primary w-100 mb-3" role="button" href="{% url 'article_edit' article.name %}">
           Edytuj
         </a>
       {% endif %}

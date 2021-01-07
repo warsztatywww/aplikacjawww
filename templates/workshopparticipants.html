@@ -39,7 +39,7 @@
         </td>
         <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
           {% if has_perm_to_edit %}
-            <button class="btn btn-default" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><span class="glyphicon glyphicon-floppy-disk"></span></button>
+            <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
           {% endif %}
         </td>
         <td style="vertical-align: middle; width: 20%;">
@@ -51,7 +51,7 @@
         </td>
         <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
           {% if has_perm_to_edit %}
-            <button class="btn btn-default" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><span class="glyphicon glyphicon-floppy-disk"></span></button>
+            <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
           {% endif %}
         </td>
         <td class="qualified-mark" style="vertical-align: middle;">

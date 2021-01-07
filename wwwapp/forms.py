@@ -32,8 +32,9 @@ class UserProfilePageForm(ModelForm):
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default'),
-            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            HTML('<a role="button" class="btn btn-outline-dark btn-lg m-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            css_class='text-right'
         ))
 
     class Meta:
@@ -49,8 +50,9 @@ class UserCoverLetterForm(ModelForm):
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default'),
-            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            HTML('<a role="button" class="btn btn-outline-dark btn-lg m-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            css_class='text-right',
         ))
 
     class Meta:
@@ -68,11 +70,12 @@ class UserProfileForm(ModelForm):
         self.helper.disable_csrf = True  # Already added by UserForm
         self.helper.include_media = False
         self.helper.form_class = 'form-horizontal'
-        self.helper.label_class = 'col-lg-2'
-        self.helper.field_class = 'col-lg-10'
+        self.helper.label_class = 'col-lg-3'
+        self.helper.field_class = 'col-lg-9'
         self.helper.layout.fields.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default'),
-            HTML('<a class="btn" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            HTML('<a role="button" class="btn btn-outline-dark btn-lg m-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            css_class='text-right row',
         ))
 
     class Meta:
@@ -93,8 +96,8 @@ class UserForm(ModelForm):
         self.helper.form_tag = False  # We have to put two Forms in one <form> :(
         self.helper.include_media = False
         self.helper.form_class = 'form-horizontal'
-        self.helper.label_class = 'col-lg-2'
-        self.helper.field_class = 'col-lg-10'
+        self.helper.label_class = 'col-lg-3'
+        self.helper.field_class = 'col-lg-9'
 
     class Meta:
         model = User
@@ -159,7 +162,8 @@ class ArticleForm(ModelForm):
                 self.fields['on_menubar'].disabled = True
         layout.append('content')
         layout.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            css_class='text-right',
         ))
         self.helper.layout = Layout(*layout)
 
@@ -184,7 +188,7 @@ class WorkshopForm(ModelForm):
             'name': 'Nazwa (w URLach)',
             'proposition_description': 'Opis propozycji warsztatów',
             'is_qualifying': 'Czy warsztaty są kwalifikujące',
-            'max_points': 'Maksymalna liczba punktów możliwa do uzyskania z obowiązkowych zadań',
+            'max_points': 'Maksymalna liczba punktów możliwa do uzyskania',
             'qualification_threshold': 'Minimalna liczba punktów potrzebna do kwalifikacji',
             'page_content': 'Strona warsztatów',
             'page_content_is_public': 'Zaznacz, jeśli opis jest gotowy i może już być publiczny.'
@@ -192,6 +196,7 @@ class WorkshopForm(ModelForm):
         help_texts = {
             'is_qualifying': '(odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
+            'max_points': '(możesz postawić punkty bonusowe powyżej tej wartości, ale tylko do max. {}%)'.format(settings.MAX_POINTS_PERCENT)
         }
 
     def __init__(self, *args, workshop_url, has_perm_to_edit=True, profile_warnings=None, **kwargs):
@@ -270,7 +275,8 @@ class WorkshopForm(ModelForm):
             'page_content_is_public'
         )
         self.fieldset_submit = FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-default'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            css_class='text-right',
         )
 
         if not self.instance or not self.instance.is_publicly_visible():
@@ -361,7 +367,8 @@ class MailFilterForm(Form):
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
-            StrictButton('Filtruj', type='submit', css_class='btn-default'),
+            StrictButton('Filtruj', type='submit', css_class='btn-outline-primary m-3 w-100'),
+            css_class='text-right',
         ))
 
     @property
