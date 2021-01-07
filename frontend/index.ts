@@ -8,6 +8,11 @@ import * as Headroom from 'headroom.js';
 window['Headroom'] = Headroom;
 import 'headroom.js/dist/jQuery.headroom.js';
 
+// Select2 (type/category in workshop editor)
+import 'select2';
+import 'select2/dist/css/select2.css';
+import './vendor/django_select2';
+
 // DateTime picker
 import 'moment';
 moment.locale('pl');

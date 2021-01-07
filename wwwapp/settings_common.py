@@ -188,6 +188,9 @@ TEMPLATES = [
     },
 ]
 
+SELECT2_JS = ''
+SELECT2_CSS = ''
+
 TINYMCE_JS_URL = os.path.join(STATIC_URL, "dist/tinymce/tinymce.js")
 TINYMCE_JS_ROOT = os.path.join(STATIC_URL, "dist/tinymce")
 TINYMCE_INCLUDE_JQUERY = False
