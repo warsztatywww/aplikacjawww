@@ -44,6 +44,7 @@
 {% endblock %}
 
 {% block script %}
+  {{ block.super }}
   <script>
     $(document).ready(() => {
       const table = $('#lecturers-table').DataTable(gen_datatables_config({}));
