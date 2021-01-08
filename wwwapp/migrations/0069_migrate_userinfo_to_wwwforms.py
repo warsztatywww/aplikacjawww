@@ -132,9 +132,12 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('wwwapp', '0068_workshop_year'),
-        ('wwwforms', '0008_add_select'),
+        ('wwwforms', '0001_initial'),
     ]
 
     operations = [
-        migrations.RunPython(forwards_func, reverse_func)
+        migrations.RunPython(forwards_func, reverse_func),
+        migrations.DeleteModel(
+            name='UserInfo',
+        ),
     ]
