@@ -6,6 +6,9 @@
     <article class="col-sm-12">
       {% if workshops %}
       <h1>{{ title }}</h1>
+      {% if has_results %}
+        <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
+      {% endif %}
       <div class="panel-group">
         {% for workshop, registered in workshops %}
           <div class="panel panel-default" id="{{ workshop.name }}" data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}" data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">

@@ -61,7 +61,7 @@
 
   <body>
     <!-- Fixed navbar -->
-    <div class="navbar navbar-inverse navbar-fixed-top headroom" >
+    <nav class="navbar navbar-inverse navbar-fixed-top headroom" >
       <div class="container">
         <div class="navbar-header">
           <a class="navbar-brand" href="{% url 'index' %}"><img src="{% static 'images/logo_transparent.png' %}" srcset="{% static 'images/logo_transparent.svg' %}" width="300" alt="Wakacyjne Warsztaty Wielodyscyplinarne"></a>
@@ -69,7 +69,7 @@
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"><span class="icon-bar"></span> <span class="icon-bar"></span> <span class="icon-bar"></span> </button>
         </div>
         <div class="navbar-collapse collapse">
-          <ul class="nav navbar-nav pull-right">
+          <ul class="nav navbar-nav nav-narrow pull-right">
             <li><a href="{% url 'index' %}">Strona główna</a></li>
 
             <li><a href="{% url 'program' current_year.pk %}">Program</a></li>
@@ -129,28 +129,19 @@
               </ul>
             </li>
 
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Zgłoś się!<b class="caret"></b></a>
-              <ul class="dropdown-menu">
-                <li><a href="{% url 'mydata_profile' %}">Twój profil</a></li>
-                <li><a href="{% url 'mydata_status' %}">Status kwalifikacji</a></li>
-                <li role="separator" class="divider"></li>
-                <li><a href="{% url 'workshops_add' current_year.pk %}">Zgłoś warsztaty!</a></li>
-                {% if has_workshops %}
-                <li><a href="{% url 'mydata_status' %}">Twoje warsztaty</a></li>
-                {% endif %}
-              </ul>
-            </li>
+            <li><a href="{% url 'mydata_status' %}">Kwalifikacja</a></li>
+
+            <li><a href="{% url 'workshops_add' current_year.pk %}">Zgłoś warsztaty!</a></li>
 
             {% if user.is_authenticated %}
-              <li><a class="btn" href="{% url 'login' %}">{{ user.first_name }} {{ user.last_name }}</a></li>
+              <li><a class="btn" href="{% url 'mydata_profile' %}">{{ user.first_name }} {{ user.last_name }}</a></li>
             {% else %}
               <li><a class="btn" href="{% url 'login' %}">Zaloguj</a></li>
             {% endif %}
           </ul>
         </div><!--/.nav-collapse -->
       </div>
-    </div>
+    </nav>
     <!-- /.navbar -->
 
     <header id="head" class="secondary"></header>

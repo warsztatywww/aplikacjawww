@@ -60,6 +60,10 @@
   }
 }
 
+.nav.nav-narrow>li>a {
+	padding-left: 10px;
+	padding-right: 10px;
+}
 /* Fix navbar image on mobile, see https://github.com/warsztatywww/aplikacjawww/issues/117 */
 .navbar-header {
 	display: table;
