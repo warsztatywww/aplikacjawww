@@ -1,11 +1,11 @@
 import datetime
 
-from django.contrib.auth.models import User
+import pytz
 from django import forms
+from django.contrib.auth.models import User
 from django.contrib.messages.api import get_messages
 from django.test import TestCase
 from django.urls import reverse
-from django.utils.timezone import make_aware
 from freezegun import freeze_time
 
 from wwwforms.forms import TextareaField
@@ -89,10 +89,10 @@ class FormSubmitTest(TestCase):
         self.assertEqual(answer2.value_string, 'gold')
         self.assertEqual(answer3.value_string, 'This is a very long paragraph of text.')
         self.assertEqual(answer4.value_date, datetime.date(2021, 1, 1))
-        self.assertEqual(answer1.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
-        self.assertEqual(answer2.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
-        self.assertEqual(answer3.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
-        self.assertEqual(answer4.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
+        self.assertEqual(answer1.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
+        self.assertEqual(answer2.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
+        self.assertEqual(answer3.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
+        self.assertEqual(answer4.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
 
     @freeze_time('2021-01-03 12:34:56')
     def test_submit_form_update(self):
@@ -122,10 +122,10 @@ class FormSubmitTest(TestCase):
         self.assertEqual(answer2.value_string, 'gold')
         self.assertEqual(answer3.value_string, 'This is a very long paragraph of text.')
         self.assertEqual(answer4.value_date, datetime.date(2021, 1, 1))
-        self.assertEqual(answer1.last_changed, make_aware(datetime.datetime(2021, 1, 1, 12, 00, 00)))
-        self.assertEqual(answer2.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
-        self.assertEqual(answer3.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
-        self.assertEqual(answer4.last_changed, make_aware(datetime.datetime(2021, 1, 3, 12, 34, 56)))
+        self.assertEqual(answer1.last_changed, datetime.datetime(2021, 1, 1, 12, 00, 00, tzinfo=pytz.utc))
+        self.assertEqual(answer2.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
+        self.assertEqual(answer3.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
+        self.assertEqual(answer4.last_changed, datetime.datetime(2021, 1, 3, 12, 34, 56, tzinfo=pytz.utc))
 
     def test_submit_form_unauthenticated(self):
         response = self.client.post(reverse('form', args=[self.form.name]), {
