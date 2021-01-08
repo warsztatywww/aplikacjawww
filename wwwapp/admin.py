@@ -8,7 +8,7 @@ from django.http.request import HttpRequest
 from django.urls import reverse
 
 from .models import Article, UserProfile, ArticleContentHistory, \
-    WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, UserInfo, \
+    WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
     WorkshopUserProfile, ResourceYearPermission, Camp
 
 admin.site.unregister(User)
@@ -16,17 +16,7 @@ admin.site.unregister(User)
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
-    readonly_fields = ['userinfo_link', ]
     show_change_link = True
-
-    def userinfo_link(self, instance):
-        # TODO: Render it as an inline instead - I just can't get it to work with a nested relation like that...
-        if instance.id:
-            userinfo_url = reverse('admin:wwwapp_userinfo_change', args=(instance.id,))
-            return u'<a href="%s">UserInfo details</a>' % userinfo_url
-        return u''
-    userinfo_link.allow_tags = True
-    userinfo_link.short_description = ''
 
 
 class MyUserAdmin(UserAdmin):
@@ -34,11 +24,6 @@ class MyUserAdmin(UserAdmin):
 
 
 admin.site.register(User, MyUserAdmin)
-
-
-class UserInfoInline(admin.StackedInline):
-    model = UserInfo
-    can_delete = False
 
 
 class WorkshopInline(admin.TabularInline):
@@ -61,11 +46,10 @@ class WorkshopParticipantInline(admin.TabularInline):
 
 class UserProfileAdmin(admin.ModelAdmin):
     model = UserProfile
-    inlines = [UserInfoInline, WorkshopUserProfileInline, WorkshopParticipantInline, WorkshopInline]
+    inlines = [WorkshopUserProfileInline, WorkshopParticipantInline, WorkshopInline]
 
 
 admin.site.register(UserProfile, UserProfileAdmin)
-admin.site.register(UserInfo)
 
 
 class WorkshopAdmin(admin.ModelAdmin):

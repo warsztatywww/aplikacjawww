@@ -12,7 +12,7 @@
         <li class="{% if request.resolver_match.view_name == 'mydata_profile' %}active{% endif %}"><a href="{% url 'mydata_profile' %}">Dane ogólne</a></li>
         <li class="{% if request.resolver_match.view_name == 'mydata_cover_letter' %}active{% endif %}"><a href="{% url 'mydata_cover_letter' %}">List motywacyjny</a></li>
         <li class="{% if request.resolver_match.view_name == 'mydata_profile_page' %}active{% endif %}"><a href="{% url 'mydata_profile_page' %}">Strona profilowa</a></li>
-        <li class="{% if request.resolver_match.view_name == 'mydata_user_info' %}active{% endif %}"><a href="{% url 'mydata_user_info' %}">Informacje wyjazdowe</a></li>
+        <li class="{% if request.resolver_match.view_name == 'mydata_forms' %}active{% endif %}"><a href="{% url 'mydata_forms' %}">Formularze</a></li>
       </ul>
     </div>
   </nav>

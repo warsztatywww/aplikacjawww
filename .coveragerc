@@ -3,8 +3,8 @@ source = .
 omit =
     ./venv/*
     ./gallery/*
-    ./wwwapp/migrations/*
-    ./wwwapp/tests/*
+    ./*/migrations/*
+    ./*/tests/*
     ./wwwapp/management/commands/download_remote_images.py
     ./wwwapp/settings*.py
     ./wwwapp/wsgi.py

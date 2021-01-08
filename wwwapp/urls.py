@@ -8,6 +8,7 @@ from django.conf import settings
 
 from . import views, mail_views
 from .auth import login_view, finish_merge_verification
+import wwwforms.views as wwwforms_views
 
 urlpatterns = [
     path(
@@ -29,7 +30,10 @@ urlpatterns = [
     path('me/profile_page/', views.mydata_profile_page_view, name='mydata_profile_page'),
     path('me/cover_letter/', views.mydata_cover_letter_view, name='mydata_cover_letter'),
     path('me/status/', views.mydata_status_view, name='mydata_status'),
-    path('me/user_info/', views.mydata_user_info_view, name='mydata_user_info'),
+    path('me/forms/', views.mydata_forms_view, name='mydata_forms'),
+    path('forms/', wwwforms_views.form_list_view, name='form_list'),
+    path('forms/<slug:name>/', wwwforms_views.form_view, name='form'),
+    path('forms/<slug:name>/results/', wwwforms_views.form_results_view, name='form_results'),
     path('article/<slug:name>/', views.article_view, name='article'),
     path('article/<slug:name>/edit/', views.article_edit_view, name='article_edit'),
     path('article/<slug:name>/edit/upload/', views.article_edit_upload_file, name='article_edit_upload'),

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <div class="container">
+    <article class="col-sm-12 maincontent">
+      <header>
+        <h1>{{ title }}</h1>
+      </header>
+
+      {% if description %}
+        <p>{{ description }}</p>
+      {% endif %}
+
+      {% crispy form %}
+    </article>
+  </div>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  {{ form.media }}
+{% endblock %}

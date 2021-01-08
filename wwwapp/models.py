@@ -180,12 +180,6 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.get_or_create(user=instance)
 
 
-@receiver(post_save, sender=UserProfile)
-def create_user_info(sender, instance, created, **kwargs):
-    if created:
-        UserInfo.objects.get_or_create(user_profile=instance)
-
-
 class WorkshopUserProfile(models.Model):
     # for each year
     STATUS_ACCEPTED = 'Z'
@@ -208,85 +202,14 @@ class WorkshopUserProfile(models.Model):
 
 
 class PESELField(models.CharField):
-    """PESEL field, with checksum verification."""
-
-    def validate(self, pesel: str, user_info: 'UserInfo') -> None:
-        super().validate(pesel, user_info)
-        # We accept empty PESEL (don't raise exception) for legacy reasons.
-        if not pesel:
-            return
-
-        # https://en.wikipedia.org/wiki/PESEL#Format
-        if len(pesel) != 11:
-            raise ValidationError('Długość numeru PESEL jest niepoprawna ({}).'.format(len(pesel)))
-        if not pesel.isdigit():
-            raise ValidationError('PESEL nie składa się z samych cyfr.')
-
-        pesel_digits = [int(digit) for digit in pesel]
-        checksum_mults = [1, 3, 7, 9] * 2 + [1, 3, 1]
-        if sum(x*y for x, y in zip(pesel_digits, checksum_mults)) % 10 != 0:
-            raise ValidationError('Suma kontrolna PESEL się nie zgadza.')
-
-        if not PESELField._extract_date(pesel):
-            raise ValidationError('Data urodzenia zawarta w numerze PESEL nie istnieje.')
-
-    @staticmethod
-    def _extract_date(pesel: str) -> datetime.date or None:
-        """
-        Takes PESEL (string that starts with at least 6 digits) and returns
-        birth date associated with it.
-        """
-        try:
-            year, month, day = [int(pesel[i:i+2]) for i in range(0, 6, 2)]
-        except ValueError:
-            return None
-        years_from_month = [1900, 2000, 2100, 2200, 1800]
-        count, month = divmod(month, 20)
-        year += years_from_month[count]
-        try:
-            return datetime.date(year, month, day)
-        except ValueError:
-            return None
-
-
-POSSIBLE_TSHIRT_SIZES = [
-    ('no_idea', 'Nie ogarniam'),
-    ("XS", "XS"),
-    ("S", "S"),
-    ("M", "M"),
-    ("L", "L"),
-    ("XL", "XL"),
-    ("XXL", "XXL"),
-]
-
-
-class UserInfo(models.Model):
-    """Info needed for camp, not for qualification."""
-    user_profile = models.OneToOneField('UserProfile', on_delete=models.CASCADE, related_name='user_info', editable=False)
-
-    pesel = PESELField(max_length=11, blank=True, default="")
-    address = models.TextField(max_length=1000, blank=True, default="")
-    phone = models.CharField(max_length=50, blank=True, default="")
-    start_date = models.DateField(blank=True, null=True)
-    end_date = models.DateField(blank=True, null=True)
-    tshirt_size = models.CharField(max_length=100, choices=POSSIBLE_TSHIRT_SIZES,
-                                   default='no_idea', blank=False, null=False)
-    comments = models.CharField(max_length=1000, blank=True, default="")
-
-    class Meta:
-        permissions = (('see_user_info', 'Can see user info'),)
-
-    def get_birth_date(self) -> datetime.date or None:
-        """
-        Retrieves the birth date from the provided PESEL number.
-        Returns a date class instance or None if the PESEL is malformed or not present.
-        """
-        if not self.pesel or len(self.pesel) < 6:
-            return None
-        return PESELField._extract_date(self.pesel)
-
-    def __str__(self):
-        return "{0}".format(self.user_profile)
+    system_check_removed_details = {
+        'msg': (
+            'PESELField has been removed except for support in '
+            'historical migrations.'
+        ),
+        'hint': 'Use wwwforms.FormQuestion with PESEL data type instead.',
+        'id': 'wwwapp.E900',
+    }
 
 
 class ArticleContentHistory(models.Model):
