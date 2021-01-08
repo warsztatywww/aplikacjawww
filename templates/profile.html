@@ -2,8 +2,7 @@
 {% load bleach_tags %}
 
 {% block content %}
-  <div class="container">
-    <div id="profile_content" class="col-sm-12 maincontent" style="display: block;">
+    <div id="profile_content" class="col-sm-12" style="display: block;">
       <h1>{{ title }}</h1>
 
         {% if profile %}
@@ -138,7 +137,6 @@
           </p>
         {% endif %}
     </div>
-  </div>
 {% endblock %}
 
 {% block script %}

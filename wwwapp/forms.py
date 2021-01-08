@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField, ModelMultipleChoiceField, DateInput
 from django.forms import ModelForm, FileInput, FileField
-from django.forms.fields import ImageField
+from django.forms.fields import ImageField, ChoiceField
 from django.forms.forms import Form
 from django.urls import reverse
 from django_select2.forms import Select2MultipleWidget, Select2Widget
@@ -390,3 +390,30 @@ class WorkshopParticipantPointsForm(ModelForm):
 
 class TinyMCEUpload(Form):
     file = ImageField()
+
+
+class MailFilterForm(Form):
+    filter = ChoiceField(label='Metoda filtrowania')
+
+    def __init__(self, filter_methods, *args, **kwargs):
+        self.filter_methods = filter_methods
+        super().__init__(*args, **kwargs)
+        self.fields['filter'].choices = [(k, v[1]) for k, v in self.filter_methods.items()]
+
+        self.helper = FormHelper(self)
+        self.helper.include_media = False
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Filtruj', type='submit', css_class='btn-default'),
+        ))
+
+    @property
+    def filter_id(self):
+        return self.cleaned_data['filter']
+
+    @property
+    def filter_method(self):
+        return self.filter_methods[self.cleaned_data['filter']][0]
+
+    @property
+    def filter_name(self):
+        return self.filter_methods[self.cleaned_data['filter']][1]

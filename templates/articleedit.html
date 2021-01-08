@@ -3,8 +3,7 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
+    <article class="col-sm-12">
       {% if title %}
         <header>
           <h1>{{ title }}</h1>
@@ -14,7 +13,6 @@
         {% crispy form %}
       </div>
     </article>
-  </div>
 {% endblock %}
 
 {% block script %}

@@ -1,8 +1,8 @@
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.shortcuts import redirect, render, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 
+from .forms import MailFilterForm
 from .models import Workshop, WorkshopUserProfile, Camp
 from .views import get_context
 
@@ -73,26 +73,21 @@ def _all_refused(year):
 
 @login_required()
 @permission_required('wwwapp.see_all_users', raise_exception=True)
-def filtered_emails_view(request, year=None, filter_id=''):
+def filtered_emails_view(request, year):
     context = get_context(request)
-    if year is None:
-        year = Camp.current()
+    year = get_object_or_404(Camp, pk=year)
+
+    if request.method == 'POST':
+        form = MailFilterForm(_registered_filters, request.POST)
+        if form.is_valid():
+            context['show_results'] = True
+            context['chosen_filter_name'] = form.filter_name
+            context['filtered_users'] = form.filter_method(year)
     else:
-        year = get_object_or_404(Camp, pk=year)
+        form = MailFilterForm(_registered_filters)
 
     context['title'] = 'Filtrowane emaile użytkowników'
-    context['filtered_users'] = None
-    if filter_id in _registered_filters:
-        method, name = _registered_filters[filter_id]
-        context['chosen_filter_name'] = name
-        context['chosen_year'] = year
-        context['filtered_users'] = method(year)
-        if not context['filtered_users']:
-            messages.info(request, 'Nie znaleziono użytkowników spełniających kryteria!')
+    context['form'] = form
 
-    context['filter_methods'] = [
-        (filter_id, _registered_filters[filter_id][1]) for filter_id in _registered_filters.keys()
-    ]
-    context['years'] = Camp.objects.all()
-
+    context['selected_year'] = year
     return render(request, 'filteredEmails.html', context)
