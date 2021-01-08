@@ -145,8 +145,7 @@ def profile_view(request, user_id):
             edition_profile = None
         else:
             raise SuspiciousOperation("Invalid argument")
-        user.userprofile.refresh_from_db(fields=['workshop_profile'])
-        context['workshop_profile'] = edition_profile
+        return redirect('profile', user.pk)
 
     context['title'] = "{0.first_name} {0.last_name}".format(user)
     context['profile_page'] = user.userprofile.profile_page
@@ -334,6 +333,7 @@ def workshop_edit_view(request, year, name=None):
             workshop.save()
         else:
             raise SuspiciousOperation("Invalid argument")
+        return redirect('workshop_edit', workshop.year.pk, workshop.name)
 
     # Generate the parts of the workshop URL displayed in the workshop slug editor
     workshop_url = request.build_absolute_uri(

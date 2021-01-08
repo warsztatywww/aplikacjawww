@@ -245,42 +245,46 @@ class CampQualificationViews(TestCase):
     def test_admin_can_accept(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'accept'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_ACCEPTED)
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="qualified">✔')
 
     def test_admin_can_reject(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'reject'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_REJECTED)
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="not-qualified">✘')
 
     def test_admin_can_cancel(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_ACCEPTED)
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'cancel'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_CANCELLED)
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="maybe-qualified">😞')
 
     def test_admin_can_delete_status(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_ACCEPTED)
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'delete'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         self.assertFalse(WorkshopUserProfile.objects.filter(year=self.year_2020, user_profile=self.participant_user.userprofile).exists())
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertNotContains(response, '<span class="qualified">✔')
         self.assertNotContains(response, '<span class="not-qualified">✘')
         self.assertNotContains(response, '<span class="maybe-qualified">😞')
@@ -289,31 +293,34 @@ class CampQualificationViews(TestCase):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_ACCEPTED)
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'accept'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_ACCEPTED)
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="qualified">✔')
 
     def test_admin_cannot_double_reject(self):
         WorkshopUserProfile.objects.create(year=self.year_2020, user_profile=self.participant_user.userprofile, status=WorkshopUserProfile.STATUS_REJECTED)
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'reject'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         wup = WorkshopUserProfile.objects.get(year=self.year_2020, user_profile=self.participant_user.userprofile)
         self.assertEqual(wup.status, WorkshopUserProfile.STATUS_REJECTED)
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="not-qualified">✘')
 
     def test_admin_cannot_double_delete_status(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'delete'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
         self.assertFalse(WorkshopUserProfile.objects.filter(year=self.year_2020, user_profile=self.participant_user.userprofile).exists())
 
+        response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertNotContains(response, '<span class="qualified">✔')
         self.assertNotContains(response, '<span class="not-qualified">✘')
         self.assertNotContains(response, '<span class="maybe-qualified">😞')

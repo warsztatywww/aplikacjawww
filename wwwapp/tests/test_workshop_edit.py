@@ -763,7 +763,7 @@ class WorkshopEditViews(TestCase):
     def test_admin_can_accept_workshop(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
 
         self.workshop.refresh_from_db()
         self.assertEqual(self.workshop.status, Workshop.STATUS_ACCEPTED)
@@ -771,7 +771,7 @@ class WorkshopEditViews(TestCase):
     def test_admin_can_reject_workshop(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'reject'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
 
         self.workshop.refresh_from_db()
         self.assertEqual(self.workshop.status, Workshop.STATUS_REJECTED)
@@ -781,7 +781,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'cancel'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
 
         self.workshop.refresh_from_db()
         self.assertEqual(self.workshop.status, Workshop.STATUS_CANCELLED)
@@ -791,7 +791,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'delete'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
 
         self.workshop.refresh_from_db()
         self.assertIsNone(self.workshop.status)
@@ -871,7 +871,7 @@ class WorkshopEditViews(TestCase):
 
         # Accept proposal
         response = self.client.post(reverse('workshop_edit', args=[2020, 'fajne']), {'qualify': 'accept'})
-        self.assertEqual(response.status_code, 200)
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
 
         # Template should not be added yet
         workshop.refresh_from_db()
