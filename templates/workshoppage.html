@@ -2,34 +2,35 @@
 {% load bleach_tags %}
 
 {% block workshop_page_content %}
-  {% if workshop.page_content_is_public or has_perm_to_edit %}
-    {% if has_perm_to_edit %}
-      {% if workshop.is_qualifying and workshop.qualification_problems %}
-        <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
-      {% elif workshop.is_qualifying %}
-        <div class="alert alert-danger" role="alert">Nie wstawiłeś jeszcze zadań kwalifikacyjnych!</div>
-      {% else %}
-        <p>Na Twoje warsztaty nie obowiązuje kwalifikacja.</p>
-      {% endif %}
+  {% if is_lecturer %}
+    {% if workshop.is_qualifying and workshop.qualification_problems %}
+      <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
+    {% elif not workshop.is_qualifying %}
+      <p>Na Twoje warsztaty nie obowiązuje kwalifikacja.</p>
     {% else %}
-      {% if workshop.is_qualifying and workshop.qualification_problems %}
-        <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
-      {% elif workshop.is_qualifying %}
-        <p>Nie ma jeszcze zadań kwalifikacyjnych.</p>
-      {% else %}
-        <p>Na te warsztaty nie obowiązuje kwalifikacja.</p>
-      {% endif %}
+      <div class="alert alert-danger" role="alert">Nie wstawiłeś jeszcze zadań kwalifikacyjnych!</div>
     {% endif %}
-
-    {% if workshop.page_content_is_public %}
-      <div role="tabpanel" style="margin: 1em 0;">
-        {{ workshop.page_content | bleach }}
-      </div>
-    {% else %}
-      <div class="alert alert-danger" role="alert">Nie opublikowałeś jeszcze opisu!</div>
-    {% endif %}
-
   {% else %}
-    <p>Prowadzący warsztatów nie wstawił jeszcze opisu.</p>
+    {% if workshop.is_qualifying and workshop.qualification_problems %}
+      <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
+    {% elif not workshop.is_qualifying %}
+      <p>Na te warsztaty nie obowiązuje kwalifikacja.</p>
+    {% else %}
+      {% if workshop.page_content_is_public %}
+        <p>Nie ma jeszcze zadań kwalifikacyjnych.</p>
+      {% elif has_perm_to_edit %}
+        <div class="alert alert-info" role="alert">Nie ma jeszcze zadań kwalifikacyjnych.</div>
+      {% endif %}
+    {% endif %}
+  {% endif %}
+
+  {% if workshop.page_content_is_public %}
+    <div role="tabpanel" style="margin: 1em 0;">
+      {{ workshop.page_content | bleach }}
+    </div>
+  {% elif is_lecturer %}
+    <div class="alert alert-danger" role="alert">Nie opublikowałeś jeszcze opisu!</div>
+  {% else %}
+    <div class="alert alert-info" role="alert">Prowadzący warsztatów nie wstawił jeszcze opisu.</div>
   {% endif %}
 {% endblock %}

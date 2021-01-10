@@ -691,7 +691,7 @@ class WorkshopEditViews(TestCase):
 
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
-        self.assertContains(response, 'Nie opublikowałeś jeszcze opisu!')
+        self.assertContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertNotContains(response, 'opis iks de')
 
     def test_view_public_page(self):
@@ -701,22 +701,26 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
 
         response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
+        self.assertNotContains(response, 'Nie opublikowałeś jeszcze opisu!')
         self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
         self.client.force_login(self.another_user)
         response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
+        self.assertNotContains(response, 'Nie opublikowałeś jeszcze opisu!')
         self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
         self.client.force_login(self.normal_user)
         response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertNotContains(response, 'Nie opublikowałeś jeszcze opisu!')
+        self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('workshop_page', args=[2020, 'bardzofajne']))
         self.assertNotContains(response, 'Nie opublikowałeś jeszcze opisu!')
+        self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
     def test_unauthed_cannot_set_workshop_status(self):
