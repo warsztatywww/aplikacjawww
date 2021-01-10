@@ -12,21 +12,23 @@
       <div class="panel-group">
         {% for workshop, registered in workshops %}
           <div class="panel panel-default" id="{{ workshop.name }}" data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}" data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">
-            <div class="panel-heading row" style="font-size: 16pt;">
-              <div class="col-sm-8">
-                {% if workshop.page_content_is_public %}
-                  {% if workshop.status == 'X' %}(ODWOŁANE) {% endif %}
-                  <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}"><span class="big">{{ workshop.title }}</span></a>
-                {% else %}
-                  <span class="big">{{ workshop.title }}</span>
-                {% endif %}
-              </div>
-              <div class="col-sm-4 text-right">
-                {% for lecturer in workshop.lecturer.all %}
-                  <span style="display: inline-block;"> <!-- this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name -->
-                    <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %},{% endif %}
-                  </span>
-                {% endfor %}
+            <div class="panel-heading">
+              <div class="row" style="font-size: 16pt;">
+                <div class="col-sm-8">
+                  {% if workshop.page_content_is_public %}
+                    {% if workshop.status == 'X' %}(ODWOŁANE) {% endif %}
+                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}"><span class="big">{{ workshop.title }}</span></a>
+                  {% else %}
+                    <span class="big">{{ workshop.title }}</span>
+                  {% endif %}
+                </div>
+                <div class="col-sm-4 text-right">
+                  {% for lecturer in workshop.lecturer.all %}
+                    <span style="display: inline-block;"> <!-- this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name -->
+                      <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %},{% endif %}
+                    </span>
+                  {% endfor %}
+                </div>
               </div>
             </div>
             <div class="panel-body" style="margin-bottom: -20px">
