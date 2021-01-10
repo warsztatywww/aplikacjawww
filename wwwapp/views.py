@@ -276,16 +276,22 @@ def mydata_forms_view(request):
 
 
 def can_edit_workshop(workshop, user):
+    """
+    Determines whether the user can see the edit views
+    (but he may not be able to actually edit if if this is a workshop from a past edition - he can only see read-only
+    state in that case)
+    """
     if user.is_authenticated:
-        return workshop.lecturer.filter(user=user).exists() \
-               or user.has_perm('wwwapp.edit_all_workshops')
+        is_lecturer = workshop.lecturer.filter(user=user).exists()
+        has_perm_to_edit = is_lecturer or user.has_perm('wwwapp.edit_all_workshops')
+        return has_perm_to_edit, is_lecturer
     else:
-        return False
+        return False, False
 
 
 def workshop_page_view(request, year, name):
     workshop = get_object_or_404(Workshop, year=year, name=name)
-    has_perm_to_edit = can_edit_workshop(workshop, request.user)
+    has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
@@ -293,6 +299,7 @@ def workshop_page_view(request, year, name):
     context = {}
     context['title'] = workshop.title
     context['workshop'] = workshop
+    context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = \
         has_perm_to_edit or request.user.has_perm('wwwapp.see_all_workshops')
@@ -306,11 +313,11 @@ def workshop_edit_view(request, year, name=None):
         year = get_object_or_404(Camp, pk=year)
         workshop = None
         title = 'Nowe warsztaty'
-        has_perm_to_edit = year.are_proposals_open()
+        has_perm_to_edit, is_lecturer = year.are_proposals_open(), True
     else:
         workshop = get_object_or_404(Workshop, year=year, name=name)
         title = workshop.title
-        has_perm_to_edit = can_edit_workshop(workshop, request.user)
+        has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
     has_perm_to_see_all = request.user.has_perm('wwwapp.see_all_workshops')
     if workshop and not has_perm_to_edit and not has_perm_to_see_all:
@@ -393,6 +400,7 @@ def workshop_edit_view(request, year, name=None):
     context = {}
     context['title'] = title
     context['workshop'] = workshop
+    context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = has_perm_to_edit or has_perm_to_see_all
 
@@ -418,7 +426,7 @@ def legacy_qualification_problems_redirect_view(request, name):
 @login_required()
 def workshop_participants_view(request, year, name):
     workshop = get_object_or_404(Workshop, year__pk=year, name=name)
-    has_perm_to_edit = can_edit_workshop(workshop, request.user)
+    has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
@@ -429,6 +437,7 @@ def workshop_participants_view(request, year, name):
     context = {}
     context['title'] = '%s - uczestnicy' % workshop.title
     context['workshop'] = workshop
+    context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
 
@@ -448,7 +457,7 @@ def save_points_view(request):
 
     workshop_participant = WorkshopParticipant.objects.get(id=request.POST['id'])
 
-    has_perm_to_edit = can_edit_workshop(workshop_participant.workshop, request.user)
+    has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop_participant.workshop, request.user)
     if not has_perm_to_edit:
         return HttpResponseForbidden()
 
@@ -925,7 +934,8 @@ def article_edit_upload_file(request, name):
 @csrf_exempt
 def workshop_edit_upload_file(request, year, name):
     workshop = get_object_or_404(Workshop, year__pk=year, name=name)
-    if not can_edit_workshop(workshop, request.user) or not workshop.is_publicly_visible() or not workshop.is_workshop_editable():
+    has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
+    if not has_perm_to_edit or not workshop.is_publicly_visible() or not workshop.is_workshop_editable():
         return HttpResponseForbidden()
     target_dir = "images/workshops/{}/{}/".format(workshop.year.pk, workshop.name)
 
