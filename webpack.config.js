@@ -21,6 +21,10 @@ module.exports = {
     filename: '[name].js',
     path: path.resolve(__dirname, './static/dist'),
   },
+  devServer: {
+    writeToDisk: true, // Write files to disk in dev mode, so Django can serve the assets
+    hot: true
+  },
   module: {
     rules: [
       {
