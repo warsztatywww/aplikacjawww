@@ -6,6 +6,7 @@
   "scripts": {
     "build": "webpack --mode production",
     "build-dev": "webpack --mode development",
+    "watch": "webpack --mode development --watch",
     "clean": "rm -r static/dist"
   },
   "repository": {
@@ -28,7 +29,8 @@
     "moment-locales-webpack-plugin": "^1.2.0",
     "url-loader": "^4.1.1",
     "webpack": "^5.11.1",
-    "webpack-cli": "^4.3.1"
+    "webpack-cli": "^4.3.1",
+    "webpack-dev-server": "^3.11.1"
   },
   "dependencies": {
     "bootstrap": "^3.4.1",
