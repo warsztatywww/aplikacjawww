@@ -52,7 +52,7 @@ module.exports = {
     new MiniCssExtractPlugin(),
     new GoogleFontsPlugin({
       fonts: [
-        { family: "Open Sans", variants: [ "300", "400", "700" ], display: "swap" }
+        { family: "Open Sans", variants: [ "300", "400", "700" ], display: "swap", subsets: ["latin-ext"] }
       ]
     }),
     new MomentLocalesPlugin({
