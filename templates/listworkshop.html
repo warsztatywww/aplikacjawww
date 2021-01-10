@@ -110,7 +110,15 @@
     </article>
 {% endblock %}
 
+{% block styles %}
+  {{ block.super }}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
+{% endblock %}
+
 {% block script %}
+  {{ block.super }}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+
   <script>
   $(document).ready( function () {
     const table = $('.workshop-table').DataTable(gen_datatables_config(

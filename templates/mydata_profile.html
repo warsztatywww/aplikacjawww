@@ -1,4 +1,5 @@
 {% extends "mydata_base.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block mydata_page_content %}
@@ -9,10 +10,4 @@
     {% crispy user_form %}
     {% crispy user_profile_form %}
   </form>
-{% endblock %}
-
-{% block script %}
-  {{ block.super }}
-  {{ user_form.media }}
-  {{ user_profile_form.media }}
 {% endblock %}

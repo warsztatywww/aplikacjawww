@@ -32,7 +32,6 @@ INSTALLED_APPS = (
     'adminsortable2',
     'django_bleach',
     'tinymce',
-    'compressor',
     'wwwforms',
     'wwwapp',
     'django_cleanup',
@@ -163,7 +162,6 @@ STATIC_URL = '/static/'
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'compressor.finders.CompressorFinder',
 )
 
 MEDIA_URL = '/media/'
@@ -190,17 +188,19 @@ TEMPLATES = [
     },
 ]
 
-TINYMCE_JS_URL = os.path.join(STATIC_URL, "tinymce/js/tinymce/tinymce.min.js")
-TINYMCE_JS_ROOT = os.path.join(STATIC_URL, "tinymce/js/tinymce")
-TINYMCE_INCLUDE_JQUERY = False
+SELECT2_JS = ''
+SELECT2_CSS = ''
+
+TINYMCE_JS_URL = os.path.join(STATIC_URL, "dist/tinymce.js")
+TINYMCE_JS_ROOT = None
 TINYMCE_DEFAULT_CONFIG = {
+    'language': 'pl',
     'theme': 'silver',
     'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount textpattern emoticons autosave',
     'removed_menuitems': 'newdocument',
     'toolbar': 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | link',
     'content_css': [
-        '/static/css/bootstrap.min.css',
-        '/static/css/main.css',
+        '/static/dist/main.css',
     ],
     'content_style': 'body { margin: 2rem; }',
     'height': 500,
@@ -220,8 +220,6 @@ TINYMCE_DEFAULT_CONFIG_WITH_IMAGES = {  # Additional settings for editors where 
     'file_picker_types': 'image',
     'file_picker_callback': 'tinymce_local_file_picker',
 }
-
-COMPRESS_ENABLED = True
 
 INTERNAL_IPS = [
     '127.0.0.1',

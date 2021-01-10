@@ -1,4 +1,5 @@
 {% extends "workshopbase.html" %}
+{% load static %}
 {% load crispy_forms_tags %}
 
 {% block workshop_page_title %}
@@ -61,12 +62,8 @@
 
 {% block script %}
   {{ block.super }}
-
-  <script>
-  /* Fixes a bug in django-tinymce with TINYMCE_INCLUDE_JQUERY = False, see https://github.com/aljosa/django-tinymce/issues/234 */
-  var django = {jQuery: jQuery};
-  </script>
-  {{ form.media }}
+  <script src="{% static 'dist/tinymce.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'dist/tinymce.css' %}">
 
   <script>
     /* Hide the qualification settings when the is_qualifying checkbox is disabled */
