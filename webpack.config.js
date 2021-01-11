@@ -5,6 +5,7 @@ const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const MomentLocalesPlugin = require('moment-locales-webpack-plugin');
 const GoogleFontsPlugin = require("@beyonk/google-fonts-webpack-plugin");
 
+// based on https://pascalw.me/blog/2020/04/19/webpack-django.html
 module.exports = {
   entry: {
     'main': './frontend/index.ts',
@@ -18,7 +19,8 @@ module.exports = {
     },
   },
   output: {
-    filename: '[name].js',
+    filename: "[name].js", // No filename hashing, Django takes care of this
+    chunkFilename: "[id]-[chunkhash].js", // Per advice from blog (see link above)
     path: path.resolve(__dirname, './static/dist'),
   },
   devServer: {

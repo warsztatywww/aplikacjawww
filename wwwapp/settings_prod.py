@@ -31,6 +31,9 @@ CSRF_COOKIE_SECURE = True
 
 MEDIA_ROOT = None  # set in local_settings
 
+# Append hashes to filenames for better caching
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
 try:
     from .local_settings import *
 except ModuleNotFoundError:
