@@ -1,3 +1,4 @@
+import django.db.utils
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
@@ -41,24 +42,30 @@ class Command(BaseCommand):
     Create and returns a fake random user.
     """
     def fake_user(self) -> Tuple[User, UserProfile]:
-        profile_data = self.fake.profile()
-        user = User.objects.create_user(profile_data['username'], profile_data['mail'], 'password')
-        user.first_name = self.fake.first_name()
-        user.last_name = self.fake.last_name()
-        user.save()
+        ok = False
+        while not ok:
+            ok = True
+            try:
+                profile_data = self.fake.profile()
+                user = User.objects.create_user(profile_data['username'], profile_data['mail'], 'password')
+                user.first_name = self.fake.first_name()
+                user.last_name = self.fake.last_name()
+                user.save()
 
-        user.userprofile.gender = profile_data['sex']
-        user.userprofile.school = "TEST"
-        user.userprofile.matura_exam_year = self.fake.date_this_year().year
-        user.userprofile.how_do_you_know_about = self.fake.text()
-        user.userprofile.profile_page = self.fake.text()
-        user.userprofile.cover_letter = self.fake.text()
-        user.userprofile.save()
+                user.userprofile.gender = profile_data['sex']
+                user.userprofile.school = "TEST"
+                user.userprofile.matura_exam_year = self.fake.date_this_year().year
+                user.userprofile.how_do_you_know_about = self.fake.text()
+                user.userprofile.profile_page = self.fake.text()
+                user.userprofile.cover_letter = self.fake.text()
+                user.userprofile.save()
 
-        # user.userprofile.user_info.pesel = pesel=profile_data['ssn']
-        # user.userprofile.user_info.address=profile_data['address']
-        # user.userprofile.user_info.comments=self.fake.text(100)
-        # user.userprofile.user_info.save()
+                # user.userprofile.user_info.pesel = pesel=profile_data['ssn']
+                # user.userprofile.user_info.address=profile_data['address']
+                # user.userprofile.user_info.comments=self.fake.text(100)
+                # user.userprofile.user_info.save()
+            except django.db.utils.IntegrityError:
+                ok = False
 
         return user, user.userprofile
 
