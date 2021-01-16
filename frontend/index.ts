@@ -18,8 +18,8 @@ import './vendor/django_select2';
 // DateTime picker
 import 'moment';
 moment.locale('pl');
-import 'eonasdan-bootstrap-datetimepicker-npm/src/js/bootstrap-datetimepicker';
-import 'eonasdan-bootstrap-datetimepicker-npm/build/css/bootstrap-datetimepicker.css';
+import 'eonasdan-bootstrap-datetimepicker/src/js/bootstrap-datetimepicker';
+import 'eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css';
 
 // Main website CSS
 import './css/site.css';
