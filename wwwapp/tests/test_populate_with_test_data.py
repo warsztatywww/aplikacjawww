@@ -6,7 +6,7 @@ from django.test.utils import override_settings
 from wwwapp.models import UserProfile, Workshop
 
 
-@override_settings(DEBUG=True)
+@override_settings(DEBUG=True, PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher'])
 class PopulateWithTestData(TestCase):
     def test_populate_command(self):
         args = []
