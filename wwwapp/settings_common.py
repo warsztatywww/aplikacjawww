@@ -199,9 +199,6 @@ TINYMCE_DEFAULT_CONFIG = {
     'plugins': 'preview paste searchreplace autolink code visualblocks visualchars image link media codesample table charmap hr nonbreaking anchor toc advlist lists wordcount textpattern emoticons autosave',
     'removed_menuitems': 'newdocument',
     'toolbar': 'undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | link',
-    'content_css': [
-        '/static/dist/main.css',
-    ],
     'content_style': 'body { margin: 2rem; }',
     'height': 500,
     'branding': False,
