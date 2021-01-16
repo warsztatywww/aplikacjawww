@@ -9,11 +9,21 @@ from django.forms.fields import ImageField, ChoiceField
 from django.forms.forms import Form
 from django.urls import reverse
 from django_select2.forms import Select2MultipleWidget, Select2Widget
-from tinymce.widgets import TinyMCE
+import tinymce.widgets
 from django.conf import settings
+from django.contrib.staticfiles.storage import staticfiles_storage
+
 
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
     WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp
+
+
+class InitializedTinyMCE(tinymce.widgets.TinyMCE):
+    def __init__(self, mce_attrs=None, **kwargs):
+        mce_attrs_all = {'content_css': staticfiles_storage.url('dist/main.css')}
+        mce_attrs = mce_attrs or {}
+        mce_attrs_all.update(mce_attrs)
+        super().__init__(mce_attrs=mce_attrs_all, **kwargs)
 
 
 class UserProfilePageForm(ModelForm):
@@ -30,7 +40,7 @@ class UserProfilePageForm(ModelForm):
         model = UserProfile
         fields = ['profile_page']
         labels = {'profile_page': "Strona profilowa"}
-        widgets = {'profile_page': TinyMCE()}
+        widgets = {'profile_page': InitializedTinyMCE()}
 
 
 class UserCoverLetterForm(ModelForm):
@@ -47,7 +57,7 @@ class UserCoverLetterForm(ModelForm):
         model = UserProfile
         fields = ['cover_letter']
         labels = {'cover_letter': "List motywacyjny"}
-        widgets = {'cover_letter': TinyMCE()}
+        widgets = {'cover_letter': InitializedTinyMCE()}
 
 
 class UserProfileForm(ModelForm):
@@ -127,7 +137,7 @@ class ArticleForm(ModelForm):
         if self.instance and self.instance.name == 'index':
             # Allow iframe on main page for Facebook embed
             mce_attrs['valid_elements'] = settings.TINYMCE_DEFAULT_CONFIG['valid_elements'] + ',iframe'
-        self.fields['content'].widget = TinyMCE(mce_attrs=mce_attrs)
+        self.fields['content'].widget = InitializedTinyMCE(mce_attrs=mce_attrs)
 
         is_special = kwargs['instance'] and kwargs['instance'].pk and \
                      kwargs['instance'].name in ArticleForm.SPECIAL_ARTICLES.keys()
@@ -208,14 +218,14 @@ class WorkshopForm(ModelForm):
         # Configure TinyMCE settings
         mce_attrs = {}
         mce_attrs['readonly'] = self.fields['proposition_description'].disabled  # does not seem to respect the Django field settings for some reason
-        self.fields['proposition_description'].widget = TinyMCE(mce_attrs=mce_attrs)
+        self.fields['proposition_description'].widget = InitializedTinyMCE(mce_attrs=mce_attrs)
 
         mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
         if self.instance and self.instance.pk:
             mce_attrs['automatic_uploads'] = True
             mce_attrs['images_upload_url'] = reverse('workshop_edit_upload', kwargs={'year': self.instance.year.pk, 'name': self.instance.name})
         mce_attrs['readonly'] = self.fields['page_content'].disabled  # does not seem to respect the Django field settings for some reason
-        self.fields['page_content'].widget = TinyMCE(mce_attrs=mce_attrs)
+        self.fields['page_content'].widget = InitializedTinyMCE(mce_attrs=mce_attrs)
 
         # Layout
         self.fieldset_general = Fieldset(
