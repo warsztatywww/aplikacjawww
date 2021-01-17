@@ -349,7 +349,7 @@ def workshop_edit_view(request, year, name=None):
     workshop_url[0:1] = workshop_url[0].split('9999')
 
     profile_warnings = []
-    if not workshop or workshop.lecturer.filter(user=request.user).exists():  # The user is one of the lecturers for this workshop
+    if is_lecturer:  # The user is one of the lecturers for this workshop
         if len(request.user.userprofile.profile_page) <= 50:  # The user does not have their profile page filled in
             profile_warnings.append(Template("""
                     <strong>Nie uzupełnił{% if user.userprofile.gender == 'F' %}aś{% else %}eś{% endif %} swojej
