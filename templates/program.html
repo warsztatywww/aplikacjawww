@@ -8,7 +8,19 @@
       <h1 class="row">
         <span class="col">{{ title }}</span>
         <div class="col-md-3 col-sm-12">
-          <a role="button" class="btn btn-outline-primary float-right btn-block mb-1" href="{% url 'workshops_add' selected_year.pk %}">Zgłoś warsztaty! <span class="fas fa-plus d-none d-lg-inline" aria-hidden="true"></span></a>
+          <div
+            {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+            id="add_workshop_button_tooltip"
+            class="d-inline-block w-100"
+            {% if not selected_year.are_proposals_open %}data-toggle="tooltip" data-placement="bottom" title="Zgłoszenia warsztatów nie są obecnie aktywne"{% endif %}
+            >
+              <a role="button"
+                 class="btn btn-outline-primary float-right btn-block mb-1 {% if not selected_year.are_proposals_open %}disabled{% endif %}"
+                 href="{% url 'workshops_add' selected_year.pk %}">
+                Zgłoś warsztaty! <span class="fas fa-plus d-none d-lg-inline" aria-hidden="true"></span>
+              </a>
+          </div>
+          </div>
         </div>
       </h1>
       {% if has_results %}
@@ -70,4 +82,11 @@
         Warsztaty pojawią się w odpowiednim momencie.
       {% endif %}
     </article>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script>
+    $('#add_workshop_button_tooltip').tooltip();
+  </script>
 {% endblock %}
