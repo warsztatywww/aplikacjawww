@@ -5,7 +5,12 @@
 {% block content %}
     <article>
       {% if workshops %}
-      <h1>{{ title }}</h1>
+      <h1 class="row">
+        <span class="col">{{ title }}</span>
+        <div class="col-md-3 col-sm-12">
+          <a role="button" class="btn btn-outline-primary float-right btn-block mb-1" href="{% url 'workshops_add' selected_year.pk %}">Zgłoś warsztaty! <span class="fas fa-plus d-none d-lg-inline" aria-hidden="true"></span></a>
+        </div>
+      </h1>
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
