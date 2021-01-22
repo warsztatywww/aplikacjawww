@@ -12,7 +12,7 @@
 
         {% if has_perm_to_view_details and workshop.is_publicly_visible %}
           <nav class="mb-3">
-            <ul class="nav nav-pills nav-fill">
+            <ul class="nav nav-pills nav-fill flex-column flex-lg-row">
               <li class="nav-item">
                 <a class="nav-link {% if request.resolver_match.view_name == 'workshop_page' %}active{% endif %}"
                    href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
