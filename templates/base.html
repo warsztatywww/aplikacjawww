@@ -40,17 +40,23 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
       <div class="container">
-        <a class="navbar-brand" href="{% url 'index' %}">
-          <img src="{% static 'images/logo_transparent.png' %}" srcset="{% static 'images/logo_transparent.svg' %}" width="300" alt="Wakacyjne Warsztaty Wielodyscyplinarne">
+        <a class="navbar-brand d-block d-lg-none" href="{% url 'index' %}">
+            <img src="{% static 'images/logo_transparent.png' %}" srcset="{% static 'images/logo_transparent.svg' %}" width="200" alt="Wakacyjne Warsztaty Wielodyscyplinarne">
         </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <a class="navbar-brand d-none d-lg-block" href="{% url 'index' %}">
+            <img src="{% static 'images/logo_transparent.png' %}" srcset="{% static 'images/logo_transparent.svg' %}" width="300" alt="Wakacyjne Warsztaty Wielodyscyplinarne">
+          </a>
           <ul class="navbar-nav ml-auto">
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'index' %}">Strona główna</a>
+              <a class="nav-link" href="{% url 'index' %}">
+                <span class="d-none d-lg-block"><i class="fas fa-home"></i></span>
+                <span class="d-block d-lg-none">Strona główna</span>
+              </a>
             </li>
 
             <li class="nav-item">
@@ -58,7 +64,7 @@
             </li>
 
             {% if resources %}
-            <!--<li class="nav-item dropdown">
+            <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownResources" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 Internety
               </a>
@@ -67,7 +73,7 @@
                   <a class="dropdown-item" href="{{ resource.access_url }}">{{ resource.display_name }}</a>
                 {% endfor %}
               </div>
-            </li>-->
+            </li>
             {% endif %}
 
             {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.see_all_workshops or perms.wwwforms.see_form_results or perms.wwwapp.export_workshop_registration %}
