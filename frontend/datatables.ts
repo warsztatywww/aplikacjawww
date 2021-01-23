@@ -11,9 +11,6 @@ import 'datatables.net-buttons-bs/css/buttons.bootstrap.css';
 import 'datatables.net-colreorder';
 import 'datatables.net-colreorder-bs';
 import 'datatables.net-colreorder-bs/css/colReorder.bootstrap.css';
-import 'datatables.net-responsive';
-import 'datatables.net-responsive-bs';
-import 'datatables.net-responsive-bs/css/responsive.bootstrap.css';
 import 'datatables.net-plugins/sorting/intl';
 
 $.fn.dataTable.ext.order.intl('pl');
