@@ -107,9 +107,10 @@ h1, .heading {
   margin-top: 20px;
 }
 
-// ?
+// Prevent user-inserted images from breaking the layout
 img {
   max-width: 100%;
+  height: auto;
 }
 
 // Make the forms look more like the old style
