@@ -99,6 +99,11 @@ body {
 // Underline main header
 h1 {
   border-bottom: 1px #777 solid;
+}
+
+// Space between the header and content
+// (it cannot be put on the header itself, as on the main page we want the big logo to touch the navbar)
+h1, .heading {
   margin-top: 20px;
 }
 
