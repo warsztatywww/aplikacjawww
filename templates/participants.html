@@ -74,13 +74,13 @@
                 </td>
                 <td>
                   {% if person.status == 'Z' %}
-                    <span class="qualified"> {{ person.status_display }} </span>
+                    <span class="text-success font-weight-bolder"> {{ person.status_display }} </span>
                   {% elif person.status == 'O' %}
-                    <span class="not-qualified"> {{ person.status_display }} </span>
+                    <span class="text-danger font-weight-bolder"> {{ person.status_display }} </span>
                   {% elif person.status == 'X' %}
-                    <span class="maybe-qualified"> {{ person.status_display }} </span>
+                    <span class="text-info font-weight-bolder"> {{ person.status_display }} </span>
                   {% else %}
-                    {{ person.status_display|default_if_none:"Brak" }}
+                    <span class="font-weight-bolder"> {{ person.status_display|default_if_none:"Brak" }} </span>
                   {% endif %}
                 </td>
                 {% endif %}

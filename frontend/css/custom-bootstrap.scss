@@ -1,0 +1,209 @@
+// Theme colors
+$primary: #46342f;
+$dark: #01093a;
+$light: #eae3c5;
+$light-darker: #fef6c5;
+
+// Headings font
+$headings-font-family: "Open sans", Helvetica, Arial;
+
+// Navbar spacing
+$navbar-nav-link-padding-x: 0.875rem;
+$navbar-brand-padding-y: 0.75em;
+
+// Normally, the navbar uses white/black for links - switch to dark/light
+$navbar-dark-color: rgba($light-darker, .5);
+$navbar-dark-hover-color: rgba($light-darker, .75);
+$navbar-dark-active-color: $light-darker;
+$navbar-dark-disabled-color: rgba($light-darker, .25);
+$navbar-dark-toggler-border-color: rgba($light-darker, .1);
+
+$navbar-light-color: rgba($primary, .5);
+$navbar-light-hover-color: rgba($primary, .7);
+$navbar-light-active-color: rgba($primary, .9);
+$navbar-light-disabled-color: rgba($primary, .3);
+$navbar-light-toggler-border-color: rgba($primary, .1);
+
+$dropdown-bg: $primary;
+$dropdown-divider-bg: $light-darker;
+$dropdown-border-color: rgba($light, .15);
+$dropdown-link-color: $light-darker;
+$dropdown-link-hover-color: $primary;
+$dropdown-link-hover-bg: $light-darker;
+$dropdown-link-active-color: $primary;
+$dropdown-link-active-bg: $light;
+
+$card-cap-bg: $light;
+$card-border-color: $primary;
+
+$jumbotron-bg: $light;
+$tooltip-bg: $primary;
+$tooltip-color: $light;
+
+$component-active-bg: $primary;
+$component-active-color: $light;
+
+$btn-border-width: 3px;
+$input-group-addon-bg: $light;
+
+$link-color: lighten($primary, 15%);
+
+$theme-colors: (
+  "facebook": #1877f2,
+  "google": #dd4b39,
+);
+
+@import "~bootstrap/scss/bootstrap";
+.custom-file-label::after { content: "Wybierz"; }
+
+@import '~select2/src/scss/core';
+.select2-container--default {
+  .select2-selection--single {
+    height: $input-height;
+    min-height: $input-height;
+  }
+  .select2-selection--multiple {
+    height: $input-height;
+    min-height: $input-height;
+
+    .select2-selection__choice {
+      background-color: $light;
+    }
+    .select2-selection__choice__remove {
+      color: $primary;
+      &:hover {
+        color: $dark;
+      }
+    }
+  }
+  .select2-results__option {
+    &[aria-selected=true] {
+      background-color: $light;
+    }
+  }
+  .select2-results__option--highlighted[aria-selected] {
+    background-color: $primary;
+  }
+}
+
+// Center the navbar while collapsed
+.navbar-collapse {
+  text-align: center;
+}
+
+// Stop the navbar from moving around depending on whether the scrollbar is visible or not
+body {
+  overflow-y: scroll;
+}
+
+// Underline main header
+h1 {
+  border-bottom: 1px #777 solid;
+}
+
+// Space between the header and content
+// (it cannot be put on the header itself, as on the main page we want the big logo to touch the navbar)
+h1, .heading {
+  margin-top: 20px;
+}
+
+// Prevent user-inserted images from breaking the layout
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+// Make the forms look more like the old style
+label {
+  color: #777 !important;
+  font-weight: 700;
+}
+
+legend {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+
+
+/* TODO: everything below can probably be in its own file if I figure out how to get access to SCSS vars there */
+
+/* Navbar login button */
+.navbar .btn {
+  border-width: 1px !important;
+}
+.navbar .btn-lg {
+  font-size: 1rem !important;
+}
+.navbar .btn-outline-light {
+  border-color: $navbar-dark-color !important;
+  color: $navbar-dark-color !important;
+}
+.navbar .btn-outline-light:hover,
+.navbar .btn-outline-light:active,
+.navbar .btn-outline-light:visited {
+  background-color: transparent !important;
+  border-color: $navbar-dark-hover-color !important;
+  color: $navbar-dark-hover-color !important;
+}
+
+/* Status page */
+@media (max-width: 1199px) {
+    .small-on-md {
+        font-size: 65%;
+    }
+}
+
+/* Program */
+.btn-circle {
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    padding: 6px 0;
+    font-size: 12px;
+    line-height: 1.428571429;
+    border-radius: 15px;
+}
+
+.btn-circle.btn-m {
+    width: 50px;
+    height: 50px;
+    padding: 8px 12px;
+    font-size: 20px;
+    line-height: 1.2;
+    border-radius: 28px;
+    color: white !important;
+}
+
+/* Sticky footer styles */
+html {
+  position: relative;
+  min-height: 100%;
+}
+.with-footer-margin {
+  margin-bottom: 80px; /* Margin bottom by footer height */
+}
+.footer {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 60px; /* Set the fixed height of the footer here */
+  line-height: 60px; /* Vertically center the text there */
+  background-color: #f5f5f5;
+}
+
+/* Year navigation pagination in the footer */
+nav.year-navigation {
+	text-align: center;
+	overflow-x: auto; /* Make it scrollable (needed on mobile) */
+}
+
+nav.year-navigation .pagination {
+    display: block;
+	margin: 0;
+	white-space: nowrap; /* Required for scrolling (don't wrap automatically) */
+}
+
+nav.year-navigation .page-item {
+	display: inline-block; /* Required for scrolling (and accidentaly gives a cool effect of the items being separated a little) */
+	vertical-align: middle;
+}

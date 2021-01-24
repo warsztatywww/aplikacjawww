@@ -1,18 +1,15 @@
-// jQuery and Bootstrap3
+// jQuery and Bootstrap4 and Font Awesome
 import 'jquery';
-import 'bootstrap/dist/css/bootstrap.css';
+import './css/custom-bootstrap.scss';
 import 'bootstrap/dist/js/bootstrap.js';
-
-// Header disappearing thing
-import * as Headroom from 'headroom.js';
-window['Headroom'] = Headroom;
-import 'headroom.js/dist/jQuery.headroom.js';
+import '@fortawesome/fontawesome-free/js/all';
+import '@fortawesome/fontawesome-free/css/all.css';
 
 // Select2 (type/category in workshop editor)
 import 'select2';
 import 'select2/dist/js/i18n/pl';
 $.fn.select2.defaults.set("language", "pl");
-import 'select2/dist/css/select2.css';
+//import 'select2/dist/css/select2.css';
 import './vendor/django_select2';
 
 // DateTime picker
@@ -21,13 +18,7 @@ moment.locale('pl');
 import 'eonasdan-bootstrap-datetimepicker/src/js/bootstrap-datetimepicker';
 import 'eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css';
 
-// Main website CSS
-import './css/site.css';
-import './css/main.css';
-import './css/bootstrap-theme.css';
-
 // Main website JS
-import './js/template.js';
 import './js/ajax.requests.js';
 import './js/warsztatywww.js';
 import './js/datatables_config.js';

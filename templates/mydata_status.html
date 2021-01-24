@@ -68,20 +68,20 @@
   </div>
 
     {% if current_status.workshops %}
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h4 class="panel-title">Twoje warsztaty</h4>
+      <div class="card mb-3 w-100">
+        <h4 class="card-header">Twoje warsztaty</h4>
+        <div class="card-body p-0">
+          {% include '_workshopStatusTable.html' with your_workshops=current_status.workshops %}
         </div>
-        {% include '_workshopStatusTable.html' with your_workshops=current_status.workshops %}
       </div>
     {% endif %}
 
     {% if current_status.qualification_results %}
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h4 class="panel-title">Wyniki kwalifikacji</h4>
-        </div>
+      <div class="card mb-3 w-100">
+        <h4 class="card-header">Wyniki kwalifikacji</h4>
+        <div class="card-body p-0">
         {% include '_qualificationsTable.html' with your_qualifications=current_status.qualification_results %}
+        </div>
       </div>
     {% endif %}
 
@@ -89,18 +89,19 @@
       <hr>
       <h3>Poprzednie edycje</h3>
       {% for status in past_status %}
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            <h4 class="panel-title">{{ status.year }}
-              {% include '_statusLabel.html' with status=status %}
-            </h4>
+        <div class="card mb-3 w-100">
+          <h4 class="card-header p-2">
+            {{ status.year }}
+            {% include '_statusLabel.html' with status=status %}
+          </h4>
+          <div class="card-body p-0">
+            {% if status.workshops %}
+              {% include '_workshopStatusTable.html' with your_workshops=status.workshops %}
+            {% endif %}
+            {% if status.qualification_results %}
+              {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results %}
+            {% endif %}
           </div>
-          {% if status.workshops %}
-            {% include '_workshopStatusTable.html' with your_workshops=status.workshops %}
-          {% endif %}
-          {% if status.qualification_results %}
-            {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results %}
-          {% endif %}
         </div>
       {% endfor %}
     {% endif %}

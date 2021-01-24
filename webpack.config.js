@@ -36,6 +36,15 @@ module.exports = {
           'css-loader'
         ]
       },
+      {
+        test: /\.(scss)$/,
+        use: [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          { loader: 'postcss-loader', options: { postcssOptions: { plugins: ['precss', 'autoprefixer'] } } },
+          'sass-loader',
+        ],
+      },
       { test: /\.(png|woff|woff2|eot|ttf|svg)$/, loader: 'url-loader' },
       {
         test: require.resolve("jquery"),

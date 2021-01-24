@@ -2,20 +2,19 @@
 {% load wwwtags %}
 
 {% block content %}
-  <div class="container">
     <h2 class="heading">Witaj, istnieje już konto o takich danych:</h2>
     {% for match in matches %}
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h3 class="panel-title">{{ match.name }} ({{ match.email }})</h3>
-        </div>
-        <div class="panel-body">
+      <div class="card mb-3 w-100">
+        <h3 class="card-header">{{ match.name }} ({{ match.email }})</h3>
+        <div class="card-body">
           {% for provider in match.providers %}
           <div class="row">
             <div class="col-md-6">
               {% include "_socialButton.html" with provider=provider next="/accounts/verified/" only %}
             </div>
           </div>
+          {% empty %}
+          Brak dostępnych metod logowania?! Skontaktuj się z administratorem
           {% endfor %}
         </div>
       </div>
@@ -29,5 +28,4 @@
           Kontynuuj (tworząc nowe konto połączone z {{ new_provider | provider_friendly_name | title }})
       </a>
     {% endif %}
-  </div>
 {% endblock %}

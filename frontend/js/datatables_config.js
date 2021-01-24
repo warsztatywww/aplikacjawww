@@ -22,15 +22,6 @@ window.gen_datatables_config = (overwrites) => {
     return strip_tags(data, row, column, node).replace('\n', ', ');
   }
 
-  function strip_tags_and_checkmark(data, row, column, node)
-  {
-    // TODO: fix checkmark rendering so that this is not required
-    data = data.replace('<span class="qualified">✔</span>', '');
-    data = data.replace('<span class="not-qualified">✘</span>', '');
-    data = data.replace('<span class="maybe-qualified">?</span>', '');
-    return strip_tags(data, row, column, node);
-  }
-
   return Object.assign({
     dom: 'Bfrtipl',
     responsive: true,
@@ -39,40 +30,57 @@ window.gen_datatables_config = (overwrites) => {
     createdRow: (row) => {
       $(row).find('[data-toggle="popover"]').popover();
     },
-    buttons: [
-      {
-        extend: 'colvis',
-        columns: ':gt(0)'
-      },
-      {
-        extend: 'copy',
-        exportOptions: {
-          columns: column_selector,
-          format: { body: strip_tags_and_newlines }
-        }
-      },
-      {
-        extend: 'excel',
-        exportOptions: {
-          columns: column_selector,
-          format: { body: strip_tags_and_checkmark }
-        }
-      },
-      {
-        extend: 'pdf',
-        exportOptions: {
-          columns: column_selector,
-          format: { body: strip_tags_and_checkmark }
+    buttons: {
+      dom: {
+        button: {
+          className: 'btn',
         },
-       },
-       {
-        extend: 'print',
-        exportOptions: {
-          columns: column_selector,
-          format: { body: strip_tags }
-        }
-       },
-    ],
+      },
+      buttons: [
+        {
+          extend: 'colvis',
+          className: 'btn-primary',
+          text: '<i class="fa fa-columns"></i> Wybierz kolumny',
+          columns: ':gt(0)'
+        },
+        {
+          extend: 'copy',
+          text: '<i class="fa fa-copy"></i> <span class="d-none d-md-inline">Kopiuj</span>',
+          className: 'btn-outline-dark btn-sm px-2 px-md-4',
+          exportOptions: {
+            columns: column_selector,
+            format: {body: strip_tags_and_newlines}
+          }
+        },
+        {
+          extend: 'excel',
+          text: '<i class="fa fa-file-excel"></i> <span class="d-none d-md-inline">Excel</span>',
+          className: 'btn-outline-dark btn-sm px-2 px-md-4',
+          exportOptions: {
+            columns: column_selector,
+            format: {body: strip_tags}
+          }
+        },
+        {
+          extend: 'pdf',
+          text: '<i class="fa fa-file-pdf"></i> <span class="d-none d-md-inline">PDF</span>',
+          className: 'btn-outline-dark btn-sm px-2 px-md-4',
+          exportOptions: {
+            columns: column_selector,
+            format: {body: strip_tags}
+          },
+        },
+        {
+          extend: 'print',
+          text: '<i class="fa fa-print"></i> <span class="d-none d-md-inline">Drukuj</span>',
+          className: 'btn-outline-dark btn-sm px-2 px-md-4',
+          exportOptions: {
+            columns: column_selector,
+            format: {body: strip_tags}
+          }
+        },
+      ],
+    },
     "language": datatables_Polish,
     "fnRowCallback" : function(nRow, aData, iDisplayIndex){
       $("td:first", nRow).html(iDisplayIndex +1);

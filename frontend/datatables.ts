@@ -1,19 +1,19 @@
 // DataTables - loaded only on pages which require them
 import 'datatables.net';
-import 'datatables.net-bs';
-import 'datatables.net-bs/css/dataTables.bootstrap.css';
+import 'datatables.net-bs4';
+import 'datatables.net-bs4/css/dataTables.bootstrap4.css';
 import 'datatables.net-buttons';
 import 'datatables.net-buttons/js/buttons.colVis';
 import 'datatables.net-buttons/js/buttons.html5';
 import 'datatables.net-buttons/js/buttons.print';
-import 'datatables.net-buttons-bs';
-import 'datatables.net-buttons-bs/css/buttons.bootstrap.css';
+import 'datatables.net-buttons-bs4';
+import 'datatables.net-buttons-bs4/css/buttons.bootstrap4.css';
 import 'datatables.net-colreorder';
-import 'datatables.net-colreorder-bs';
-import 'datatables.net-colreorder-bs/css/colReorder.bootstrap.css';
+import 'datatables.net-colreorder-bs4';
+import 'datatables.net-colreorder-bs4/css/colReorder.bootstrap4.css';
 import 'datatables.net-responsive';
-import 'datatables.net-responsive-bs';
-import 'datatables.net-responsive-bs/css/responsive.bootstrap.css';
+import 'datatables.net-responsive-bs4';
+import 'datatables.net-responsive-bs4/css/responsive.bootstrap4.css';
 import 'datatables.net-plugins/sorting/intl';
 
 $.fn.dataTable.ext.order.intl('pl');

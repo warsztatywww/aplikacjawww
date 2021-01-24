@@ -4,8 +4,7 @@
 {% load wwwtags %}
 
 {% block content %}
-  <div class="container">
-    <article class="col-sm-12 maincontent">
+    <article>
       <h1>{{ title }}</h1>
       <div class="table-responsive">
         <table id="lecturers-table" class="table" style="width:100%!important;" data-order='[[ 1, "asc" ]]'>
@@ -40,11 +39,17 @@
         </table>
       </div>
     </article>
-  </div>
+{% endblock %}
+
+{% block styles %}
+  {{ block.super }}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
 {% endblock %}
 
 {% block script %}
   {{ block.super }}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+
   <script>
     $(document).ready(() => {
       const table = $('#lecturers-table').DataTable(gen_datatables_config({}));
