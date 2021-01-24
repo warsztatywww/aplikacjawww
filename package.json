@@ -38,7 +38,8 @@
     "webpack-dev-server": "^3.11.1"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^5.15.1",
+    "@fortawesome/fontawesome-svg-core": "^1.2.34",
+    "@fortawesome/free-solid-svg-icons": "^5.15.2",
     "bootstrap": "^4.5.3",
     "datatables.net": "^1.10.23",
     "datatables.net-bs4": "^1.10.23",
