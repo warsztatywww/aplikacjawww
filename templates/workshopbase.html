@@ -7,7 +7,7 @@
       {% if workshop %}
         <h3>Prowadzący: {% for lecturer in workshop.lecturer.all %}<a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</h3>
         {% if workshop.status == 'X' %}
-          <h3 style="color: red;">Te warsztaty są odwołane!</h3>
+          <h3 class="text-danger">Te warsztaty są odwołane!</h3>
         {% endif %}
 
         {% if has_perm_to_view_details and workshop.is_publicly_visible %}
