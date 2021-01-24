@@ -147,8 +147,8 @@ $(function () {
                 return;
             if($(this).width() == 0 || $(this).height() == 0)
                 return;
-            url = url.replace(/width=([0-9]+)/, 'width=' + $(this).width());
-            url = url.replace(/height=([0-9]+)/, 'height=' + $(this).height());
+            url = url.replace(/width=([0-9]+)/, 'width=' + Math.round($(this).width()));
+            url = url.replace(/height=([0-9]+)/, 'height=' + Math.round($(this).height()));
             if ($(this).attr('src') != url)
                 $(this).attr('src', url);
         });
