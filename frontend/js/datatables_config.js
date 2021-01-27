@@ -40,12 +40,12 @@ window.gen_datatables_config = (overwrites) => {
         {
           extend: 'colvis',
           className: 'btn-primary',
-          text: '<i class="fa fa-columns"></i> Wybierz kolumny',
+          text: '<i class="fas fa-columns"></i> Wybierz kolumny',
           columns: ':gt(0)'
         },
         {
           extend: 'copy',
-          text: '<i class="fa fa-copy"></i> <span class="d-none d-md-inline">Kopiuj</span>',
+          text: '<i class="fas fa-copy"></i> <span class="d-none d-md-inline">Kopiuj</span>',
           className: 'btn-outline-dark btn-sm px-2 px-md-4',
           exportOptions: {
             columns: column_selector,
@@ -54,7 +54,7 @@ window.gen_datatables_config = (overwrites) => {
         },
         {
           extend: 'excel',
-          text: '<i class="fa fa-file-excel"></i> <span class="d-none d-md-inline">Excel</span>',
+          text: '<i class="fas fa-file-excel"></i> <span class="d-none d-md-inline">Excel</span>',
           className: 'btn-outline-dark btn-sm px-2 px-md-4',
           exportOptions: {
             columns: column_selector,
@@ -63,7 +63,7 @@ window.gen_datatables_config = (overwrites) => {
         },
         {
           extend: 'pdf',
-          text: '<i class="fa fa-file-pdf"></i> <span class="d-none d-md-inline">PDF</span>',
+          text: '<i class="fas fa-file-pdf"></i> <span class="d-none d-md-inline">PDF</span>',
           className: 'btn-outline-dark btn-sm px-2 px-md-4',
           exportOptions: {
             columns: column_selector,
@@ -72,7 +72,7 @@ window.gen_datatables_config = (overwrites) => {
         },
         {
           extend: 'print',
-          text: '<i class="fa fa-print"></i> <span class="d-none d-md-inline">Drukuj</span>',
+          text: '<i class="fas fa-print"></i> <span class="d-none d-md-inline">Drukuj</span>',
           className: 'btn-outline-dark btn-sm px-2 px-md-4',
           exportOptions: {
             columns: column_selector,

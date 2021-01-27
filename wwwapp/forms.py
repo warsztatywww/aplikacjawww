@@ -32,8 +32,8 @@ class UserProfilePageForm(ModelForm):
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
-            HTML('<a role="button" class="btn btn-outline-dark btn-lg m-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            HTML('<a role="button" class="btn btn-outline-dark btn-sm mx-1 my-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
             css_class='text-right'
         ))
 
@@ -50,9 +50,9 @@ class UserCoverLetterForm(ModelForm):
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
-            HTML('<a role="button" class="btn btn-outline-dark btn-lg m-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
-            css_class='text-right',
+            HTML('<a role="button" class="btn btn-outline-dark btn-sm mx-1 my-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
+            css_class='text-right'
         ))
 
     class Meta:
@@ -73,9 +73,9 @@ class UserProfileForm(ModelForm):
         self.helper.label_class = 'col-lg-3'
         self.helper.field_class = 'col-lg-9'
         self.helper.layout.fields.append(FormActions(
-            HTML('<a role="button" class="btn btn-outline-dark btn-lg m-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
-            css_class='text-right row',
+            HTML('<a role="button" class="btn btn-outline-dark btn-sm mx-1 my-3" href="{% url "profile" user.id %}" target="_blank" title="Otwiera się w nowej karcie">Podgląd twojego profilu</a>'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
+            css_class='text-right row'
         ))
 
     class Meta:
@@ -162,7 +162,7 @@ class ArticleForm(ModelForm):
                 self.fields['on_menubar'].disabled = True
         layout.append('content')
         layout.append(FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
             css_class='text-right',
         ))
         self.helper.layout = Layout(*layout)
@@ -275,7 +275,7 @@ class WorkshopForm(ModelForm):
             'page_content_is_public'
         )
         self.fieldset_submit = FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg m-3'),
+            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
             css_class='text-right',
         )
 
@@ -367,7 +367,7 @@ class MailFilterForm(Form):
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout.fields.append(FormActions(
-            StrictButton('Filtruj', type='submit', css_class='btn-outline-primary m-3 w-100'),
+            StrictButton('Filtruj', type='submit', css_class='btn-outline-primary mx-1 my-3 w-100'),
             css_class='text-right',
         ))
 
