@@ -24,7 +24,6 @@ window.gen_datatables_config = (overwrites) => {
 
   return Object.assign({
     dom: 'Bfrtipl',
-    responsive: true,
     colReorder: true,
     deferRender: true,
     createdRow: (row) => {
