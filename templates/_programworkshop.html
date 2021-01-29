@@ -2,7 +2,7 @@
   {% if workshop.is_qualification_editable %}
     {% if registered %}
       <div onclick="handle_registration_change('{{ workshop.name }}', false);" style="cursor: pointer;">
-        <button class="btn btn-warning btn-circle btn-m" type="button">
+        <button class="btn btn-warning btn-circle" type="button">
           <i class="fas fa-minus"></i>
         </button>
         <br/>
@@ -10,7 +10,7 @@
       </div>
     {% else %}
       <div onclick="handle_registration_change('{{ workshop.name }}', true);" style="cursor: pointer;">
-        <button class="btn btn-success btn-circle btn-m" type="button">
+        <button class="btn btn-success btn-circle" type="button">
           <i class="fas fa-plus"></i>
         </button>
         <br/>
@@ -20,7 +20,7 @@
   {% else %}
     {% if registered %}
       <div>
-        <button class="btn btn-success btn-circle btn-m" type="button" disabled="disabled">
+        <button class="btn btn-success btn-circle" type="button" disabled="disabled">
           <i class="fas fa-check"></i>
         </button>
         <br/>

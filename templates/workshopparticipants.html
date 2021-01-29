@@ -8,6 +8,9 @@
     <th>Imię i nazwisko</th>
     <th>Email</th>
     {% if workshop.is_qualifying %}
+    {% if workshop.solution_uploads_enabled %}
+    <th>Rozwiązania</th>
+    {% endif %}
     <th>Liczba punktów</th>
     <th></th>
     <th>Komentarz</th>
@@ -18,45 +21,56 @@
     <tbody>
     {% for workshop_participant in workshop_participants %}
       <tr>
-        <td style="vertical-align: middle;">
+        <td class="align-middle">
           {{ forloop.counter }}
         </td>
-        <td style="vertical-align: middle;">
+        <td class="align-middle">
           <a href="{% url 'profile' workshop_participant.participant.user.id %}">
             {{ workshop_participant.participant.user.get_full_name }}
           </a>
         </td>
-        <td style="vertical-align: middle;">
+        <td class="align-middle">
           {{ workshop_participant.participant.user.email }}
         </td>
         {% if workshop.is_qualifying %}
-        <td style="vertical-align: middle; width: 12.5%;">
-          {% if has_perm_to_edit %}
-            {{ workshop_participant.form.qualification_result }}
+          {% if workshop.solution_uploads_enabled and not workshop_participant.solution %}
+            <td class="align-middle text-center" colspan="5">
+              Nie przesłano rozwiązań
+            </td>
           {% else %}
-            {{ workshop_participant.qualification_result | default_if_none:'' }}
+            {% if workshop.solution_uploads_enabled %}
+              <td class="align-middle">
+                <a href="{% url 'workshop_solution' workshop.year.pk workshop.name workshop_participant.solution.pk %}">Otwórz</a>
+              </td>
+            {% endif %}
+            <td style="vertical-align: middle; width: 12.5%;">
+              {% if has_perm_to_edit %}
+                {{ workshop_participant.form.qualification_result }}
+              {% else %}
+                {{ workshop_participant.qualification_result | default_if_none:'' }}
+              {% endif %}
+            </td>
+            <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
+              {% if has_perm_to_edit %}
+                <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
+              {% endif %}
+            </td>
+            <td style="vertical-align: middle; width: 20%;">
+              {% if has_perm_to_edit %}
+                {{ workshop_participant.form.comment }}
+              {% else %}
+                {{ workshop_participant.comment | default_if_none:'' }}
+              {% endif %}
+            </td>
+            <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
+              {% if has_perm_to_edit %}
+                <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
+              {% endif %}
+            </td>
           {% endif %}
-        </td>
-        <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
-          {% if has_perm_to_edit %}
-            <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
-          {% endif %}
-        </td>
-        <td style="vertical-align: middle; width: 20%;">
-          {% if has_perm_to_edit %}
-            {{ workshop_participant.form.comment }}
-          {% else %}
-            {{ workshop_participant.comment | default_if_none:'' }}
-          {% endif %}
-        </td>
-        <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
-          {% if has_perm_to_edit %}
-            <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
-          {% endif %}
-        </td>
-        <td class="qualified-mark" style="vertical-align: middle;">
-          {{ workshop_participant.is_qualified | qualified_mark }}
-        </td>
+          <td class="align-middle qualified-mark">
+            {{ workshop_participant.is_qualified | qualified_mark }}
+          </td>
         {% endif %}
       </tr>
     {% endfor %}

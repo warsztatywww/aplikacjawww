@@ -356,6 +356,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': '',
             'qualification_threshold': 1337,
             'max_points': 2137,
+            'solution_uploads_enabled': 'on',
             'page_content': '<p>Zapraszam na moje warsztaty</p>',
             'page_content_is_public': 'on',
         })
@@ -410,6 +411,7 @@ class WorkshopEditViews(TestCase):
                 'is_qualifying': '',
                 'qualification_threshold': 1337,
                 'max_points': 2137,
+                'solution_uploads_enabled': 'on',
                 'page_content': '<p>Zapraszam na moje warsztaty</p>',
                 'page_content_is_public': 'on',
             })
@@ -549,6 +551,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
+            'solution_uploads_enabled': 'on',
             'page_content': '',
             'page_content_is_public': '',
         })
@@ -559,7 +562,7 @@ class WorkshopEditViews(TestCase):
 
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_edit_qual_problems_change(self):
         self.workshop.qualification_problems = SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024))
@@ -582,6 +585,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
+            'solution_uploads_enabled': 'on',
             'page_content': '',
             'page_content_is_public': '',
         })
@@ -592,7 +596,7 @@ class WorkshopEditViews(TestCase):
 
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_edit_qual_problems_no_change(self):
         data = os.urandom(1024 * 1024)
@@ -613,6 +617,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
+            'solution_uploads_enabled': 'on',
             'page_content': '',
             'page_content_is_public': '',
         })
@@ -623,7 +628,7 @@ class WorkshopEditViews(TestCase):
 
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_view_empty_qual_problems(self):
         self.workshop.status = Workshop.STATUS_ACCEPTED
@@ -646,7 +651,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_view_public_page_proposal(self):
         # Nobody can see the public page until the proposal is accepted
@@ -904,6 +909,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': '',
             'qualification_threshold': 1337,
             'max_points': 2137,
+            'solution_uploads_enabled': 'on',
             'page_content': template_for_workshop_page.content,
             'page_content_is_public': '',
         })

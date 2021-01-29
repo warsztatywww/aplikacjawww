@@ -54,6 +54,9 @@ class Camp(models.Model):
         else:
             return self.are_workshops_editable()
 
+    def are_solutions_editable(self) -> bool:
+        return self.is_qualification_editable()
+
     @staticmethod
     def current():
         if hasattr(Camp, '_latest'):
@@ -312,6 +315,7 @@ class Workshop(models.Model):
 
     is_qualifying = models.BooleanField(default=True)
     qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification")
+    solution_uploads_enabled = models.BooleanField(default=True)
     participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
@@ -321,6 +325,9 @@ class Workshop(models.Model):
 
     def is_qualification_editable(self) -> bool:
         return self.year.is_qualification_editable()
+
+    def are_solutions_editable(self) -> bool:
+        return self.year.are_solutions_editable()
 
     def clean(self):
         super(Workshop, self).clean()
@@ -396,6 +403,30 @@ class WorkshopParticipant(models.Model):
 
     class Meta:
         unique_together = [('workshop', 'participant')]
+
+    def __str__(self):
+        return '{}: {}'.format(self.workshop, self.participant)
+
+
+class Solution(models.Model):
+    workshop_participant = models.OneToOneField(WorkshopParticipant, null=False, blank=False, related_name='solution', on_delete=models.CASCADE)
+    last_changed = models.DateTimeField(blank=False, null=False, auto_now=True)
+    message = models.TextField(blank=True, verbose_name='Komentarz dla prowadzącego', help_text='Nie wpisuj rozwiązań w tym polu - załącz je jako plik. To pole jest przeznaczone jedynie na szybkie uwagi typu "poprawiłem plik X"')
+
+
+def solutions_dir(instance, filename):
+    workshop_participant = instance.solution.workshop_participant
+    # TODO: hash the file?
+    return f'solutions/{workshop_participant.workshop.name}/{workshop_participant.participant.user.pk}/{filename}'
+
+
+class SolutionFile(models.Model):
+    solution = models.ForeignKey(Solution, null=False, blank=False, related_name='files', on_delete=models.CASCADE)
+    file = models.FileField(null=False, blank=False, upload_to=solutions_dir, verbose_name='Plik')
+    last_changed = models.DateTimeField(blank=False, null=False, auto_now=True)
+
+    def __str__(self):
+        return os.path.basename(self.file.path)
 
 
 class ResourceYearPermission(models.Model):
