@@ -356,6 +356,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': '',
             'qualification_threshold': 1337,
             'max_points': 2137,
+            'solution_uploads_enabled': 'on',
             'page_content': '<p>Zapraszam na moje warsztaty</p>',
             'page_content_is_public': 'on',
         })
@@ -410,6 +411,7 @@ class WorkshopEditViews(TestCase):
                 'is_qualifying': '',
                 'qualification_threshold': 1337,
                 'max_points': 2137,
+                'solution_uploads_enabled': 'on',
                 'page_content': '<p>Zapraszam na moje warsztaty</p>',
                 'page_content_is_public': 'on',
             })
@@ -549,6 +551,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
+            'solution_uploads_enabled': 'on',
             'page_content': '',
             'page_content_is_public': '',
         })
@@ -582,6 +585,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
+            'solution_uploads_enabled': 'on',
             'page_content': '',
             'page_content_is_public': '',
         })
@@ -613,6 +617,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
+            'solution_uploads_enabled': 'on',
             'page_content': '',
             'page_content_is_public': '',
         })
@@ -904,6 +909,7 @@ class WorkshopEditViews(TestCase):
             'is_qualifying': '',
             'qualification_threshold': 1337,
             'max_points': 2137,
+            'solution_uploads_enabled': 'on',
             'page_content': template_for_workshop_page.content,
             'page_content_is_public': '',
         })

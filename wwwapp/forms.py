@@ -180,7 +180,7 @@ class WorkshopForm(ModelForm):
     class Meta:
         model = Workshop
         fields = ['title', 'name', 'type', 'category', 'proposition_description',
-                  'qualification_problems', 'is_qualifying',
+                  'qualification_problems', 'is_qualifying', 'solution_uploads_enabled',
                   'max_points', 'qualification_threshold',
                   'page_content', 'page_content_is_public']
         labels = {
@@ -188,6 +188,7 @@ class WorkshopForm(ModelForm):
             'name': 'Nazwa (w URLach)',
             'proposition_description': 'Opis propozycji warsztatów',
             'is_qualifying': 'Czy warsztaty są kwalifikujące',
+            'solution_uploads_enabled': 'Czy przesyłanie rozwiązań przez stronę jest włączone',
             'max_points': 'Maksymalna liczba punktów możliwa do uzyskania',
             'qualification_threshold': 'Minimalna liczba punktów potrzebna do kwalifikacji',
             'page_content': 'Strona warsztatów',
@@ -195,11 +196,12 @@ class WorkshopForm(ModelForm):
         }
         help_texts = {
             'is_qualifying': '(odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
+            'solution_uploads_enabled': 'Od edycji 2021 uczestnicy przesyłają rozwiązania zadań kwalifikacyjnych przez stronę zamiast maila. Jeśli z jakiegoś powodu bardzo chcesz wyłączyć tą funkcję, skontaktuj się z organizatorami.',
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
             'max_points': '(możesz postawić punkty bonusowe powyżej tej wartości, ale tylko do max. {}%)'.format(settings.MAX_POINTS_PERCENT)
         }
 
-    def __init__(self, *args, workshop_url, has_perm_to_edit=True, profile_warnings=None, **kwargs):
+    def __init__(self, *args, workshop_url, has_perm_to_edit=True, has_perm_to_disable_uploads=False, profile_warnings=None, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.include_media = False
@@ -212,6 +214,9 @@ class WorkshopForm(ModelForm):
         if self.instance.status:
             # The proposition cannot be edited once the workshop has a status set
             self.fields['proposition_description'].disabled = True
+
+        if not has_perm_to_disable_uploads:
+            self.fields['solution_uploads_enabled'].disabled = True
 
         # Make sure only current category and type choices are displayed
         if self.instance is None:
@@ -266,6 +271,7 @@ class WorkshopForm(ModelForm):
                     Div('qualification_threshold', css_class='col-lg-6'),
                     css_class='row'
                 ),
+                'solution_uploads_enabled',
                 css_id='qualification_settings'
             ),
         )
@@ -281,7 +287,7 @@ class WorkshopForm(ModelForm):
 
         if not self.instance or not self.instance.is_publicly_visible():
             for field in [
-                  'qualification_problems', 'is_qualifying',
+                  'qualification_problems', 'is_qualifying', 'solution_uploads_enabled',
                   'max_points', 'qualification_threshold',
                   'page_content', 'page_content_is_public']:
                 del self.fields[field]
