@@ -9,6 +9,8 @@ from faker import Faker
 from faker.providers import profile, person, date_time, internet
 import random
 
+from wwwforms.models import Form, FormQuestion
+
 """
 Command implementing database population. 
 Useful for making test fixtures. 
@@ -60,10 +62,9 @@ class Command(BaseCommand):
                 user.userprofile.cover_letter = self.fake.text()
                 user.userprofile.save()
 
-                # user.userprofile.user_info.pesel = pesel=profile_data['ssn']
-                # user.userprofile.user_info.address=profile_data['address']
-                # user.userprofile.user_info.comments=self.fake.text(100)
-                # user.userprofile.user_info.save()
+                self.question_pesel.answers.create(user=user, value_string=profile_data['ssn'])
+                self.question_address.answers.create(user=user, value_string=profile_data['address'])
+                self.question_comments.answers.create(user=user, value_string=self.fake.text(100))
             except django.db.utils.IntegrityError:
                 ok = False
 
@@ -157,6 +158,21 @@ class Command(BaseCommand):
         if not settings.DEBUG:
             print("Command not allowed in production")
             return
+
+        self.form_userinfo = Form.objects.create(name='user_info', title='Informacje wyjazdowe', description='Te informacje będą nam potrzebne dopiero, gdy zostaniesz zakwalifikowany na warsztaty.')
+        self.question_pesel = self.form_userinfo.questions.create(title='PESEL', data_type=FormQuestion.TYPE_PESEL, is_required=True, order=0)
+        self.question_address = self.form_userinfo.questions.create(title='Adres zameldowania', data_type=FormQuestion.TYPE_TEXTBOX, is_required=True, order=1)
+        self.question_phone = self.form_userinfo.questions.create(title='Numer telefonu', data_type=FormQuestion.TYPE_STRING, is_required=True, order=2)
+        self.question_start_date = self.form_userinfo.questions.create(title='Data przyjazdu :-)', data_type=FormQuestion.TYPE_DATE, is_required=True, order=3)
+        self.question_end_date = self.form_userinfo.questions.create(title='Data wyjazdu :-(', data_type=FormQuestion.TYPE_DATE, is_required=True, order=4)
+        self.question_tshirt_size = self.form_userinfo.questions.create(title='Rozmiar koszulki', data_type=FormQuestion.TYPE_SELECT, is_required=False, order=5)
+        self.tshirt_sizes = {}
+        for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL']:
+            self.tshirt_sizes[size] = self.question_tshirt_size.options.create(title=size)
+        self.question_comments = self.form_userinfo.questions.create(title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)', data_type=FormQuestion.TYPE_TEXTBOX, is_required=False, order=6)
+        self.form_userinfo.arrival_date = self.question_start_date
+        self.form_userinfo.departure_date = self.question_end_date
+        self.form_userinfo.save()
 
         User.objects.create_superuser("admin", "admin@admin.admin", "admin")
 
