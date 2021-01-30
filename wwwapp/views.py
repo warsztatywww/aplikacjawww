@@ -8,7 +8,6 @@ from urllib.parse import urljoin
 
 import bleach
 from dateutil.relativedelta import relativedelta
-from wsgiref.util import FileWrapper
 from typing import Dict
 
 from django.db.models.expressions import F
@@ -23,7 +22,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
+from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, Http404, StreamingHttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
@@ -35,9 +34,9 @@ from django_bleach.utils import get_bleach_default_options
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion, pesel_extract_date
 from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
-    TinyMCEUpload
+    TinyMCEUpload, SolutionFileFormSet, SolutionForm
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission, Camp
+    WorkshopUserProfile, ResourceYearPermission, Camp, Solution
 from .templatetags.wwwtags import qualified_mark
 
 
@@ -466,6 +465,9 @@ def save_points_view(request):
     if not workshop_participant.workshop.is_qualifying:
         return HttpResponseForbidden("Na te warsztaty nie obowiązuje kwalifikacja")
 
+    if workshop_participant.workshop.solution_uploads_enabled and not hasattr(workshop_participant, 'solution'):
+        return HttpResponseForbidden("Nie przesłano rozwiązań")
+
     form = WorkshopParticipantPointsForm(request.POST, instance=workshop_participant)
     if not form.is_valid():
         return JsonResponse({'error': form.errors.as_text()})
@@ -653,6 +655,9 @@ def unregister_from_workshop_view(request, year, name):
         if workshop_participant.qualification_result is not None or workshop_participant.comment:
             return JsonResponse({'error': u'Masz już wyniki z tej kwalifikacji - nie możesz się wycofać.'})
 
+        if hasattr(workshop_participant, 'solution'):
+            return JsonResponse({'error': u'Nie możesz wycofać się z warsztatów, na które przesłałeś już rozwiązania.'})
+
         workshop_participant.delete()
 
     context = {}
@@ -663,6 +668,110 @@ def unregister_from_workshop_view(request, year, name):
         return JsonResponse({'content': content})
     else:
         return JsonResponse({'content': content, 'error': u'Nie jesteś zapisany na te warsztaty'})
+
+
+@login_required()
+def workshop_solution(request, year, name, solution_id=None):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    if not workshop.is_publicly_visible():
+        return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.is_qualifying:
+        raise Http404('Na te warsztaty nie obowiązuje kwalifikacja')
+    if not workshop.solution_uploads_enabled:
+        raise Http404('Przesyłanie rozwiązań przez stronę na te warsztaty jest wyłączone')
+    if not workshop.qualification_problems:
+        raise Http404('Zadania kwalifikacyjne nie zostały jeszcze opublikowane')
+
+    if not solution_id:
+        # My solution
+        try:
+            workshop_participant = workshop.workshopparticipant_set \
+                .select_related('solution', 'participant__user') \
+                .get(participant__user=request.user)
+        except WorkshopParticipant.DoesNotExist:
+            raise Http404('Nie jesteś zapisany na te warsztaty')
+        solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
+        if not solution:
+            if workshop.are_solutions_editable():
+                solution = Solution(workshop_participant=workshop_participant)
+            else:
+                raise Http404('Nie przesłałeś rozwiązania na te warsztaty')
+    else:
+        # Selected solution
+        has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
+        if not has_perm_to_edit and not request.user.has_perm('wwwapp.see_all_workshops'):
+            return HttpResponseForbidden()
+        solution = get_object_or_404(
+            Solution.objects
+                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .filter(workshop_participant__workshop=workshop),
+            pk=solution_id)
+
+    is_editable = not solution_id and workshop.is_qualification_editable()
+    if request.method == 'POST' and not solution_id:
+        if not workshop.is_qualification_editable():
+            return HttpResponseForbidden()
+        form = SolutionForm(request.POST, request.FILES, instance=solution)
+        formset = SolutionFileFormSet(request.POST, request.FILES, instance=solution)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('workshop_my_solution', year, name)
+    else:
+        form = SolutionForm(instance=solution, is_editable=is_editable)
+        formset = SolutionFileFormSet(instance=solution, is_editable=is_editable)
+
+    context = {}
+    context['title'] = workshop.title
+    context['workshop'] = workshop
+    context['solution'] = solution
+    context['form'] = form
+    context['form_attachments'] = formset
+    context['is_editable'] = is_editable
+    context['is_mine'] = not solution_id
+    return render(request, 'workshopsolution.html', context)
+
+
+@login_required()
+def workshop_solution_file(request, year, name, file_pk, solution_id=None):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    if not workshop.is_publicly_visible():
+        return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.is_qualifying:
+        raise Http404('Na te warsztaty nie obowiązuje kwalifikacja')
+    if not workshop.solution_uploads_enabled:
+        raise Http404('Przesyłanie rozwiązań przez stronę na te warsztaty jest wyłączone')
+    if not workshop.qualification_problems:
+        raise Http404('Zadania kwalifikacyjne nie zostały jeszcze opublikowane')
+
+    if not solution_id:
+        # My solution
+        try:
+            workshop_participant = workshop.workshopparticipant_set \
+                .select_related('solution', 'participant__user') \
+                .get(participant__user=request.user)
+        except WorkshopParticipant.DoesNotExist:
+            raise Http404('Nie jesteś zapisany na te warsztaty')
+        solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
+        if not solution:
+            raise Http404('Nie przesłałeś rozwiązania na te warsztaty')
+    else:
+        # Selected solution
+        has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
+        if not has_perm_to_edit and not request.user.has_perm('wwwapp.see_all_workshops'):
+            return HttpResponseForbidden()
+        solution = get_object_or_404(
+            Solution.objects
+                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .filter(workshop_participant__workshop=workshop),
+            pk=solution_id)
+
+    solution_file = get_object_or_404(solution.files.all(), pk=file_pk)
+
+    response = StreamingHttpResponse(solution_file.file, content_type=mimetypes.guess_type(solution_file.file.path)[0])
+    response['Content-Length'] = solution_file.file.size
+    return response
 
 
 @permission_required('wwwapp.export_workshop_registration')
@@ -745,11 +854,9 @@ def qualification_problems_view(request, year, name):
     if not workshop.qualification_problems:
         return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
 
-    filename = workshop.qualification_problems.path
-
-    wrapper = FileWrapper(open(filename, "rb"))
-    response = HttpResponse(wrapper, content_type=mimetypes.guess_type(filename)[0])
-    response['Content-Length'] = os.path.getsize(filename)
+    response = StreamingHttpResponse(workshop.qualification_problems,
+                                     content_type=mimetypes.guess_type(workshop.qualification_problems.path)[0])
+    response['Content-Length'] = workshop.qualification_problems.size
     return response
 
 
