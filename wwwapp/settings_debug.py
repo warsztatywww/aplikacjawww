@@ -27,5 +27,7 @@ DATABASES = {
 }
 
 MEDIA_ROOT = os.path.join(BASE_DIR, *MEDIA_URL.strip("/").split("/"))
+SENDFILE_ROOT = MEDIA_ROOT
+SENDFILE_BACKEND = 'django_sendfile.backends.development'
 
 GOOGLE_ANALYTICS_KEY = None

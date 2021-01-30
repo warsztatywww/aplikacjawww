@@ -30,6 +30,7 @@ RUN echo "ALLOWED_HOSTS = ['*']" >> wwwapp/local_settings.py
 RUN echo "DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql_psycopg2', 'HOST': 'db', 'NAME': 'aplikacjawww', 'USER': 'app', 'PASSWORD': 'app'}}" >> wwwapp/local_settings.py
 RUN echo "GOOGLE_ANALYTICS_KEY = None" >> wwwapp/local_settings.py
 RUN echo "MEDIA_ROOT = os.environ['MEDIA_ROOT']" >> wwwapp/local_settings.py
+RUN echo "SENDFILE_ROOT = os.environ['MEDIA_ROOT']" >> wwwapp/local_settings.py
 RUN echo "USE_X_FORWARDED_HOST = True" >> wwwapp/local_settings.py
 RUN echo "SESSION_COOKIE_SECURE = False" >> wwwapp/local_settings.py
 RUN echo "CSRF_COOKIE_SECURE = False" >> wwwapp/local_settings.py
