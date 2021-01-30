@@ -562,7 +562,7 @@ class WorkshopEditViews(TestCase):
 
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_edit_qual_problems_change(self):
         self.workshop.qualification_problems = SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024))
@@ -596,7 +596,7 @@ class WorkshopEditViews(TestCase):
 
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_edit_qual_problems_no_change(self):
         data = os.urandom(1024 * 1024)
@@ -628,7 +628,7 @@ class WorkshopEditViews(TestCase):
 
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_view_empty_qual_problems(self):
         self.workshop.status = Workshop.STATUS_ACCEPTED
@@ -651,7 +651,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, data)
+        self.assertEqual(b''.join(response.streaming_content), data)
 
     def test_view_public_page_proposal(self):
         # Nobody can see the public page until the proposal is accepted

@@ -1,13 +1,17 @@
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Button, Div, HTML
+from crispy_forms.layout import Layout, Fieldset, Div, HTML
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.forms import ModelChoiceField, ModelMultipleChoiceField, DateInput
+from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
-from django.forms.fields import ImageField, ChoiceField
+from django.forms.fields import ImageField, ChoiceField, DateField
 from django.forms.forms import Form
+from django.forms.models import inlineformset_factory, BaseInlineFormSet
+from django.forms.widgets import Textarea, Widget
+from django.template import Template, Context
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 import tinymce.widgets
 from django.conf import settings
@@ -15,7 +19,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 
 
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp
+    WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp, Solution, SolutionFile
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -356,6 +360,74 @@ class WorkshopParticipantPointsForm(ModelForm):
         for k, v in self.cleaned_data.items():
             if k not in self.data:
                 self.cleaned_data[k] = getattr(self.instance, k, self.cleaned_data[k])
+
+
+class SolutionForm(ModelForm):
+    class Meta:
+        model = Solution
+        fields = ['message']
+        widgets = {'message': Textarea(attrs={'rows': 4})}
+
+    def __init__(self, *args, is_editable=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False  # handled in template
+        self.helper.layout = Layout(
+            'message',
+        )
+        if not is_editable:
+            self.fields['message'].disabled = True
+
+
+class LinkWidget(Widget):
+    def __init__(self, link, text, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.link = link
+        self.text = text
+
+    def render(self, name, value, attrs=None, renderer=None):
+        return Template('<a href="{{link}}">{{text}}</a>').render(Context({'link': self.link, 'text': self.text}))
+
+
+class ConstantTextWidget(Widget):
+    def render(self, name, value, attrs=None, renderer=None):
+        if not value:
+            return '-'
+        return Template('{{text}}').render(Context({'text': value}))
+
+
+class SolutionFileForm(ModelForm):
+    class Meta:
+        model = SolutionFile
+        fields = ['file']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields['file'].disabled = True
+            self.fields['file'].widget = LinkWidget(
+                link='file/{}/'.format(self.instance.pk),
+                text=str(self.instance),
+            )
+            self.fields['last_changed'] = DateField(widget=ConstantTextWidget(), required=False, disabled=True, label='Ostatnia zmiana', initial=self.instance.last_changed)
+        else:
+            self.fields['last_changed'] = DateField(widget=ConstantTextWidget(), required=False, disabled=True, label='Ostatnia zmiana')
+
+
+class BaseSolutionFileInlineFormSet(BaseInlineFormSet):
+    def __init__(self, *args, is_editable=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False  # handled in template
+        self.helper.disable_csrf = True  # added by SolutionForm
+        self.helper.include_media = False
+        self.helper.template = 'bootstrap4/table_inline_formset.html'
+        self.extra = 1 if not self.instance.pk else 0
+        self.can_delete = is_editable
+
+
+SolutionFileFormSet = inlineformset_factory(Solution, SolutionFile, form=SolutionFileForm, formset=BaseSolutionFileInlineFormSet,
+                                            widgets={'file': FileInput()}, extra=0)
 
 
 class TinyMCEUpload(Form):

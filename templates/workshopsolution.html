@@ -1,0 +1,78 @@
+{% extends "workshopbase.html" %}
+{% load crispy_forms_tags %}
+
+{% block workshop_page_content %}
+  {% if is_mine %}
+  <p>
+    Ta część aplikacji służy do przesyłania rozwiązań zadań kwalifikacyjnych prowadzącym.
+    Zalecane jest umieszczenie głównej treści odpowiedzi w pliku .pdf oraz ewentualnych załączników (np. kodu)
+    w pliku .zip, ale każdy prowadzący może mieć własne wymagania.
+  </p>
+  <p>
+    Po zatwierdzeniu formularza, nadal będziesz mieć możliwość edycji, ale prowadzący będzie widział twoje rozwiązanie.
+  </p>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>
+        Warsztaty
+      </label>
+      <div class="px-3">
+        <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
+        (<a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}">zadania</a>)
+      </div>
+    </div>
+    <div class="form-group">
+      <label>
+        Autor rozwiązania
+      </label>
+      <div class="px-3">
+        <a href="{% url 'profile' solution.workshop_participant.participant.user.pk %}">{{ solution.workshop_participant.participant.user.get_full_name }}</a>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>
+        Ostatnia zmiana
+      </label>
+      <div class="px-3">
+        {% if solution.last_changed %}
+          {{ solution.last_changed }}
+        {% else %}
+          Jeszcze nie przesłano
+        {% endif %}
+      </div>
+    </div>
+    <div class="mt-5"></div>
+
+    {% crispy form %}
+
+    <label class="mt-5 mb-0">Pliki</label>
+    {% crispy form_attachments %}
+
+    {% if is_editable %}
+    <div>
+      <button class="btn btn-outline-success btn-sm mx-1 my-3 float-left add-more-files" type="button">Dodaj kolejny plik</button>
+      <button class="btn btn-outline-primary btn-lg mx-1 my-3 float-right" type="submit">Zapisz</button>
+    </div>
+    {% endif %}
+  </form>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script>
+    $(function() {
+      const formCount = $('#id_files-TOTAL_FORMS');
+      const formset = $('form table');
+      const emptyForm = formset.find('tr.empty-form');
+      const add = () => {
+        const newRow = $('<tr></tr>');
+        newRow.html(emptyForm.html().replace(/__prefix__/g, formCount.val()));
+        formset.find('tbody').append(newRow);
+        formCount.val(parseInt(formCount.val()) + 1);
+      };
+      $('button.add-more-files').click(add);
+    })
+  </script>
+{% endblock %}
