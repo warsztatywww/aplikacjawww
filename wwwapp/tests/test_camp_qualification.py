@@ -43,6 +43,7 @@ class CampQualificationViews(TestCase):
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED,
+            solution_uploads_enabled=False,
             qualification_threshold=5,
             max_points=10,
         )
@@ -57,6 +58,7 @@ class CampQualificationViews(TestCase):
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>yay</p>',
             status=Workshop.STATUS_ACCEPTED,
+            solution_uploads_enabled=False,
             qualification_threshold=5,
             max_points=10,
         )

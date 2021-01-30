@@ -372,6 +372,7 @@ def workshop_edit_view(request, year, name=None):
                 return HttpResponseForbidden()
             form = WorkshopForm(request.POST, request.FILES, workshop_url=workshop_url,
                                 instance=initial_workshop, has_perm_to_edit=has_perm_to_edit,
+                                has_perm_to_disable_uploads=request.user.has_perm('wwwapp.edit_all_workshops'),
                                 profile_warnings=profile_warnings)
             if form.is_valid():
                 new = workshop is None
@@ -393,6 +394,7 @@ def workshop_edit_view(request, year, name=None):
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
                 workshop.page_content = workshop_template
             form = WorkshopForm(instance=initial_workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit,
+                                has_perm_to_disable_uploads=request.user.has_perm('wwwapp.edit_all_workshops'),
                                 profile_warnings=profile_warnings)
     else:
         form = None
