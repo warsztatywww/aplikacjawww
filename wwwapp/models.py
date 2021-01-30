@@ -7,11 +7,20 @@ from typing import Dict, Set, Optional, Collection
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
 from django.utils.functional import cached_property
+
+
+# This is a separate directory for Django-controlled uploaded files.
+# Unlike /media, this directory is not directly externally accesible,
+# but it still needs to be configured in nginx (with internal;) for
+# X-Accel-Redirect to work.
+# See https://www.nginx.com/resources/wiki/start/topics/examples/xsendfile/
+upload_storage = FileSystemStorage(location=settings.SENDFILE_ROOT, base_url=settings.SENDFILE_URL)
 
 
 _latest_camp = threading.local()
@@ -314,7 +323,7 @@ class Workshop(models.Model):
     page_content_is_public = models.BooleanField(default=False)
 
     is_qualifying = models.BooleanField(default=True)
-    qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification")
+    qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification", storage=upload_storage)
     solution_uploads_enabled = models.BooleanField(default=True)
     participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
@@ -421,7 +430,7 @@ def solutions_dir(instance, filename):
 
 class SolutionFile(models.Model):
     solution = models.ForeignKey(Solution, null=False, blank=False, related_name='files', on_delete=models.CASCADE)
-    file = models.FileField(null=False, blank=False, upload_to=solutions_dir, verbose_name='Plik')
+    file = models.FileField(null=False, blank=False, upload_to=solutions_dir, storage=upload_storage, verbose_name='Plik')
     last_changed = models.DateTimeField(blank=False, null=False, auto_now=True)
 
     def __str__(self):
