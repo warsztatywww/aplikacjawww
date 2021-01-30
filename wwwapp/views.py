@@ -3,7 +3,6 @@ import hashlib
 import json
 import os
 import sys
-import mimetypes
 from urllib.parse import urljoin
 
 import bleach
@@ -22,7 +21,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, Http404, StreamingHttpResponse
+from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
@@ -30,6 +29,7 @@ from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django_bleach.utils import get_bleach_default_options
+from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion, pesel_extract_date
 from .forms import ArticleForm, UserProfileForm, UserForm, \
@@ -769,10 +769,7 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
             pk=solution_id)
 
     solution_file = get_object_or_404(solution.files.all(), pk=file_pk)
-
-    response = StreamingHttpResponse(solution_file.file, content_type=mimetypes.guess_type(solution_file.file.path)[0])
-    response['Content-Length'] = solution_file.file.size
-    return response
+    return sendfile(request, solution_file.file.path)
 
 
 @permission_required('wwwapp.export_workshop_registration')
@@ -855,10 +852,7 @@ def qualification_problems_view(request, year, name):
     if not workshop.qualification_problems:
         return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
 
-    response = StreamingHttpResponse(workshop.qualification_problems,
-                                     content_type=mimetypes.guess_type(workshop.qualification_problems.path)[0])
-    response['Content-Length'] = workshop.qualification_problems.size
-    return response
+    return sendfile(request, workshop.qualification_problems.path)
 
 
 def article_view(request, name):
