@@ -437,8 +437,8 @@ def workshop_participants_view(request, year, name):
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
 
-    context['workshop_participants'] = WorkshopParticipant.objects.filter(workshop=workshop).prefetch_related(
-            'workshop', 'participant', 'participant__user')
+    context['workshop_participants'] = WorkshopParticipant.objects.filter(workshop=workshop).select_related(
+            'workshop', 'workshop__year', 'participant', 'participant__user', 'solution')
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))
