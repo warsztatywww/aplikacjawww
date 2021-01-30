@@ -238,7 +238,7 @@ def mydata_status_view(request):
     for p in participation_data:
         p['qualification_results'] = []
 
-    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).prefetch_related('workshop', 'workshop__year').all()
+    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).select_related('workshop', 'workshop__year', 'solution').all()
     for q in qualifications:
         participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
         if participation_for_year is None:
@@ -290,9 +290,15 @@ def workshop_page_view(request, year, name):
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
+    if request.user.is_authenticated:
+        registered = workshop.participants.filter(user=request.user).exists()
+    else:
+        registered = False
+
     context = {}
     context['title'] = workshop.title
     context['workshop'] = workshop
+    context['registered'] = registered
     context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = \
