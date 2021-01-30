@@ -1,0 +1,8 @@
+node_modules
+media
+htmlcov
+.mypy_cache
+venv
+database.sqlite3
+.env
+.coverage
