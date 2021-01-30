@@ -477,8 +477,9 @@ def save_points_view(request):
 @login_required()
 @permission_required('wwwapp.see_all_users', raise_exception=True)
 def participants_view(request, year=None):
-    participants = UserProfile.objects.prefetch_related(
-        'user',
+    participants = UserProfile.objects \
+        .select_related('user') \
+        .prefetch_related(
         'workshop_profile',
         'workshop_profile__year',
         'lecturer_workshops',
@@ -489,7 +490,7 @@ def participants_view(request, year=None):
         year = get_object_or_404(Camp, pk=year)
         participants = participants.filter(workshops__year=year)
 
-        lecturers = Workshop.objects.filter(year=year).values_list('lecturer__user').distinct()
+        lecturers = Workshop.objects.filter(year=year).values_list('lecturer__user__id').distinct()
         participants = participants.exclude(user__id__in=lecturers)
 
         participants = participants.prefetch_related(
@@ -500,9 +501,9 @@ def participants_view(request, year=None):
 
     participants = participants.all()
 
-    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__in=[p.user for p in participants]).distinct()
+    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__userprofile__in=participants).distinct()
     all_questions = [question for form in all_forms for question in form.questions.all()]
-    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__in=[p.user for p in participants], question__in=all_questions).all()
+    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__userprofile__in=participants, question__in=all_questions).all()
 
     people = {}
 
