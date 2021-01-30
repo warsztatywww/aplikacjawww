@@ -6,11 +6,13 @@ services:
     volumes:
       - static_volume:/usr/src/static
       - media_volume:/usr/src/media
+      - uploads_volume:/usr/src/uploads
     expose:
       - 8000
     environment:
       - DJANGO_SETTINGS_MODULE=wwwapp.settings_prod
       - MEDIA_ROOT=/usr/src/media
+      - SENDFILE_ROOT=/usr/src/uploads
       - SECRET_KEY=test123
       - SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=${SOCIAL_AUTH_GOOGLE_OAUTH2_KEY}
       - SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET=${SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET}
@@ -32,6 +34,7 @@ services:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - static_volume:/usr/share/nginx/static
       - media_volume:/usr/share/nginx/media
+      - uploads_volume:/usr/share/nginx/uploads
       - ${INTERNETY:-/dev/null}:/usr/share/nginx/internet
     ports:
       - 8000:8000
@@ -42,3 +45,4 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
+  uploads_volume:
