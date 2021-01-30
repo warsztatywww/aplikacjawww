@@ -54,7 +54,20 @@
                     <div class="col-6 col-lg-4">Zadania kwalifikacyjne:</div>
                     <div class="col-6 col-lg-8">
                       {% if workshop.is_qualifying and workshop.qualification_problems %}
-                        <a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}"> Link </a>
+                        <a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}" class="mr-3"> Link </a>
+
+                        {% if workshop.are_solutions_editable and workshop.solution_uploads_enabled %}
+                          <span class="d-inline-block enable-tooltip"
+                              {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+                              {% if not registered %}data-toggle="tooltip" data-placement="right" title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"{% endif %}
+                          >
+                            <a role="button"
+                               class="btn btn-primary btn-sm {% if not registered %}disabled{% endif %}"
+                               href="{% url 'workshop_my_solution' workshop.year.pk workshop.name %}">
+                              <i class="fas fa-paper-plane"></i> Prześlij rozwiązania!
+                            </a>
+                          </span>
+                        {% endif %}
                       {% elif workshop.is_qualifying %}
                         Pojawią się wkrótce.
                       {% else %}

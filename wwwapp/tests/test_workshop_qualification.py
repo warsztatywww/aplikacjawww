@@ -1,7 +1,9 @@
 import datetime
+import os
 
 import mock
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test.testcases import TestCase
 from django.urls import reverse
 from freezegun import freeze_time
@@ -40,6 +42,7 @@ class WorkshopQualificationViews(TestCase):
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED,
             solution_uploads_enabled=False,
+            qualification_problems=SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024)),
             qualification_threshold=5,
             max_points=10,
         )
