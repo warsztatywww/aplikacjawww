@@ -5,11 +5,10 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.db.models.base import Model
 from django.http.request import HttpRequest
-from django.urls import reverse
 
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission, Camp
+    WorkshopUserProfile, ResourceYearPermission, Camp, Solution, SolutionFile
 
 admin.site.unregister(User)
 
@@ -134,7 +133,37 @@ class ArticleAdmin(admin.ModelAdmin):
 admin.site.register(Article, ArticleAdmin)
 admin.site.register(ArticleContentHistory, ArticleContentHistoryAdmin)
 
-admin.site.register(WorkshopParticipant)
+
+class SolutionInline(admin.StackedInline):
+    model = Solution
+    extra = 0
+    show_change_link = True
+
+
+class WorkshopParticipantAdmin(admin.ModelAdmin):
+    model = WorkshopParticipant
+    inlines = [SolutionInline]
+
+
+class SolutionFileInline(admin.TabularInline):
+    model = SolutionFile
+    extra = 1
+    show_change_link = False
+
+
+class SolutionAdmin(admin.ModelAdmin):
+    model = Solution
+    inlines = [SolutionFileInline]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ['workshop_participant']
+        else:
+            return []
+
+
+admin.site.register(WorkshopParticipant, WorkshopParticipantAdmin)
 admin.site.register(WorkshopUserProfile)
+admin.site.register(Solution, SolutionAdmin)
 
 admin.site.register(ResourceYearPermission)

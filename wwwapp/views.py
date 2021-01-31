@@ -3,12 +3,10 @@ import hashlib
 import json
 import os
 import sys
-import mimetypes
 from urllib.parse import urljoin
 
 import bleach
 from dateutil.relativedelta import relativedelta
-from wsgiref.util import FileWrapper
 from typing import Dict
 
 from django.db.models.expressions import F
@@ -23,7 +21,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
+from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
@@ -31,37 +29,21 @@ from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django_bleach.utils import get_bleach_default_options
+from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion, pesel_extract_date
 from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
-    TinyMCEUpload
+    TinyMCEUpload, SolutionFileFormSet, SolutionForm
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission, Camp
+    WorkshopUserProfile, ResourceYearPermission, Camp, Solution
 from .templatetags.wwwtags import qualified_mark
 
 
 def get_context(request):
     context = {}
 
-    context['has_workshops'] = False
-
-    if request.user.is_authenticated:
-        if Workshop.objects.filter(lecturer__user=request.user).exists():
-            context['has_workshops'] = True
-
-        visible_resources = ResourceYearPermission.objects.exclude(access_url__exact="")
-        if request.user.has_perm('wwwapp.access_all_resources'):
-            context['resources'] = visible_resources
-        else:
-            try:
-                user_profile = UserProfile.objects.get(user=request.user)
-                context['resources'] = visible_resources.filter(year__in=user_profile.all_participation_years())
-            except UserProfile.DoesNotExist:
-                context['resources'] = []
-
     context['google_analytics_key'] = settings.GOOGLE_ANALYTICS_KEY
-    context['articles_on_menubar'] = Article.objects.filter(on_menubar=True).all()
     context['years'] = Camp.objects.all()
     context['current_year'] = Camp.current()
 
@@ -244,7 +226,7 @@ def mydata_status_view(request):
     for p in participation_data:
         p['qualification_results'] = []
 
-    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).prefetch_related('workshop', 'workshop__year').all()
+    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).select_related('workshop', 'workshop__year', 'solution').all()
     for q in qualifications:
         participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
         if participation_for_year is None:
@@ -296,9 +278,15 @@ def workshop_page_view(request, year, name):
     if not workshop.is_publicly_visible():  # Accepted or cancelled
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
+    if request.user.is_authenticated:
+        registered = workshop.participants.filter(user=request.user).exists()
+    else:
+        registered = False
+
     context = {}
     context['title'] = workshop.title
     context['workshop'] = workshop
+    context['registered'] = registered
     context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = \
@@ -372,6 +360,7 @@ def workshop_edit_view(request, year, name=None):
                 return HttpResponseForbidden()
             form = WorkshopForm(request.POST, request.FILES, workshop_url=workshop_url,
                                 instance=initial_workshop, has_perm_to_edit=has_perm_to_edit,
+                                has_perm_to_disable_uploads=request.user.has_perm('wwwapp.edit_all_workshops'),
                                 profile_warnings=profile_warnings)
             if form.is_valid():
                 new = workshop is None
@@ -393,6 +382,7 @@ def workshop_edit_view(request, year, name=None):
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
                 workshop.page_content = workshop_template
             form = WorkshopForm(instance=initial_workshop, workshop_url=workshop_url, has_perm_to_edit=has_perm_to_edit,
+                                has_perm_to_disable_uploads=request.user.has_perm('wwwapp.edit_all_workshops'),
                                 profile_warnings=profile_warnings)
     else:
         form = None
@@ -441,8 +431,8 @@ def workshop_participants_view(request, year, name):
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
 
-    context['workshop_participants'] = WorkshopParticipant.objects.filter(workshop=workshop).prefetch_related(
-            'workshop', 'participant', 'participant__user')
+    context['workshop_participants'] = WorkshopParticipant.objects.filter(workshop=workshop).select_related(
+            'workshop', 'workshop__year', 'participant', 'participant__user', 'solution')
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))
@@ -463,6 +453,9 @@ def save_points_view(request):
 
     if not workshop_participant.workshop.is_qualifying:
         return HttpResponseForbidden("Na te warsztaty nie obowiązuje kwalifikacja")
+
+    if workshop_participant.workshop.solution_uploads_enabled and not hasattr(workshop_participant, 'solution'):
+        return HttpResponseForbidden("Nie przesłano rozwiązań")
 
     form = WorkshopParticipantPointsForm(request.POST, instance=workshop_participant)
     if not form.is_valid():
@@ -651,6 +644,9 @@ def unregister_from_workshop_view(request, year, name):
         if workshop_participant.qualification_result is not None or workshop_participant.comment:
             return JsonResponse({'error': u'Masz już wyniki z tej kwalifikacji - nie możesz się wycofać.'})
 
+        if hasattr(workshop_participant, 'solution'):
+            return JsonResponse({'error': u'Nie możesz wycofać się z warsztatów, na które przesłałeś już rozwiązania.'})
+
         workshop_participant.delete()
 
     context = {}
@@ -661,6 +657,107 @@ def unregister_from_workshop_view(request, year, name):
         return JsonResponse({'content': content})
     else:
         return JsonResponse({'content': content, 'error': u'Nie jesteś zapisany na te warsztaty'})
+
+
+@login_required()
+def workshop_solution(request, year, name, solution_id=None):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    if not workshop.is_publicly_visible():
+        return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.is_qualifying:
+        raise Http404('Na te warsztaty nie obowiązuje kwalifikacja')
+    if not workshop.solution_uploads_enabled:
+        raise Http404('Przesyłanie rozwiązań przez stronę na te warsztaty jest wyłączone')
+    if not workshop.qualification_problems:
+        raise Http404('Zadania kwalifikacyjne nie zostały jeszcze opublikowane')
+
+    if not solution_id:
+        # My solution
+        try:
+            workshop_participant = workshop.workshopparticipant_set \
+                .select_related('solution', 'participant__user') \
+                .get(participant__user=request.user)
+        except WorkshopParticipant.DoesNotExist:
+            raise Http404('Nie jesteś zapisany na te warsztaty')
+        solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
+        if not solution:
+            if workshop.are_solutions_editable():
+                solution = Solution(workshop_participant=workshop_participant)
+            else:
+                raise Http404('Nie przesłałeś rozwiązania na te warsztaty')
+    else:
+        # Selected solution
+        has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
+        if not has_perm_to_edit and not request.user.has_perm('wwwapp.see_all_workshops'):
+            return HttpResponseForbidden()
+        solution = get_object_or_404(
+            Solution.objects
+                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .filter(workshop_participant__workshop=workshop),
+            pk=solution_id)
+
+    is_editable = not solution_id and workshop.is_qualification_editable()
+    if request.method == 'POST' and not solution_id:
+        if not workshop.is_qualification_editable():
+            return HttpResponseForbidden()
+        form = SolutionForm(request.POST, request.FILES, instance=solution)
+        formset = SolutionFileFormSet(request.POST, request.FILES, instance=solution)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('workshop_my_solution', year, name)
+    else:
+        form = SolutionForm(instance=solution, is_editable=is_editable)
+        formset = SolutionFileFormSet(instance=solution, is_editable=is_editable)
+
+    context = {}
+    context['title'] = workshop.title
+    context['workshop'] = workshop
+    context['solution'] = solution
+    context['form'] = form
+    context['form_attachments'] = formset
+    context['is_editable'] = is_editable
+    context['is_mine'] = not solution_id
+    return render(request, 'workshopsolution.html', context)
+
+
+@login_required()
+def workshop_solution_file(request, year, name, file_pk, solution_id=None):
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    if not workshop.is_publicly_visible():
+        return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
+    if not workshop.is_qualifying:
+        raise Http404('Na te warsztaty nie obowiązuje kwalifikacja')
+    if not workshop.solution_uploads_enabled:
+        raise Http404('Przesyłanie rozwiązań przez stronę na te warsztaty jest wyłączone')
+    if not workshop.qualification_problems:
+        raise Http404('Zadania kwalifikacyjne nie zostały jeszcze opublikowane')
+
+    if not solution_id:
+        # My solution
+        try:
+            workshop_participant = workshop.workshopparticipant_set \
+                .select_related('solution', 'participant__user') \
+                .get(participant__user=request.user)
+        except WorkshopParticipant.DoesNotExist:
+            raise Http404('Nie jesteś zapisany na te warsztaty')
+        solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
+        if not solution:
+            raise Http404('Nie przesłałeś rozwiązania na te warsztaty')
+    else:
+        # Selected solution
+        has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
+        if not has_perm_to_edit and not request.user.has_perm('wwwapp.see_all_workshops'):
+            return HttpResponseForbidden()
+        solution = get_object_or_404(
+            Solution.objects
+                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .filter(workshop_participant__workshop=workshop),
+            pk=solution_id)
+
+    solution_file = get_object_or_404(solution.files.all(), pk=file_pk)
+    return sendfile(request, solution_file.file.path)
 
 
 @permission_required('wwwapp.export_workshop_registration')
@@ -743,12 +840,7 @@ def qualification_problems_view(request, year, name):
     if not workshop.qualification_problems:
         return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
 
-    filename = workshop.qualification_problems.path
-
-    wrapper = FileWrapper(open(filename, "rb"))
-    response = HttpResponse(wrapper, content_type=mimetypes.guess_type(filename)[0])
-    response['Content-Length'] = os.path.getsize(filename)
-    return response
+    return sendfile(request, workshop.qualification_problems.path)
 
 
 def article_view(request, name):
@@ -861,7 +953,6 @@ def as_article(name):
     return page
 
 
-index_view = as_article("index")
 template_for_workshop_page_view = as_article("template_for_workshop_page")
 
 

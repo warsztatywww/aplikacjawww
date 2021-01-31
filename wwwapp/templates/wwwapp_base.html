@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load wwwtags %}
+
+{% block main %}
+<main role="main" class="container {% if selected_year %}with-footer-margin{% endif %}">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert{% for tag in message.tags|split:" " %} alert-{{ tag }}{% endfor %} alert-auto-dismiss mt-3">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% block content %}{% endblock %}
+</main>
+
+{% if selected_year %}
+<footer class="footer">
+  <div class="container">
+    <nav class="year-navigation" aria-label="Wybór edycji">
+      <ul class="pagination">
+        {% if request.resolver_match.view_name == 'program' %}
+          <li class="page-item">
+            <a class="page-link" href="{% url 'article' 'historia' %}">
+              &laquo; Starsze
+            </a>
+          </li>
+        {% endif %}
+        {% for year in years %}
+          <li class="page-item {% if year == selected_year %}active{% endif %}">
+            <a class="page-link" href="{% url request.resolver_match.view_name year.pk %}">
+              {% if year == current_year %}
+                <b>{{ year }}</b>
+              {% else %}
+                {{ year }}
+              {% endif %}
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </div>
+</footer>
+{% endif %}
+{% endblock main %}

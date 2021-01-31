@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load cms_tags %}
+
+{% block main %}
+  <main role="main" class="container">
+    <div class="mb-5">
+        {% placeholder "header_image" %}
+    </div>
+    <div class="row">
+      <div class="col-12 col-lg-8">
+        {% placeholder "left_of_facebook_embed" %}
+      </div>
+      <div class="col-12 col-lg-4 d-none d-lg-block text-center">
+        <iframe style="width: 100%; min-width: 180px; max-width: 500px; border: none;"
+            src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Fwarsztatywww%2F&amp;tabs=timeline&amp;width=340&amp;height=500&amp;small_header=false&amp;adapt_container_width=false&amp;hide_cover=false&amp;show_facepile=true&amp;appId=1522345984699744"
+            height="500"></iframe>
+      </div>
+    </div>
+    <div class="col-12 col-lg-4 d-block d-lg-none text-center">
+      <iframe style="width: 100%; min-width: 180px; max-width: 500px; border: none;"
+          src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Fwarsztatywww%2F&amp;tabs&amp;width=500&amp;height=214&amp;small_header=false&amp;adapt_container_width=false&amp;hide_cover=false&amp;show_facepile=true&amp;appId=1522345984699744"
+          height="214"></iframe>
+    </div>
+    {% placeholder "content" %}
+
+    {% if has_change_permissions and not current_page.publisher_is_draft %}
+    <a class="btn btn-outline-primary w-100 mb-3" role="button" href="?edit">
+      Edytuj
+    </a>
+    {% endif %}
+  </main>
+{% endblock main %}

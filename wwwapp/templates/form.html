@@ -1,0 +1,16 @@
+{% extends "wwwapp_base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <article>
+      <header>
+        <h1>{{ title }}</h1>
+      </header>
+
+      {% if description %}
+        <p>{{ description }}</p>
+      {% endif %}
+
+      {% crispy form %}
+    </article>
+{% endblock %}

@@ -1,0 +1,31 @@
+<div class="col-md-2 text-center button-div">
+  {% if workshop.is_qualification_editable %}
+    {% if registered %}
+      <div onclick="handle_registration_change('{{ workshop.name }}', false);" style="cursor: pointer;">
+        <button class="btn btn-warning btn-circle" type="button">
+          <i class="fas fa-minus"></i>
+        </button>
+        <br/>
+        <h5 class="text-default mt-3 mb-0">Wypisz się</h5>
+      </div>
+    {% else %}
+      <div onclick="handle_registration_change('{{ workshop.name }}', true);" style="cursor: pointer;">
+        <button class="btn btn-success btn-circle" type="button">
+          <i class="fas fa-plus"></i>
+        </button>
+        <br/>
+        <h5 class="text-default mt-3 mb-0">Zapisz się</h5>
+      </div>
+    {% endif %}
+  {% else %}
+    {% if registered %}
+      <div>
+        <button class="btn btn-success btn-circle" type="button" disabled="disabled">
+          <i class="fas fa-check"></i>
+        </button>
+        <br/>
+        <h5 class="text-default mt-3 mb-0">Byłeś zapisany</h5>
+      </div>
+    {% endif %}
+  {% endif %}
+</div>

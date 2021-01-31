@@ -1,0 +1,135 @@
+{% extends "wwwapp_base.html" %}
+
+{% load static %}
+{% load wwwtags %}
+
+{% block content %}
+    <article>
+      <h1> {{ title }}</h1>
+        <div class="table-responsive">
+          <table class="table workshop-table" style="width:100%!important;" data-order='[[ 10, "desc" ]]'>
+            <thead>
+            <tr>
+              <th data-visible="true" data-searchable="false" data-orderable="false"></th>
+              <th data-visible="true" data-searchable="true"  data-orderable="true">Warsztaty</th>
+              <th data-visible="true" data-searchable="true"  data-orderable="true">Prowadzący</th>
+              <th data-visible="true" data-searchable="true"  data-orderable="true">Kategorie</th>
+              <th data-visible="true" data-searchable="true"  data-orderable="true">Rodzaj</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zakwalifikowanych">L.zak.</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zapisanych">L.zap.</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Próg kwalifikacji ustawiony?">Próg?</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Zadania opublikowane?">Zadania?</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Strona opublikowana?">Strona?</th>
+              <th data-visible="true" data-searchable="false" data-orderable="true">Status</th>
+            </tr>
+            </thead>
+            <tbody>
+              {% for workshop in workshops %}
+                <tr>
+                  <td>
+                  </td>
+                  <td>
+                    <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
+                  </td>
+                  <td data-order="{% for lecturer in workshop.lecturer.all %}{{ lecturer.user.last_name }} {{ lecturer.user.first_name }} {% endfor %}">
+                    {% for lecturer in workshop.lecturer.all %}
+                      <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer.user.get_full_name | question_mark_on_empty_string }}</a><br/>
+                    {% endfor %}
+                  </td>
+                  <td>
+                  {% for category in workshop.category.all %}
+                      {{ category.name }}<br/>
+                  {% endfor %}
+                  </td>
+                  <td>
+                      <p>{{ workshop.type }}</p>
+                  </td>
+                  <td>
+                    {% if workshop.is_qualifying and workshop.qualification_threshold and workshop.is_publicly_visible %}
+                      <p>{{ workshop.qualified_count }}</p>
+                    {% else %}
+                      <p>-</p>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if workshop.is_publicly_visible %}
+                      <p>{{ workshop.registered_count }}</p>
+                    {% else %}
+                      <p>-</p>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if workshop.is_qualifying and workshop.is_publicly_visible %}
+                      {% if workshop.qualification_threshold %}
+                        <span class="text-success"><i class="fas fa-check-circle"></i></span> TAK
+                      {% else %}
+                        <span class="text-danger"><i class="fas fa-times-circle"></i></span> NIE
+                      {% endif %}
+                    {% else %}
+                      <p>-</p>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if workshop.is_qualifying and workshop.is_publicly_visible %}
+                      {% if workshop.qualification_problems %}
+                        <span class="text-success"><i class="fas fa-check-circle"></i></span> TAK
+                      {% else %}
+                        <span class="text-danger"><i class="fas fa-times-circle"></i></span> NIE
+                      {% endif %}
+                    {% else %}
+                      <p>-</p>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if workshop.is_publicly_visible %}
+                      {% if workshop.page_content_is_public %}
+                        <span class="text-success"><i class="fas fa-check-circle"></i></span> TAK
+                      {% else %}
+                        <span class="text-danger"><i class="fas fa-times-circle"></i></span> NIE
+                      {% endif %}
+                    {% else %}
+                      <p>-</p>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if workshop.status == 'Z' %}
+                      <span class="text-success font-weight-bolder"> {{ workshop.get_status_display }} </span>
+                    {% elif workshop.status == 'O' %}
+                      <span class="text-danger font-weight-bolder"> {{ workshop.get_status_display }} </span>
+                    {% elif workshop.status == 'X' %}
+                      <span class="text-info font-weight-bolder"> {{ workshop.get_status_display }} </span>
+                    {% else %}
+                      <span class="font-weight-bolder"> {{ workshop.get_status_display|default_if_none:"Brak" }} </span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+    </article>
+{% endblock %}
+
+{% block styles %}
+  {{ block.super }}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+
+  <script>
+  $(document).ready( function () {
+    const table = $('.workshop-table').DataTable(gen_datatables_config(
+      {
+        dom: 'Bfrtil',
+        paging: false,
+      }));
+  });
+
+  $(function () {
+    $('[data-toggle="tooltip"]').tooltip()
+  });
+  </script>
+{% endblock %}

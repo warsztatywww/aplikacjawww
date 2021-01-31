@@ -1,0 +1,151 @@
+{% extends "wwwapp_base.html" %}
+{% load bleach_tags %}
+
+{% block content %}
+    <article>
+      <h1>
+        {{ title }}
+        {% if is_my_profile %}
+          <a class="btn btn-outline-primary btn-sm" role="button" href="{% url 'mydata_profile' %}">
+            Edytuj mój profil
+          </a>
+        {% endif %}
+      </h1>
+
+        {% if profile %}
+          <table class="table">
+            <tbody>
+              <tr>
+                <th class="w-25">Edycje WWW:</th>
+                <td class="w-75">
+                  {% include '_pastParticipation.html' with participation_data=participation_data only %}
+                  {% if perms.wwwapp.change_workshop_user_profile %}
+                    <form method="post" class="d-inline">
+                      {% csrf_token %}
+                      {% if workshop_profile %}
+                        {% if workshop_profile.status == 'Z' %}
+                          <button type="submit" class="btn btn-outline-primary btn-sm"
+                                  name="qualify" value="cancel"
+                                  onclick="return confirm('Czy na pewno chcesz odwołać przyjazd?');">
+                            😞 Odwołaj przyjazd
+                          </button>
+                        {% elif workshop_profile.status == 'X' %}
+                          <button type="submit" class="btn btn-outline-primary btn-sm"
+                                  name="qualify" value="accept"
+                                  onclick="return confirm('Czy na pewno chcesz odwołać odwołanie przyjazdu?');">
+                            😊 Jednak przyjedzie
+                          </button>
+                        {% endif %}
+                          <button type="submit" class="btn btn-outline-primary btn-sm"
+                                  name="qualify" value="delete"
+                                  onclick="return confirm('Czy na pewno chcesz usunąć kwalifikację?');">
+                            Usuń kwalifikację
+                          </button>
+                      {% else %}
+                        <button type="submit" class="btn btn-outline-primary btn-sm"
+                                name="qualify" value="accept"
+                                onclick="return confirm('Czy na pewno chcesz zakwalifikować?');">
+                          <i class="fas fa-check-circle"></i> Zakwalifikuj
+                        </button>
+                        <button type="submit" class="btn btn-outline-primary btn-sm"
+                                name="qualify" value="reject"
+                                onclick="return confirm('Czy na pewno chcesz odrzucić?');">
+                          <i class="fas fa-minus-circle"></i> Odrzuć
+                        </button>
+                      {% endif %}
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <th class="w-25">Email:</th>
+                <td class="w-75">{{ profile.user.email }}
+              </tr>
+              <tr>
+                <th class="w-25">Płeć:</th>
+                <td class="w-75">{{ profile.get_gender_display }}
+              </tr>
+              <tr>
+                <th class="w-25">Szkoła lub uniwersytet:</th>
+                <td class="w-75">{{ profile.school }}
+              </tr>
+              <tr>
+                <th class="w-25">Rok matury:</th>
+                <td class="w-75">{{ profile.matura_exam_year }}
+              </tr>
+              <tr>
+                <th class="w-25">Skąd wie o WWW:</th>
+                <td class="w-75">{{ profile.how_do_you_know_about }}
+              </tr>
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if lecturer_workshops %}
+          <h3>Prowadził{% if gender == 'F' %}a{% endif %} warsztaty:</h3>
+          <ul>
+            {% for workshop in lecturer_workshops %}
+              <li>
+                {{ workshop.year }}:
+                {% if workshop.is_publicly_visible %}
+                  {% if workshop.page_content_is_public %}
+                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
+                  {% else %}
+                      {% if can_see_all_workshops %}
+                        <a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a>
+                      {% else %}
+                        {{ workshop.title }}
+                      {% endif %}
+                  {% endif %}
+                {% else %}
+                  <del><i><a href="{% url 'workshop_edit' workshop.year.pk workshop.name %}">{{ workshop.title }}</a></i></del>
+                {% endif %}
+                {% if workshop.status != 'Z' %}
+                  {% if workshop.status == 'O' %}
+                    <span class="badge badge-danger">{{ workshop.get_status_display }}</span>
+                  {% elif workshop.status == 'X' %}
+                    <span class="badge badge-info">{{ workshop.get_status_display }}</span>
+                  {% elif not workshop.status %}
+                    <span class="badge badge-warning">Propozycja</span>
+                  {% else %}
+                    <span class="badge badge-secondary">{{ workshop.get_status_display }}</span>
+                  {% endif %}
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+
+        {% if profile %}
+          {% if profile.cover_letter %}
+            <hr/>
+            <h3>List motywacyjny</h3>
+            {{ profile.cover_letter | bleach }}
+          {% endif %}
+
+          {% if profile_page %}
+            <hr />
+            <h3>Strona profilowa</h3>
+          {% endif %}
+        {% endif %}
+
+        {{ profile_page | bleach }}
+        <hr />
+
+        {% if is_my_profile %}
+          <p>
+            <em>Twoje szczegółowe dane oraz list motywacyjny są widoczne tylko dla administratorów. Strona profilowa jest publiczna.</em>
+          </p>
+        {% endif %}
+    </article>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+
+  <script>
+    $(document).ready(function() {
+      $('[data-toggle="tooltip"]').tooltip({html: true});
+    });
+  </script>
+{% endblock %}

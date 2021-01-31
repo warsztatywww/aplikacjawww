@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load cms_tags %}
+
+{% block title %}{% page_attribute "page_title" %}{% endblock title %}
+
+{% block main %}
+<main role="main" class="container">
+  <h1>
+    {% page_attribute "page_title" %}
+
+    {% if has_change_permissions and not current_page.publisher_is_draft %}
+      <a class="btn btn-outline-primary btn-sm" role="button" href="?edit">
+        Edytuj
+      </a>
+    {% endif %}
+  </h1>
+
+  {% placeholder "content" %}
+</main>
+{% endblock main %}

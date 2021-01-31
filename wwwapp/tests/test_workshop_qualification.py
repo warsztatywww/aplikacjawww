@@ -1,7 +1,9 @@
 import datetime
+import os
 
 import mock
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test.testcases import TestCase
 from django.urls import reverse
 from freezegun import freeze_time
@@ -39,6 +41,8 @@ class WorkshopQualificationViews(TestCase):
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>Testowy opis</p>',
             status=Workshop.STATUS_ACCEPTED,
+            solution_uploads_enabled=False,
+            qualification_problems=SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024)),
             qualification_threshold=5,
             max_points=10,
         )
@@ -52,7 +56,8 @@ class WorkshopQualificationViews(TestCase):
             year=self.year_2020,
             type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
             proposition_description='<p>nie akceptuj tego</p>',
-            status=None
+            status=None,
+            solution_uploads_enabled=False
         )
         self.workshop_proposal.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
         self.workshop_proposal.lecturer.add(self.lecturer_user.userprofile)
@@ -64,7 +69,8 @@ class WorkshopQualificationViews(TestCase):
             year=self.year_2019,
             type=WorkshopType.objects.get(year=self.year_2019, name='Not this type'),
             proposition_description='<p>Testowy opis</p>',
-            status=Workshop.STATUS_ACCEPTED
+            status=Workshop.STATUS_ACCEPTED,
+            solution_uploads_enabled=False
         )
         self.previous_year_workshop.category.add(WorkshopCategory.objects.get(year=self.year_2019, name='Not this category'))
         self.previous_year_workshop.lecturer.add(self.lecturer_user.userprofile)
