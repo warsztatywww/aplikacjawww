@@ -21,7 +21,7 @@ module.exports = {
   output: {
     filename: "[name].js", // No filename hashing, Django takes care of this
     chunkFilename: "[id]-[chunkhash].js", // Per advice from blog (see link above)
-    path: path.resolve(__dirname, './static/dist'),
+    path: path.resolve(__dirname, './aplikacjawww_djangocms/static/dist'),
   },
   devServer: {
     writeToDisk: true, // Write files to disk in dev mode, so Django can serve the assets
