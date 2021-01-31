@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "wwwapp_base.html" %}
 
 {% load static %}
 {% load wwwtags %}
@@ -12,22 +12,35 @@
             <tr>
               <th data-visible="true"  data-searchable="false" data-orderable="false"></th>
               <th data-visible="true"  data-searchable="true"  data-orderable="true">Imię i nazwisko</th>
-              {% for question in questions %}
-                <th data-visible="true" data-searchable="{% if question.is_searchable %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}">{{ question.title }}</th>
+              <th data-visible="true"  data-searchable="true"  data-orderable="true">Email</th>
+              <th data-visible="true"  data-searchable="true"  data-orderable="false">Warsztaty</th>
+              {% for question in form_questions %}
+                <th data-visible="false" data-searchable="{% if question.is_searchable %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}">{{ question.form.title }}: {{ question.title }}</th>
               {% endfor %}
             </tr>
           </thead>
           <tbody>
-            {% for user, user_answers in answers.items %}
+            {% for person in people %}
               <tr>
                 <td>
                 </td>
-                <td data-order="{{ user.last_name }} {{ user.first_name }}">
-                  <a href="{% url 'profile' user.id %}">
-                    {{ user.get_full_name | question_mark_on_empty_string }}
+                <td data-order="{{ person.user.last_name }} {{ person.user.first_name }}">
+                  <a href="{% url 'profile' person.user.id %}">
+                    {{ person.user.get_full_name | question_mark_on_empty_string }}
                   </a>
                 </td>
-                {% for answer in user_answers %}
+                <td>
+                  {{ person.user.email | question_mark_on_empty_string }}
+                </td>
+                <td>
+                  {% for workshop in person.workshops %}
+                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
+                      {{ workshop.title }}
+                    </a>
+                    <br>
+                  {% endfor %}
+                </td>
+                {% for answer in person.form_answers %}
                   <td title="Ostatnia modyfikacja: {% if answer %}{{ answer.last_changed }}{% else %}Nigdy{% endif %}"
                       {% if answer.question.data_type == 'd' %}data-order="{{ answer.value_date | date:"U" }}"{% endif %}>
                     {{ answer.value }}

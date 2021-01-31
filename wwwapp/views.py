@@ -43,19 +43,7 @@ from .templatetags.wwwtags import qualified_mark
 def get_context(request):
     context = {}
 
-    if request.user.is_authenticated:
-        visible_resources = ResourceYearPermission.objects.exclude(access_url__exact="")
-        if request.user.has_perm('wwwapp.access_all_resources'):
-            context['resources'] = visible_resources
-        else:
-            try:
-                user_profile = UserProfile.objects.get(user=request.user)
-                context['resources'] = visible_resources.filter(year__in=user_profile.all_participation_years())
-            except UserProfile.DoesNotExist:
-                context['resources'] = []
-
     context['google_analytics_key'] = settings.GOOGLE_ANALYTICS_KEY
-    context['articles_on_menubar'] = Article.objects.filter(on_menubar=True).all()
     context['years'] = Camp.objects.all()
     context['current_year'] = Camp.current()
 
@@ -958,7 +946,6 @@ def as_article(name):
     return page
 
 
-index_view = as_article("index")
 template_for_workshop_page_view = as_article("template_for_workshop_page")
 
 

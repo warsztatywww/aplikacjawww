@@ -1,4 +1,4 @@
-from .settings_common import *
+from aplikacjawww_djangocms.settings_common import *
 
 SECRET_KEY = None  # set in local_settings
 
