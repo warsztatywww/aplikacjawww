@@ -44,12 +44,7 @@ from .templatetags.wwwtags import qualified_mark
 def get_context(request):
     context = {}
 
-    context['has_workshops'] = False
-
     if request.user.is_authenticated:
-        if Workshop.objects.filter(lecturer__user=request.user).exists():
-            context['has_workshops'] = True
-
         visible_resources = ResourceYearPermission.objects.exclude(access_url__exact="")
         if request.user.has_perm('wwwapp.access_all_resources'):
             context['resources'] = visible_resources
