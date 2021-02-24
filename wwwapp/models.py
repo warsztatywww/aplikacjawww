@@ -56,8 +56,8 @@ class Camp(models.Model):
 
     @staticmethod
     def current():
-        if hasattr(Camp, '_latest'):
-            return Camp._latest
+        if hasattr(_latest_camp, 'v'):
+            return _latest_camp.v
         else:
             return Camp.objects.latest()
 
