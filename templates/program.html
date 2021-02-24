@@ -23,59 +23,7 @@
 
       {% if workshops %}
         {% for workshop, registered in workshops %}
-          <div class="card mb-3 w-100" id="{{ workshop.name }}" data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}" data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">
-            <div class="card-header">
-              <div class="row">
-                <div class="col-12 col-lg-8">
-                  <h4 class="m-0">
-                  {% if workshop.page_content_is_public %}<a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">{% endif %}
-                  {% if workshop.status == 'X' %}<del>{% endif %}
-                  <b>{{ workshop.title }}</b>
-                  {% if workshop.status == 'X' %}</del>{% endif %}
-                  {% if workshop.page_content_is_public %}</a>{% endif %}
-                  {% if workshop.status == 'X' %}&nbsp;&nbsp;<span class="text-danger">(odwołane)</span>{% endif %}
-                  </h4>
-                </div>
-                <div class="col-12 col-lg-4 text-right">
-                  <h5 class="m-0">
-                  {% for lecturer in workshop.lecturer.all %}
-                    <span class="d-inline-block"> {# this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name #}
-                      <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %},{% endif %}
-                    </span>
-                  {% endfor %}
-                  </h5>
-                </div>
-              </div>
-            </div>
-            <div class="card-body">
-              <div class="row">
-                <div class="col-md-10">
-                  <div class="row my-3 my-md-2 mb-3 mb-md-4">
-                    <div class="col-6 col-lg-4">Zadania kwalifikacyjne:</div>
-                    <div class="col-6 col-lg-8">
-                      {% if workshop.is_qualifying and workshop.qualification_problems %}
-                        <a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}"> Link </a>
-                      {% elif workshop.is_qualifying %}
-                        Pojawią się wkrótce.
-                      {% else %}
-                        Na te warsztaty nie ma kwalifikacji. Nie liczą się do puli wymaganych zgłoszeń.
-                      {% endif %}
-                    </div>
-                  </div>
-
-                  <div class="row my-3 my-md-2 mb-3 mb-md-4">
-                    <div class="col-6 col-lg-4">Kategorie:</div>
-                    <div class="col-6 col-lg-8">
-                      {% for category in workshop.category.all %}
-                      <span class="badge badge-secondary">{{ category.name }}</span>
-                      {% endfor %}
-                    </div>
-                  </div>
-                </div>
-                {% include '_programworkshop.html' %}
-              </div>
-            </div>
-          </div>
+          {% include "_programworkshop.html" %}
         {% endfor %}
       {% else %}
         Warsztaty pojawią się w odpowiednim momencie.

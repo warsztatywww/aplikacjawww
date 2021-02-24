@@ -7,11 +7,24 @@ from typing import Dict, Set, Optional, Collection
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
+from django.core.files.storage import FileSystemStorage
 from django.db import models
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
+from django.utils.deconstruct import deconstructible
 from django.utils.functional import cached_property
+
+
+# This is a separate directory for Django-controlled uploaded files.
+# Unlike /media, this directory is not directly externally accesible,
+# but it still needs to be configured in nginx (with internal;) for
+# X-Accel-Redirect to work.
+# See https://www.nginx.com/resources/wiki/start/topics/examples/xsendfile/
+@deconstructible
+class UploadStorage(FileSystemStorage):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, location=settings.SENDFILE_ROOT, base_url=settings.SENDFILE_URL, **kwargs)
 
 
 _latest_camp = threading.local()
@@ -53,6 +66,9 @@ class Camp(models.Model):
             return self.are_workshops_editable() and datetime.datetime.now().date() < self.start_date
         else:
             return self.are_workshops_editable()
+
+    def are_solutions_editable(self) -> bool:
+        return self.is_qualification_editable()
 
     @staticmethod
     def current():
@@ -311,7 +327,8 @@ class Workshop(models.Model):
     page_content_is_public = models.BooleanField(default=False)
 
     is_qualifying = models.BooleanField(default=True)
-    qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification")
+    qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification", storage=UploadStorage())
+    solution_uploads_enabled = models.BooleanField(default=True)
     participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
     max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
@@ -321,6 +338,18 @@ class Workshop(models.Model):
 
     def is_qualification_editable(self) -> bool:
         return self.year.is_qualification_editable()
+
+    def are_solutions_editable(self) -> bool:
+        return self.year.are_solutions_editable()
+
+    def can_access_solution_upload(self) -> bool:
+        """
+        Check if all preconditions to be able to access the solution upload form are met. The solution upload form
+        can be opened only when the solution uploads are enabled, the workshop is qualifying and the qualification
+        problems have been uploaded.
+        Note: This does not mean that the solution is currently editable.
+        """
+        return self.solution_uploads_enabled and self.is_qualifying and self.qualification_problems
 
     def clean(self):
         super(Workshop, self).clean()
@@ -396,6 +425,29 @@ class WorkshopParticipant(models.Model):
 
     class Meta:
         unique_together = [('workshop', 'participant')]
+
+    def __str__(self):
+        return '{}: {}'.format(self.workshop, self.participant)
+
+
+class Solution(models.Model):
+    workshop_participant = models.OneToOneField(WorkshopParticipant, null=False, blank=False, related_name='solution', on_delete=models.CASCADE)
+    last_changed = models.DateTimeField(blank=False, null=False, auto_now=True)
+    message = models.TextField(blank=True, verbose_name='Komentarz dla prowadzącego', help_text='Nie wpisuj rozwiązań w tym polu - załącz je jako plik. To pole jest przeznaczone jedynie na szybkie uwagi typu "poprawiłem plik X"')
+
+
+def solutions_dir(instance, filename):
+    workshop_participant = instance.solution.workshop_participant
+    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.participant.user.pk}/{filename}'
+
+
+class SolutionFile(models.Model):
+    solution = models.ForeignKey(Solution, null=False, blank=False, related_name='files', on_delete=models.CASCADE)
+    file = models.FileField(null=False, blank=False, upload_to=solutions_dir, storage=UploadStorage(), verbose_name='Plik')
+    last_changed = models.DateTimeField(blank=False, null=False, auto_now=True)
+
+    def __str__(self):
+        return os.path.basename(self.file.path)
 
 
 class ResourceYearPermission(models.Model):

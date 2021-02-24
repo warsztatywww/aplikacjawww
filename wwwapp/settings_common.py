@@ -165,6 +165,7 @@ STATICFILES_FINDERS = (
 )
 
 MEDIA_URL = '/media/'
+SENDFILE_URL = '/uploads/'
 
 TEMPLATES = [
     {

@@ -113,7 +113,8 @@ window.handle_registration_change = function(workshop_name_txt, register) {
                 window.location.href = json.redirect;
             }
             if (json.content) {
-                $("#" + workshop_name_txt).find(".button-div").replaceWith(json.content);
+                $("#" + workshop_name_txt).replaceWith(json.content);
+                $("#" + workshop_name_txt).find('.enable-tooltip').tooltip();
             }
         },
         error: function(xhr, errmsg, errcode) {

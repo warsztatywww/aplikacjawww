@@ -1,13 +1,17 @@
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Button, Div, HTML
+from crispy_forms.layout import Layout, Fieldset, Div, HTML
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.forms import ModelChoiceField, ModelMultipleChoiceField, DateInput
+from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
-from django.forms.fields import ImageField, ChoiceField
+from django.forms.fields import ImageField, ChoiceField, DateField
 from django.forms.forms import Form
+from django.forms.models import inlineformset_factory, BaseInlineFormSet
+from django.forms.widgets import Textarea, Widget
+from django.template import Template, Context
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 import tinymce.widgets
 from django.conf import settings
@@ -15,7 +19,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 
 
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp
+    WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp, Solution, SolutionFile
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -180,7 +184,7 @@ class WorkshopForm(ModelForm):
     class Meta:
         model = Workshop
         fields = ['title', 'name', 'type', 'category', 'proposition_description',
-                  'qualification_problems', 'is_qualifying',
+                  'qualification_problems', 'is_qualifying', 'solution_uploads_enabled',
                   'max_points', 'qualification_threshold',
                   'page_content', 'page_content_is_public']
         labels = {
@@ -188,6 +192,7 @@ class WorkshopForm(ModelForm):
             'name': 'Nazwa (w URLach)',
             'proposition_description': 'Opis propozycji warsztatów',
             'is_qualifying': 'Czy warsztaty są kwalifikujące',
+            'solution_uploads_enabled': 'Czy przesyłanie rozwiązań przez stronę jest włączone',
             'max_points': 'Maksymalna liczba punktów możliwa do uzyskania',
             'qualification_threshold': 'Minimalna liczba punktów potrzebna do kwalifikacji',
             'page_content': 'Strona warsztatów',
@@ -195,11 +200,12 @@ class WorkshopForm(ModelForm):
         }
         help_texts = {
             'is_qualifying': '(odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
+            'solution_uploads_enabled': 'Od edycji 2021 uczestnicy przesyłają rozwiązania zadań kwalifikacyjnych przez stronę zamiast maila. Jeśli z jakiegoś powodu bardzo chcesz wyłączyć tą funkcję, skontaktuj się z organizatorami.',
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
             'max_points': '(możesz postawić punkty bonusowe powyżej tej wartości, ale tylko do max. {}%)'.format(settings.MAX_POINTS_PERCENT)
         }
 
-    def __init__(self, *args, workshop_url, has_perm_to_edit=True, profile_warnings=None, **kwargs):
+    def __init__(self, *args, workshop_url, has_perm_to_edit=True, has_perm_to_disable_uploads=False, profile_warnings=None, **kwargs):
         super(ModelForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.include_media = False
@@ -212,6 +218,9 @@ class WorkshopForm(ModelForm):
         if self.instance.status:
             # The proposition cannot be edited once the workshop has a status set
             self.fields['proposition_description'].disabled = True
+
+        if not has_perm_to_disable_uploads:
+            self.fields['solution_uploads_enabled'].disabled = True
 
         # Make sure only current category and type choices are displayed
         if self.instance is None:
@@ -266,6 +275,7 @@ class WorkshopForm(ModelForm):
                     Div('qualification_threshold', css_class='col-lg-6'),
                     css_class='row'
                 ),
+                'solution_uploads_enabled',
                 css_id='qualification_settings'
             ),
         )
@@ -281,7 +291,7 @@ class WorkshopForm(ModelForm):
 
         if not self.instance or not self.instance.is_publicly_visible():
             for field in [
-                  'qualification_problems', 'is_qualifying',
+                  'qualification_problems', 'is_qualifying', 'solution_uploads_enabled',
                   'max_points', 'qualification_threshold',
                   'page_content', 'page_content_is_public']:
                 del self.fields[field]
@@ -350,6 +360,74 @@ class WorkshopParticipantPointsForm(ModelForm):
         for k, v in self.cleaned_data.items():
             if k not in self.data:
                 self.cleaned_data[k] = getattr(self.instance, k, self.cleaned_data[k])
+
+
+class SolutionForm(ModelForm):
+    class Meta:
+        model = Solution
+        fields = ['message']
+        widgets = {'message': Textarea(attrs={'rows': 4})}
+
+    def __init__(self, *args, is_editable=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False  # handled in template
+        self.helper.layout = Layout(
+            'message',
+        )
+        if not is_editable:
+            self.fields['message'].disabled = True
+
+
+class LinkWidget(Widget):
+    def __init__(self, link, text, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.link = link
+        self.text = text
+
+    def render(self, name, value, attrs=None, renderer=None):
+        return Template('<a href="{{link}}">{{text}}</a>').render(Context({'link': self.link, 'text': self.text}))
+
+
+class ConstantTextWidget(Widget):
+    def render(self, name, value, attrs=None, renderer=None):
+        if not value:
+            return '-'
+        return Template('{{text}}').render(Context({'text': value}))
+
+
+class SolutionFileForm(ModelForm):
+    class Meta:
+        model = SolutionFile
+        fields = ['file']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields['file'].disabled = True
+            self.fields['file'].widget = LinkWidget(
+                link='file/{}/'.format(self.instance.pk),
+                text=str(self.instance),
+            )
+            self.fields['last_changed'] = DateField(widget=ConstantTextWidget(), required=False, disabled=True, label='Ostatnia zmiana', initial=self.instance.last_changed)
+        else:
+            self.fields['last_changed'] = DateField(widget=ConstantTextWidget(), required=False, disabled=True, label='Ostatnia zmiana')
+
+
+class BaseSolutionFileInlineFormSet(BaseInlineFormSet):
+    def __init__(self, *args, is_editable=True, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False  # handled in template
+        self.helper.disable_csrf = True  # added by SolutionForm
+        self.helper.include_media = False
+        self.helper.template = 'bootstrap4/table_inline_formset.html'
+        self.extra = 1 if not self.instance.pk else 0
+        self.can_delete = is_editable
+
+
+SolutionFileFormSet = inlineformset_factory(Solution, SolutionFile, form=SolutionFileForm, formset=BaseSolutionFileInlineFormSet,
+                                            widgets={'file': FileInput()}, extra=0)
 
 
 class TinyMCEUpload(Form):
