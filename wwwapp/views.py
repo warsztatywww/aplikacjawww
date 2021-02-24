@@ -623,7 +623,7 @@ def register_to_workshop_view(request, year, name):
     if not request.user.is_authenticated:
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
-    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    workshop = get_object_or_404(Workshop.objects.prefetch_related('lecturer', 'lecturer__user', 'type', 'category'), year__pk=year, name=name)
 
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
@@ -645,7 +645,7 @@ def unregister_from_workshop_view(request, year, name):
     if not request.user.is_authenticated:
         return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
 
-    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    workshop = get_object_or_404(Workshop.objects.prefetch_related('lecturer', 'lecturer__user', 'type', 'category'), year__pk=year, name=name)
     profile = UserProfile.objects.get(user=request.user)
     workshop_participant = WorkshopParticipant.objects.filter(workshop=workshop, participant=profile).first()
 
