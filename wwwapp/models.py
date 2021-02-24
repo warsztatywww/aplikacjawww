@@ -342,6 +342,15 @@ class Workshop(models.Model):
     def are_solutions_editable(self) -> bool:
         return self.year.are_solutions_editable()
 
+    def can_access_solution_upload(self) -> bool:
+        """
+        Check if all preconditions to be able to access the solution upload form are met. The solution upload form
+        can be opened only when the solution uploads are enabled, the workshop is qualifying and the qualification
+        problems have been uploaded.
+        Note: This does not mean that the solution is currently editable.
+        """
+        return self.solution_uploads_enabled and self.is_qualifying and self.qualification_problems
+
     def clean(self):
         super(Workshop, self).clean()
         if hasattr(self, 'year'):

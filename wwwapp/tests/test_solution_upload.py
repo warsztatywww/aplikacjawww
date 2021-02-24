@@ -48,7 +48,7 @@ class SolutionUploadViews(TestCase):
 
         WorkshopParticipant.objects.create(participant=self.participant_user.userprofile, workshop=self.workshop)
 
-    def _assert_solution_upload_not_accessible(self, code=404):
+    def _assert_solution_upload_not_accessible(self, code=403):
         response = self.client.get(reverse('workshop_my_solution', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, code)
 
@@ -113,14 +113,14 @@ class SolutionUploadViews(TestCase):
         self.workshop.save()
 
         self.client.force_login(self.participant_user)
-        self._assert_solution_upload_not_accessible(404)
+        self._assert_solution_upload_not_accessible(403)
 
     @freeze_time('2020-05-01 12:00:00')
     def test_solution_upload_blocked_not_participant(self):
         WorkshopParticipant.objects.all().delete()
 
         self.client.force_login(self.participant_user)
-        self._assert_solution_upload_not_accessible(404)
+        self._assert_solution_upload_not_accessible(403)
 
     @freeze_time('2020-05-01 12:00:00')
     def test_solution_upload_blocked_not_logged_in(self):
@@ -130,7 +130,7 @@ class SolutionUploadViews(TestCase):
     @freeze_time('2020-12-01 12:00:00')
     def test_solution_upload_blocked_after_deadline_not_sent(self):
         self.client.force_login(self.participant_user)
-        self._assert_solution_upload_not_accessible(404)
+        self._assert_solution_upload_not_accessible(403)
 
     @freeze_time('2020-12-01 12:00:00')
     def test_solution_upload_readonly_after_deadline_sent(self):

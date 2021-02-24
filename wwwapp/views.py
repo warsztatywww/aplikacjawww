@@ -676,12 +676,8 @@ def workshop_solution(request, year, name, solution_id=None):
     workshop = get_object_or_404(Workshop, year__pk=year, name=name)
     if not workshop.is_publicly_visible():
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
-    if not workshop.is_qualifying:
-        raise Http404('Na te warsztaty nie obowiązuje kwalifikacja')
-    if not workshop.solution_uploads_enabled:
-        raise Http404('Przesyłanie rozwiązań przez stronę na te warsztaty jest wyłączone')
-    if not workshop.qualification_problems:
-        raise Http404('Zadania kwalifikacyjne nie zostały jeszcze opublikowane')
+    if not workshop.can_access_solution_upload():
+        return HttpResponseForbidden('Na te warsztaty nie można obecnie przesyłać rozwiązań')
 
     if not solution_id:
         # My solution
@@ -690,13 +686,13 @@ def workshop_solution(request, year, name, solution_id=None):
                 .select_related('solution', 'participant__user') \
                 .get(participant__user=request.user)
         except WorkshopParticipant.DoesNotExist:
-            raise Http404('Nie jesteś zapisany na te warsztaty')
+            return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
         solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
         if not solution:
             if workshop.are_solutions_editable():
                 solution = Solution(workshop_participant=workshop_participant)
             else:
-                raise Http404('Nie przesłałeś rozwiązania na te warsztaty')
+                return HttpResponseForbidden('Nie przesłałeś rozwiązania na te warsztaty')
     else:
         # Selected solution
         has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
@@ -739,12 +735,8 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
     workshop = get_object_or_404(Workshop, year__pk=year, name=name)
     if not workshop.is_publicly_visible():
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
-    if not workshop.is_qualifying:
-        raise Http404('Na te warsztaty nie obowiązuje kwalifikacja')
-    if not workshop.solution_uploads_enabled:
-        raise Http404('Przesyłanie rozwiązań przez stronę na te warsztaty jest wyłączone')
-    if not workshop.qualification_problems:
-        raise Http404('Zadania kwalifikacyjne nie zostały jeszcze opublikowane')
+    if not workshop.can_access_solution_upload():
+        return HttpResponseForbidden('Na te warsztaty nie można obecnie przesyłać rozwiązań')
 
     if not solution_id:
         # My solution
@@ -753,10 +745,10 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
                 .select_related('solution', 'participant__user') \
                 .get(participant__user=request.user)
         except WorkshopParticipant.DoesNotExist:
-            raise Http404('Nie jesteś zapisany na te warsztaty')
+            return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
         solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
         if not solution:
-            raise Http404('Nie przesłałeś rozwiązania na te warsztaty')
+            return HttpResponseForbidden('Nie przesłałeś rozwiązania na te warsztaty')
     else:
         # Selected solution
         has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)

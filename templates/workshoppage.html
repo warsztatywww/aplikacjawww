@@ -24,7 +24,7 @@
     {% endif %}
   {% endif %}
 
-  {% if workshop.are_solutions_editable and workshop.solution_uploads_enabled and workshop.is_qualifying and workshop.qualification_problems %}
+  {% if workshop.can_access_solution_upload and workshop.are_solutions_editable %}
     <span class="d-inline-block enable-tooltip"
         {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
         {% if not registered %}data-toggle="tooltip" data-placement="right" title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"{% endif %}
