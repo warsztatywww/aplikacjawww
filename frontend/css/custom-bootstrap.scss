@@ -147,10 +147,16 @@ legend {
 }
 
 /* Status page */
-@media (max-width: 1199px) {
-    .small-on-md {
-        font-size: 65%;
-    }
+@include media-breakpoint-down(md) {
+  .small-on-md {
+    font-size: 65%;
+  }
+}
+
+@include media-breakpoint-down(sm) {
+  .w-100-on-sm {
+    width: 100%;
+  }
 }
 
 /* Program */
