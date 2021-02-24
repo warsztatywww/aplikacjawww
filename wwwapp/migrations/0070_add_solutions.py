@@ -30,9 +30,19 @@ class Migration(migrations.Migration):
             name='SolutionFile',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to=wwwapp.models.solutions_dir, verbose_name='Plik')),
+                ('file', models.FileField(storage=wwwapp.models.UploadStorage(), upload_to=wwwapp.models.solutions_dir, verbose_name='Plik')),
                 ('last_changed', models.DateTimeField(auto_now=True)),
                 ('solution', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='files', to='wwwapp.solution')),
             ],
+        ),
+        migrations.AlterField(
+            model_name='workshop',
+            name='qualification_problems',
+            field=models.FileField(blank=True, null=True, storage=wwwapp.models.UploadStorage(), upload_to='qualification'),
+        ),
+        migrations.AlterField(
+            model_name='workshop',
+            name='solution_uploads_enabled',
+            field=models.BooleanField(default=True),
         ),
     ]
