@@ -91,10 +91,13 @@ window.handle_registration_change = function(workshop_name_txt, register) {
     }
 
     function error(message) {
-        var elem = $('<div class="alert alert-danger fade in"><a href="#" class="close" data-dismiss="alert">&times;</a>' +
+        var elem = $('<div class="alert alert-danger fade"><a href="#" class="close" data-dismiss="alert">&times;</a>' +
                      '<strong>Error!</strong> <span></span></div>');
         elem.find('span').text(message);
         $("#" + workshop_name_txt).after(elem); // add the error to the dom
+        setTimeout(function() {
+            elem.addClass('show');
+        },10);
     }
 
     $.ajax({
