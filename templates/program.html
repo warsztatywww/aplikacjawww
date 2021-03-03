@@ -20,14 +20,15 @@
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
-
-      {% if workshops %}
-        {% for workshop, registered in workshops %}
-          {% include "_programworkshop.html" %}
-        {% endfor %}
-      {% else %}
-        Warsztaty pojawią się w odpowiednim momencie.
+      {% if selected_year.are_proposals_open %}
+        <p class="alert alert-info">Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
       {% endif %}
+
+      {% for workshop, registered in workshops %}
+        {% include "_programworkshop.html" %}
+      {% empty %}
+        Jeszcze nie ma tu żadnych warsztatów. Zajrzyj ponownie później.
+      {% endfor %}
 
       <div class="d-block d-md-none w-100 enable-tooltip"
           {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
