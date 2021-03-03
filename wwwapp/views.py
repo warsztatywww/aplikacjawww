@@ -25,6 +25,7 @@ from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, H
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -388,7 +389,13 @@ def workshop_edit_view(request, year, name=None):
                     user_profile = UserProfile.objects.get(user=request.user)
                     workshop.lecturer.add(user_profile)
                     workshop.save()
-                messages.info(request, 'Zapisano.')
+                if new:
+                    messages.info(request, format_html(
+                        'Twoje zgłoszenie zostało zapisane. Jego status i możliwość dalszej edycji znajdziesz w zakładce "<a href="{}">Status kwalifikacji</a>"',
+                        reverse('mydata_status')
+                    ))
+                else:
+                    messages.info(request, 'Zapisano.')
                 return redirect('workshop_edit', form.instance.year.pk, form.instance.name)
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
