@@ -567,7 +567,7 @@ def participants_view(request, year=None):
         if year:
             for wp in participant.workshopparticipant_set.all():
                 assert wp.workshop.year == year
-                if wp.qualification_result:
+                if wp.workshop.is_qualifying and wp.qualification_result:
                     people[participant.id]['points'] += float(wp.result_in_percent())
                 people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
                     title=wp.workshop.title,
