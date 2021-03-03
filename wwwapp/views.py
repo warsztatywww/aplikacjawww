@@ -63,14 +63,17 @@ def get_context(request):
     return context
 
 
-def program_view(request, year=None):
-    if year is None:
-        url = reverse('program', args=[Camp.current().pk])
+def redirect_to_view_for_latest_year(target_view_name):
+    def view(request):
+        url = reverse(target_view_name, args=[Camp.current().pk])
         args = request.META.get('QUERY_STRING', '')
         if args:
             url = "%s?%s" % (url, args)
         return redirect(url)
+    return view
 
+
+def program_view(request, year):
     year = get_object_or_404(Camp, pk=year)
 
     context = {}
