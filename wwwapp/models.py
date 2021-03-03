@@ -376,6 +376,9 @@ class Workshop(models.Model):
     def registered_count(self):
         return self.workshopparticipant_set.count()
 
+    def solutions_count(self):
+        return self.workshopparticipant_set.filter(solution__isnull=False).count()
+
     def qualified_count(self):
         if self.qualification_threshold is None:
             return None
