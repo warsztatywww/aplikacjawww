@@ -285,7 +285,7 @@ class WorkshopForm(ModelForm):
             'page_content_is_public'
         )
         self.fieldset_submit = FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
+            StrictButton('Zapisz' if self.instance and self.instance.pk else 'Zgłoś!', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
             css_class='text-right',
         )
 
