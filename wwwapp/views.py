@@ -689,6 +689,7 @@ def workshop_solution(request, year, name, solution_id=None):
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
     if not workshop.can_access_solution_upload():
         return HttpResponseForbidden('Na te warsztaty nie można obecnie przesyłać rozwiązań')
+    has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
     if not solution_id:
         # My solution
@@ -706,7 +707,6 @@ def workshop_solution(request, year, name, solution_id=None):
                 return HttpResponseForbidden('Nie przesłałeś rozwiązania na te warsztaty')
     else:
         # Selected solution
-        has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
         if not has_perm_to_edit and not request.user.has_perm('wwwapp.see_all_workshops'):
             return HttpResponseForbidden()
         solution = get_object_or_404(
@@ -738,6 +738,9 @@ def workshop_solution(request, year, name, solution_id=None):
     context['form_attachments'] = formset
     context['is_editable'] = is_editable
     context['is_mine'] = not solution_id
+    context['is_lecturer'] = is_lecturer
+    context['has_perm_to_edit'] = has_perm_to_edit
+    context['has_perm_to_view_details'] = has_perm_to_edit or request.user.has_perm('wwwapp.see_all_workshops')
     return render(request, 'workshopsolution.html', context)
 
 

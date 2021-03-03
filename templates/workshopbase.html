@@ -14,7 +14,7 @@
           <nav class="mb-3">
             <ul class="nav nav-pills nav-fill flex-column flex-lg-row">
               <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_page' %}active{% endif %}"
+                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_page' or request.resolver_match.view_name == 'workshop_my_solution' %}active{% endif %}"
                    href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
                   Strona warsztatów
                 </a>
@@ -28,7 +28,7 @@
               </li>
 
               <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_participants' %}active{% endif %}"
+                <a class="nav-link {% if request.resolver_match.view_name == 'workshop_participants' or request.resolver_match.view_name == 'workshop_solution' %}active{% endif %}"
                    href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">
                   {% if workshop.is_qualifying %}
                     Uczestnicy i ocenianie

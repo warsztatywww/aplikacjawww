@@ -2,6 +2,14 @@
 {% load crispy_forms_tags %}
 
 {% block workshop_page_content %}
+  <p>
+    {% if is_mine %}
+      <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">&lsaquo; Wróć</a>
+    {% else %}
+      <a href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">&lsaquo; Wróć</a>
+    {% endif %}
+  </p>
+
   {% if is_mine %}
   <p>
     Ta część aplikacji służy do przesyłania rozwiązań zadań kwalifikacyjnych prowadzącym.
