@@ -358,11 +358,6 @@ class WorkshopParticipantPointsForm(ModelForm):
         if not self.instance.workshop.is_qualification_editable():
             raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
 
-        # Only apply changes to the fields that were actually sent
-        for k, v in self.cleaned_data.items():
-            if k not in self.data:
-                self.cleaned_data[k] = getattr(self.instance, k, self.cleaned_data[k])
-
 
 class SolutionForm(ModelForm):
     class Meta:
