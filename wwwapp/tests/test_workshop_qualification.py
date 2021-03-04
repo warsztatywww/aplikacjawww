@@ -245,7 +245,7 @@ class WorkshopQualificationViews(TestCase):
         with mock.patch('wwwapp.models.WorkshopParticipant.save', autospec=True, side_effect=WorkshopParticipant.save) as save:
             response = self.client.post(reverse('save_points'), {
                 'id': participant.id,
-                'qualification_result': 1234,
+                'qualification_result': 2.5,
                 'comment': 'Dobrze!',
             })
             if not can_edit:
@@ -261,11 +261,11 @@ class WorkshopQualificationViews(TestCase):
                 self.assertIn('qualification_result', data)
                 self.assertIn('comment', data)
                 self.assertIn('mark', data)
-                self.assertEqual(data['qualification_result'], '1234')
+                self.assertEqual(data['qualification_result'], '2.5')
                 self.assertEqual(data['comment'], 'Dobrze!')
 
                 participant = WorkshopParticipant.objects.get(workshop=self.workshop, participant=self.participant_user.userprofile)
-                self.assertEqual(participant.qualification_result, 1234)
+                self.assertEqual(participant.qualification_result, 2.5)
                 self.assertEqual(participant.comment, 'Dobrze!')
 
     @freeze_time('2020-05-01 12:00:00')
@@ -357,7 +357,7 @@ class WorkshopQualificationViews(TestCase):
     @freeze_time('2020-05-01 12:00:00')
     def test_mark_none(self):
         self.workshop.qualification_threshold = None
-        self.workshop.max_points = None
+        self.workshop.max_points = 10
         self.workshop.save()
         participant = WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
 
