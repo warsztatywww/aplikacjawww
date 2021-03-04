@@ -1,6 +1,6 @@
 {% load wwwtags %}
 
-<div class="d-block d-sm-none">
+<div class="d-block d-lg-none">
   <table class="table table-striped m-0">
     <thead>
       <tr>
@@ -42,14 +42,14 @@
       </tr>
       {% if workshop_participant.workshop.is_qualifying and workshop_participant.comment %}
         <tr>
-          <td colspan="3">{{ workshop_participant.comment }}</td>
+          <td colspan="3">{{ workshop_participant.comment | linebreaksbr }}</td>
         </tr>
       {% endif %}
       {% endfor %}
     </tbody>
   </table>
 </div>
-<div class="d-none d-sm-block">
+<div class="d-none d-lg-block">
   <table class="table table-striped m-0">
     <thead>
       <tr>
@@ -92,7 +92,7 @@
         {% endif %}
         <td>
           {% if workshop_participant.workshop.is_qualifying and workshop_participant.comment %}
-            {{ workshop_participant.comment }}
+            {{ workshop_participant.comment | linebreaksbr }}
           {% endif %}
         </td>
       </tr>

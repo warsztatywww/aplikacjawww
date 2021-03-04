@@ -1,6 +1,6 @@
-from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert
+from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert, AppendedText
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, Div, HTML
+from crispy_forms.layout import Layout, Fieldset, Div, HTML, Field
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
@@ -11,13 +11,14 @@ from django.forms.models import inlineformset_factory, BaseInlineFormSet
 from django.forms.widgets import Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django_select2.forms import Select2MultipleWidget, Select2Widget
 import tinymce.widgets
 from django.conf import settings
 from django.contrib.staticfiles.storage import staticfiles_storage
 
-
+from .templatetags.wwwtags import qualified_mark
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
     WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp, Solution, SolutionFile
 
@@ -338,20 +339,63 @@ class WorkshopForm(ModelForm):
 
 
 class WorkshopParticipantPointsForm(ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, participant_view=False, **kwargs):
         super(WorkshopParticipantPointsForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.include_media = False
+        self.helper.form_tag = False
+        self.helper.form_class = 'form-horizontal'
+        self.helper.label_class = 'col-lg-3'
+        self.helper.field_class = 'col-lg-9'
+        self.helper.layout = Layout(
+            AppendedText(
+                'qualification_result',
+                'na&nbsp;<b>{}</b>&nbsp;możliwych'.format(self.instance.workshop.max_points) if self.instance.workshop.max_points is not None else None,
+                css_class='col-md-3'
+            ),
+            'comment',
+            # I don't think there is any proper way to render a field-like constant text using crispy forms :<
+            HTML(format_html('''
+                <div id="div_id_mark" class="form-group row">
+                    <label for="id_mark" class="col-form-label col-lg-3">
+                        Zakwalifikowano
+                    </label>
+
+                    <div class="col-lg-9">
+                        <div id="id_mark" class="form-control px-0" style="border: 0;">
+                            {}
+                        </div>
+                        {}
+                    </div>
+                </div>
+            ''',
+            qualified_mark(self.instance.is_qualified()),
+            mark_safe('<small id="hint_id_mark" class="form-text text-muted">To pole jest wypełniane automatycznie na podstawie progu kwalifikacji ustawionego w edytorze warsztatów</small>') if not participant_view else ''))
+        )
+        if not participant_view:
+            self.helper.layout.fields.append(
+                FormActions(
+                    StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
+                    css_class='text-right row'
+                )
+            )
+
+            self.fields['comment'].help_text = 'Komentarz jest widoczny dla uczestnika na stronie z wynikami kwalifikacji oraz w widoku rozwiązania'
+            self.fields['qualification_result'].help_text = 'Maksymalną liczbę punktów możliwą do uzyskania można ustawić w edytorze warsztatów. Możesz postawić punkty bonusowe powyżej tej wartości, ale tylko do {}% wartości bazowej.'.format(settings.MAX_POINTS_PERCENT)
+
         for field in self.fields.values():
             # autocomplete=off fixes a problem on Firefox where the form fields don't reset on reload, making the save button visibility desync
             field.widget.attrs.update({'class': 'form-control', 'autocomplete': 'off'})
             field.required = False
 
-        if not self.instance.workshop.is_qualification_editable():
+        if not self.instance.workshop.is_qualification_editable() or participant_view:
             for field in self.fields.values():
                 field.disabled = True
 
     class Meta:
         model = WorkshopParticipant
         fields = ['qualification_result', 'comment']
+        widgets = {'comment': Textarea(attrs={'rows': 4})}
 
     def clean(self):
         super(WorkshopParticipantPointsForm, self).clean()

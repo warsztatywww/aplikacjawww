@@ -22,7 +22,7 @@ window.tinymce_local_file_picker = function(cb, value, meta) {
 }
 
 function send_points(row, save_btn) {
-    var all_inputs = row.find('input');
+    var all_inputs = row.find(':input').not('button');
     var editable_inputs = all_inputs.filter(':not([type=hidden])');
     var saved_values = {};
     editable_inputs.each(function() {
