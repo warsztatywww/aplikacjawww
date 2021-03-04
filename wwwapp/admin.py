@@ -1,5 +1,6 @@
 from typing import Optional
 
+from adminsortable2.admin import SortableAdminMixin
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
@@ -125,10 +126,12 @@ class ArticleContentHistoryAdmin(admin.ModelAdmin):
         return False
 
 
-class ArticleAdmin(admin.ModelAdmin):
+class ArticleAdmin(SortableAdminMixin, admin.ModelAdmin):
     model = Article
     inlines = [ArticleContentHistoryInlineAdmin]
     readonly_fields = ('modified_by',)
+    list_filter = ('on_menubar',)
+    list_display = ('name', 'title', 'on_menubar',)
 
 
 admin.site.register(Article, ArticleAdmin)
