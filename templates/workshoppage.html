@@ -2,39 +2,11 @@
 {% load bleach_tags %}
 
 {% block workshop_page_content %}
+  {% include "_programworkshop.html" with no_workshop_card_header=True %}
   {% if is_lecturer %}
-    {% if workshop.is_qualifying and workshop.qualification_problems %}
-      <p>Twoje zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
-    {% elif not workshop.is_qualifying %}
-      <p>Na Twoje warsztaty nie obowiązuje kwalifikacja.</p>
-    {% else %}
+    {% if workshop.is_qualifying and not workshop.qualification_problems %}
       <div class="alert alert-danger" role="alert">Nie wstawiłeś jeszcze zadań kwalifikacyjnych!</div>
     {% endif %}
-  {% else %}
-    {% if workshop.is_qualifying and workshop.qualification_problems %}
-      <p>Zadania kwalifikacyjne są <a target="_blank" href="{% url 'qualification_problems' workshop.year.pk workshop.name%}">tutaj</a>.</p>
-    {% elif not workshop.is_qualifying %}
-      <p>Na te warsztaty nie obowiązuje kwalifikacja.</p>
-    {% else %}
-      {% if workshop.page_content_is_public %}
-        <p>Nie ma jeszcze zadań kwalifikacyjnych.</p>
-      {% elif has_perm_to_edit %}
-        <div class="alert alert-info" role="alert">Nie ma jeszcze zadań kwalifikacyjnych.</div>
-      {% endif %}
-    {% endif %}
-  {% endif %}
-
-  {% if workshop.can_access_solution_upload and workshop.are_solutions_editable %}
-    <span class="d-inline-block enable-tooltip"
-        {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
-        {% if not registered %}data-toggle="tooltip" data-placement="right" title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"{% endif %}
-    >
-      <a role="button"
-         class="btn btn-primary btn-sm {% if not registered %}disabled{% endif %}"
-         href="{% url 'workshop_my_solution' workshop.year.pk workshop.name %}">
-        <i class="fas fa-paper-plane"></i> Prześlij rozwiązania!
-      </a>
-    </span>
   {% endif %}
 
   {% if workshop.page_content_is_public %}

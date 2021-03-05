@@ -89,6 +89,7 @@ window.handle_registration_change = function(workshop_name_txt, register) {
     } else {
         proper_url = $("#" + workshop_name_txt).data('unregister');
     }
+    var no_workshop_card_header = $("#" + workshop_name_txt).find('.card-header').length === 0;
 
     function error(message) {
         var elem = $('<div class="alert alert-danger fade"><a href="#" class="close" data-dismiss="alert">&times;</a>' +
@@ -114,6 +115,8 @@ window.handle_registration_change = function(workshop_name_txt, register) {
             }
             if (json.content) {
                 $("#" + workshop_name_txt).replaceWith(json.content);
+                if (no_workshop_card_header)
+                    $("#" + workshop_name_txt).find('.card-header').replaceWith('');
                 $("#" + workshop_name_txt).find('.enable-tooltip').tooltip();
             }
         },
