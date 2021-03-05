@@ -204,6 +204,8 @@ class SolutionUploadViews(TestCase):
         with freeze_time('2020-01-01 00:00:00'):
             initial_solution = Solution.objects.create(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, participant=self.participant_user.userprofile), message='To są testy')
             initial_solution_file = initial_solution.files.create(file=SimpleUploadedFile('solution.pdf', os.urandom(1024 * 1024)))
+        self.assertEqual(SolutionFile.objects.filter(solution=initial_solution).count(), 1)
+        self.assertEqual(SolutionFile.all_objects.filter(solution=initial_solution).count(), 1)
 
         self.client.force_login(self.participant_user)
         response = self.client.post(reverse('workshop_my_solution', args=[self.workshop.year.pk, self.workshop.name]), {
@@ -224,6 +226,9 @@ class SolutionUploadViews(TestCase):
         self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))  # even though the message has not changed, the attachments did
         files = solution.files.all()
         self.assertEqual(len(files), 0)
+
+        self.assertEqual(SolutionFile.objects.filter(solution=initial_solution).count(), 0)
+        self.assertEqual(SolutionFile.all_objects.filter(solution=initial_solution).count(), 1)
 
     def test_download_my_solution_file(self):
         solution = Solution.objects.create(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, participant=self.participant_user.userprofile), message='To są testy')

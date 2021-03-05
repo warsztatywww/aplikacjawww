@@ -12,6 +12,7 @@ from django.db import models
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
 from django.dispatch.dispatcher import receiver
+from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.functional import cached_property
 
@@ -441,13 +442,62 @@ def solutions_dir(instance, filename):
     return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.participant.user.pk}/{filename}'
 
 
+class SoftDeletionQuerySet(models.QuerySet):
+    def delete(self):
+        return super().update(deleted_at=timezone.now())
+
+    def hard_delete(self):
+        return super().delete()
+
+    def alive(self):
+        return self.filter(deleted_at=None)
+
+    def deleted(self):
+        return self.exclude(deleted_at=None)
+
+
+class SoftDeletionManager(models.Manager):
+    def __init__(self, *args, **kwargs):
+        self.alive_only = kwargs.pop('alive_only', True)
+        super().__init__(*args, **kwargs)
+
+    def get_queryset(self):
+        if self.alive_only:
+            return SoftDeletionQuerySet(self.model).filter(deleted_at=None)
+        return SoftDeletionQuerySet(self.model)
+
+    def hard_delete(self):
+        return self.get_queryset().hard_delete()
+
+
 class SolutionFile(models.Model):
     solution = models.ForeignKey(Solution, null=False, blank=False, related_name='files', on_delete=models.CASCADE)
     file = models.FileField(null=False, blank=False, upload_to=solutions_dir, storage=UploadStorage(), verbose_name='Plik')
     last_changed = models.DateTimeField(blank=False, null=False, auto_now=True)
+    deleted_at = models.DateTimeField(blank=True, null=True)
+
+    objects = SoftDeletionManager()
+    all_objects = SoftDeletionManager(alive_only=False)
+
+    def delete(self):
+        if self.deleted:
+            return True
+        self.deleted_at = timezone.now()
+        self.save()
+
+    def hard_delete(self, *args, **kwargs):
+        super().delete(*args, **kwargs)
+
+    @property
+    def alive(self):
+        return self.deleted_at is None
+
+    @property
+    def deleted(self):
+        return self.deleted_at is not None
 
     def __str__(self):
-        return os.path.basename(self.file.path)
+        return os.path.basename(self.file.path) + (' (usunięty)' if self.deleted else '')
 
 
 class ResourceYearPermission(models.Model):

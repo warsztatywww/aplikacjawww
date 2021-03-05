@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.db.models.base import Model
+from django.forms.models import BaseInlineFormSet
 from django.http.request import HttpRequest
 
 from .models import Article, UserProfile, ArticleContentHistory, \
@@ -145,10 +146,30 @@ class WorkshopParticipantAdmin(admin.ModelAdmin):
     inlines = [SolutionInline]
 
 
+class SolutionFileInlineFormSet(BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        form.fields[self._pk_field.name].queryset = self.model.all_objects
+
+
 class SolutionFileInline(admin.TabularInline):
     model = SolutionFile
+    formset = SolutionFileInlineFormSet
     extra = 1
     show_change_link = False
+    fields = ('file', 'last_changed', 'deleted', 'deleted_at')
+    readonly_fields = ('last_changed', 'deleted')
+
+    # Change the queryset to include deleted objects
+    def get_queryset(self, request):
+        queryset = self.model.all_objects
+        # The below is copied from the base implementation in BaseModelAdmin to prevent other changes in behavior
+        ordering = self.get_ordering(request)
+        if ordering:
+            queryset = queryset.order_by(*ordering)
+        if not self.has_view_or_change_permission(request):
+            queryset = queryset.none()
+        return queryset
 
 
 class SolutionAdmin(admin.ModelAdmin):
