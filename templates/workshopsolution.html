@@ -61,7 +61,7 @@
     {% if is_editable %}
     <div>
       <button class="btn btn-outline-success btn-sm mx-1 my-3 float-left add-more-files" type="button">Dodaj kolejny plik</button>
-      <button class="btn btn-outline-primary btn-lg mx-1 my-3 float-right" type="submit">Zapisz</button>
+      <button class="btn btn-outline-primary btn-lg mx-1 my-3 float-right" type="submit">{% if not solution.pk %}Prześlij{% else %}Zapisz{% endif %}</button>
     </div>
     {% endif %}
   </form>
