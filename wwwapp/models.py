@@ -326,6 +326,7 @@ class Workshop(models.Model):
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,
                               null=True, default=None, blank=True)
+    short_description = models.CharField(max_length=140, blank=True)
     page_content = models.TextField(max_length=100000, blank=True)
     page_content_is_public = models.BooleanField(default=False)
 

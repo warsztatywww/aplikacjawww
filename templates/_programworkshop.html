@@ -25,6 +25,15 @@
   </div>
   {% endif %}
   <div class="card-body">
+    {% if workshop.short_description %}
+    <div class="row">
+      <div class="col-md-10">
+        <blockquote class="blockquote">
+          {{ workshop.short_description }}
+        </blockquote>
+      </div>
+    </div>
+    {% endif %}
     <div class="row">
       <div class="col-md-10">
         <div class="row mt-2 mb-3">
