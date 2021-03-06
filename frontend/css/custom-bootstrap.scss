@@ -91,6 +91,13 @@ $theme-colors: (
   text-align: center;
 }
 
+// Prevent long article names from breaking the navbar layout by allowing line breaks on small devices
+@include media-breakpoint-down(md) {  // This should match the navbar collapse breakpoint
+  .dropdown-item {
+    white-space: normal;
+  }
+}
+
 // Stop the navbar from moving around depending on whether the scrollbar is visible or not
 body {
   overflow-y: scroll;
