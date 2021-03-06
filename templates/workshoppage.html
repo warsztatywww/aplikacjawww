@@ -19,10 +19,3 @@
     <div class="alert alert-info" role="alert">Prowadzący warsztatów nie wstawił jeszcze opisu.</div>
   {% endif %}
 {% endblock %}
-
-{% block script %}
-  {{ block.super }}
-  <script>
-    $('.enable-tooltip').tooltip();
-  </script>
-{% endblock %}
