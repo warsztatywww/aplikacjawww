@@ -25,6 +25,7 @@ from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, H
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -62,14 +63,17 @@ def get_context(request):
     return context
 
 
-def program_view(request, year=None):
-    if year is None:
-        url = reverse('program', args=[Camp.current().pk])
+def redirect_to_view_for_latest_year(target_view_name):
+    def view(request):
+        url = reverse(target_view_name, args=[Camp.current().pk])
         args = request.META.get('QUERY_STRING', '')
         if args:
             url = "%s?%s" % (url, args)
         return redirect(url)
+    return view
 
+
+def program_view(request, year):
     year = get_object_or_404(Camp, pk=year)
 
     context = {}
@@ -173,7 +177,7 @@ def mydata_profile_view(request):
         if user_form.is_valid() and user_profile_form.is_valid():
             user_form.save()
             user_profile_form.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_profile')
     else:
         user_form = UserForm(instance=request.user)
@@ -194,7 +198,7 @@ def mydata_profile_page_view(request):
         user_profile_page_form = UserProfilePageForm(request.POST, instance=request.user.userprofile)
         if user_profile_page_form.is_valid():
             user_profile_page_form.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_profile_page')
     else:
         user_profile_page_form = UserProfilePageForm(instance=request.user.userprofile)
@@ -213,7 +217,7 @@ def mydata_cover_letter_view(request):
         user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.userprofile)
         if user_cover_letter_form.is_valid():
             user_cover_letter_form.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_cover_letter')
     else:
         user_cover_letter_form = UserCoverLetterForm(instance=request.user.userprofile)
@@ -388,7 +392,13 @@ def workshop_edit_view(request, year, name=None):
                     user_profile = UserProfile.objects.get(user=request.user)
                     workshop.lecturer.add(user_profile)
                     workshop.save()
-                messages.info(request, 'Zapisano.')
+                if new:
+                    messages.info(request, format_html(
+                        'Twoje zgłoszenie zostało zapisane. Jego status i możliwość dalszej edycji znajdziesz w zakładce "<a href="{}">Status kwalifikacji</a>"',
+                        reverse('mydata_status')
+                    ))
+                else:
+                    messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
                 return redirect('workshop_edit', form.instance.year.pk, form.instance.name)
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
@@ -560,7 +570,7 @@ def participants_view(request, year=None):
         if year:
             for wp in participant.workshopparticipant_set.all():
                 assert wp.workshop.year == year
-                if wp.qualification_result:
+                if wp.workshop.is_qualifying and wp.qualification_result:
                     people[participant.id]['points'] += float(wp.result_in_percent())
                 people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
                     title=wp.workshop.title,
@@ -679,6 +689,7 @@ def workshop_solution(request, year, name, solution_id=None):
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
     if not workshop.can_access_solution_upload():
         return HttpResponseForbidden('Na te warsztaty nie można obecnie przesyłać rozwiązań')
+    has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
     if not solution_id:
         # My solution
@@ -696,7 +707,6 @@ def workshop_solution(request, year, name, solution_id=None):
                 return HttpResponseForbidden('Nie przesłałeś rozwiązania na te warsztaty')
     else:
         # Selected solution
-        has_perm_to_edit, _is_lecturer = can_edit_workshop(workshop, request.user)
         if not has_perm_to_edit and not request.user.has_perm('wwwapp.see_all_workshops'):
             return HttpResponseForbidden()
         solution = get_object_or_404(
@@ -714,7 +724,7 @@ def workshop_solution(request, year, name, solution_id=None):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('workshop_my_solution', year, name)
     else:
         form = SolutionForm(instance=solution, is_editable=is_editable)
@@ -728,6 +738,9 @@ def workshop_solution(request, year, name, solution_id=None):
     context['form_attachments'] = formset
     context['is_editable'] = is_editable
     context['is_mine'] = not solution_id
+    context['is_lecturer'] = is_lecturer
+    context['has_perm_to_edit'] = has_perm_to_edit
+    context['has_perm_to_view_details'] = has_perm_to_edit or request.user.has_perm('wwwapp.see_all_workshops')
     return render(request, 'workshopsolution.html', context)
 
 
@@ -897,7 +910,7 @@ def article_edit_view(request, name=None):
             article.modified_by = request.user
             article.save()
             form.save_m2m()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('article', form.instance.name)
     else:
         form = ArticleForm(request.user, article_url, instance=art)

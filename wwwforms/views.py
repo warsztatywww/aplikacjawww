@@ -15,7 +15,7 @@ def form_view(request, name):
         formform = FormForm(form, request.user, request.POST)
         if formform.is_valid():
             formform.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect(reverse('form', args=[form.name]))
     else:
         formform = FormForm(form, request.user)

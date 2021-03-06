@@ -6,6 +6,7 @@
     <article>
       <h1 class="row">
         <span class="col-12 col-md-9">{{ title }}</span>
+        {% if selected_year == current_year %}
         <span class="col-12 col-md-3 d-none d-md-inline-block enable-tooltip"
             {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
             {% if not selected_year.are_proposals_open %}data-toggle="tooltip" data-placement="left" title="Zgłoszenia warsztatów nie są obecnie aktywne"{% endif %}
@@ -16,19 +17,22 @@
             Zgłoś warsztaty! <span class="d-none d-lg-inline"><i class="fas fa-plus"></i></span>
           </a>
         </span>
+        {% endif %}
       </h1>
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
-
-      {% if workshops %}
-        {% for workshop, registered in workshops %}
-          {% include "_programworkshop.html" %}
-        {% endfor %}
-      {% else %}
-        Warsztaty pojawią się w odpowiednim momencie.
+      {% if selected_year.are_proposals_open %}
+        <p class="alert alert-info">Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
       {% endif %}
 
+      {% for workshop, registered in workshops %}
+        {% include "_programworkshop.html" %}
+      {% empty %}
+        Jeszcze nie ma tu żadnych warsztatów. Zajrzyj ponownie później.
+      {% endfor %}
+
+      {% if selected_year == current_year %}
       <div class="d-block d-md-none w-100 enable-tooltip"
           {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
           {% if not selected_year.are_proposals_open %}data-toggle="tooltip" data-placement="top" title="Zgłoszenia warsztatów nie są obecnie aktywne"{% endif %}
@@ -39,6 +43,7 @@
           Zgłoś warsztaty! <i class="fas fa-plus"></i>
         </a>
       </div>
+      {% endif %}
     </article>
 {% endblock %}
 

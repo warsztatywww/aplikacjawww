@@ -157,7 +157,8 @@ class ArticleForm(ModelForm):
         else:
             layout.append(PrependedAppendedText('name',
                 article_url[0],
-                article_url[1]
+                article_url[1],
+                template="%s/layout/prepended_appended_text_with_mobile_support.html"
             ))
             layout.append('title')
             layout.append('on_menubar')
@@ -247,7 +248,8 @@ class WorkshopForm(ModelForm):
             Div(
                 Div(PrependedAppendedText('name',
                     workshop_url[0] + '<b>' + str(year.pk) + '</b>' + workshop_url[1],
-                    workshop_url[2]
+                    workshop_url[2],
+                    template="%s/layout/prepended_appended_text_with_mobile_support.html"
                 ), css_class='col-lg-12'),
                 Div('title', css_class='col-lg-12'),
                 css_class='row'
@@ -285,7 +287,7 @@ class WorkshopForm(ModelForm):
             'page_content_is_public'
         )
         self.fieldset_submit = FormActions(
-            StrictButton('Zapisz', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
+            StrictButton('Zapisz' if self.instance and self.instance.pk else 'Zgłoś!', type='submit', css_class='btn-outline-primary btn-lg mx-1 my-3'),
             css_class='text-right',
         )
 

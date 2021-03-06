@@ -95,7 +95,7 @@ class WorkshopEditViews(TestCase):
         self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
         messages = get_messages(response.wsgi_request)
         self.assertEqual(len(messages), 1)
-        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+        self.assertRegex(list(messages)[0].message, r'^Twoje zgłoszenie zostało zapisane.')
         workshop = Workshop.objects.filter(name='fajne').get()
         self.assertEqual(workshop.title, 'Fajne warsztaty')
         self.assertEqual(workshop.name, 'fajne')
@@ -209,7 +209,7 @@ class WorkshopEditViews(TestCase):
             self.assertRedirects(response, reverse('workshop_edit', args=[2021, 'bardzofajne']))
             messages = get_messages(response.wsgi_request)
             self.assertEqual(len(messages), 1)
-            self.assertEqual(list(messages)[0].message, 'Zapisano.')
+            self.assertRegex(list(messages)[0].message, r'^Twoje zgłoszenie zostało zapisane.')
 
             self.assertTrue(Workshop.objects.filter(year=self.year_2020, name='bardzofajne').count() == 1)
             self.assertTrue(Workshop.objects.filter(year=year_2021, name='bardzofajne').count() == 1)
@@ -826,7 +826,7 @@ class WorkshopEditViews(TestCase):
         self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
         messages = get_messages(response.wsgi_request)
         self.assertEqual(len(messages), 1)
-        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+        self.assertRegex(list(messages)[0].message, r'^Twoje zgłoszenie zostało zapisane.')
 
         # Template should not be added yet
         workshop = Workshop.objects.filter(name='fajne').get()
@@ -872,7 +872,7 @@ class WorkshopEditViews(TestCase):
         self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
         messages = get_messages(response.wsgi_request)
         self.assertEqual(len(messages), 1)
-        self.assertEqual(list(messages)[0].message, 'Zapisano.')
+        self.assertRegex(list(messages)[0].message, r'^Twoje zgłoszenie zostało zapisane.')
 
         # Template should not be added yet
         workshop = Workshop.objects.filter(name='fajne').get()

@@ -2,6 +2,14 @@
 {% load crispy_forms_tags %}
 
 {% block workshop_page_content %}
+  <p>
+    {% if is_mine %}
+      <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">&lsaquo; Wróć</a>
+    {% else %}
+      <a href="{% url 'workshop_participants' workshop.year.pk workshop.name %}">&lsaquo; Wróć</a>
+    {% endif %}
+  </p>
+
   {% if is_mine %}
   <p>
     Ta część aplikacji służy do przesyłania rozwiązań zadań kwalifikacyjnych prowadzącym.
@@ -53,7 +61,7 @@
     {% if is_editable %}
     <div>
       <button class="btn btn-outline-success btn-sm mx-1 my-3 float-left add-more-files" type="button">Dodaj kolejny plik</button>
-      <button class="btn btn-outline-primary btn-lg mx-1 my-3 float-right" type="submit">Zapisz</button>
+      <button class="btn btn-outline-primary btn-lg mx-1 my-3 float-right" type="submit">{% if not solution.pk %}Prześlij{% else %}Zapisz{% endif %}</button>
     </div>
     {% endif %}
   </form>
