@@ -177,11 +177,19 @@ class ArticleForm(ModelForm):
 
 
 class WorkshopForm(ModelForm):
+    class CategoryChoiceField(ModelMultipleChoiceField):
+        def label_from_instance(self, obj):
+            return obj.name
+
+    class TypeChoiceField(ModelChoiceField):
+        def label_from_instance(self, obj):
+            return obj.name
+
     # Note that the querysets for category and type are overwritten in __init__, but the argument is required here
-    category = ModelMultipleChoiceField(label="Kategorie", queryset=WorkshopCategory.objects.all(),
-                                        widget=Select2MultipleWidget(attrs={'width': '200px'}))
-    type = ModelChoiceField(label="Rodzaj zajęć", queryset=WorkshopType.objects.all(),
-                            widget=Select2Widget(attrs={'width': '200px'}))
+    category = CategoryChoiceField(label="Kategorie", queryset=WorkshopCategory.objects.all(),
+                                   widget=Select2MultipleWidget(attrs={'width': '200px'}))
+    type = TypeChoiceField(label="Rodzaj zajęć", queryset=WorkshopType.objects.all(),
+                           widget=Select2Widget(attrs={'width': '200px'}))
 
     qualification_problems = FileField(required=False, widget=FileInput(), label='Zadania kwalifikacyjne (zalecany format PDF):')
 
