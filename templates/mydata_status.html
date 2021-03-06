@@ -15,11 +15,17 @@
       {% endif %}
     </h2>
     {% if not current_status %}
-      <div>
-        Nie zgłosiłeś się na żadne warsztaty. Przejdź do zakładki <a href="{% url 'program' current_year.pk %}">Program</a>,
+      <p>
+        Nie {% if current_status.status == 'Z' %}zgłosiłaś{% else %}zgłosiłeś{% endif %} się na żadne warsztaty.
+        Przejdź do zakładki <a href="{% url 'program' current_year.pk %}">Program</a>,
         zapisz się na interesujące Cię tematy i rozwiąż na nie zadania kwalifikacyjne. Wypełnij także swój
         <a href="{% url 'mydata_profile' %}">profil</a> i <a href="{% url 'mydata_cover_letter' %}">list motywacyjny</a>.
-      </div>
+      </p>
+      {% if current_year.are_proposals_open %}
+      <p>
+        Możesz również <a href="{% url 'workshops_add' current_year.pk %}">zgłosić się jako prowadzący</a>.
+      </p>
+      {% endif %}
     {% else %}
       {% if current_status.type == 'lecturer' %}
         <p>
