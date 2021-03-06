@@ -21,10 +21,14 @@ window.tinymce_local_file_picker = function(cb, value, meta) {
     input.click();
 }
 
-function send_points(elem, save_btn, workshop_participant_id) {
-    var field_name = elem.attr('name');
-    var saved_value = elem.val();
-    var qualified_mark = elem.parents('tr').find('.qualified-mark');
+function send_points(row, save_btn) {
+    var all_inputs = row.find(':input').not('button');
+    var editable_inputs = all_inputs.filter(':not([type=hidden])');
+    var saved_values = {};
+    editable_inputs.each(function() {
+        saved_values[$(this).attr('name')] = $(this).val();
+    });
+    var qualified_mark = row.find('.qualified-mark');
 
     var mark_changed = function () {
         save_btn.attr('disabled', false);
@@ -43,8 +47,10 @@ function send_points(elem, save_btn, workshop_participant_id) {
 
     mark_saved();
     save_btn.click(function() {
-        var data = {'id': workshop_participant_id};
-        data[field_name] = elem.val();
+        var data = {};
+        all_inputs.each(function() {
+            data[$(this).attr('name')] = $(this).val();
+        });
         mark_saving();
         $.ajax({
             'url': '/savePoints/',
@@ -59,9 +65,11 @@ function send_points(elem, save_btn, workshop_participant_id) {
                     mark_changed();
                     alert('Błąd:\n' + value.error);
                 } else {
-                    saved_value = value[field_name];
-                    elem.val(""); // For whatever reason, this is required to get the field to reformat with the correct comma. Don't ask.
-                    elem.val(saved_value);
+                    editable_inputs.each(function() {
+                        saved_values[$(this).attr('name')] = value[$(this).attr('name')];
+                        $(this).val(""); // For whatever reason, this is required to get the field to reformat with the correct comma. Don't ask.
+                        $(this).val(saved_values[$(this).attr('name')]);
+                    });
                     mark_saved();
                     qualified_mark.html(value.mark);
                 }
@@ -69,17 +77,18 @@ function send_points(elem, save_btn, workshop_participant_id) {
         });
     });
 
-    elem.on('change keyup mouseup', function() {
-        if(elem.val() != saved_value)
-            mark_changed();
+    editable_inputs.each(function() {
+        $(this).on('change keyup mouseup', function () {
+            if ($(this).val() != saved_values[$(this).attr('name')])
+                mark_changed();
+        });
     });
 }
 
-$('button[data-save]').each(function() {
+$('button.savePointsButton').each(function() {
     var save_btn = $(this);
-    var elem = $(save_btn.data('save'));
-    var workshop_participant_id = save_btn.data('participantId');
-    send_points(elem, save_btn, workshop_participant_id);
+    var row = $(save_btn.parents('tr'));
+    send_points(row, save_btn);
 });
 
 window.handle_registration_change = function(workshop_name_txt, register) {

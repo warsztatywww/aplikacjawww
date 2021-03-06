@@ -60,8 +60,23 @@
 
     {% if is_editable %}
     <div>
-      <button class="btn btn-outline-success btn-sm mx-1 my-3 float-left add-more-files" type="button">Dodaj kolejny plik</button>
+      <button class="btn btn-outline-success btn-sm mx-1 my-3 add-more-files" type="button">Dodaj kolejny plik</button>
       <button class="btn btn-outline-primary btn-lg mx-1 my-3 float-right" type="submit">{% if not solution.pk %}Prześlij{% else %}Zapisz{% endif %}</button>
+    </div>
+    {% endif %}
+
+    {% if solution.pk %}
+    <div class="mt-5 mb-3">
+      {% if is_mine %}
+        <h2>Wyniki</h2>
+      {% else %}
+        <h2>Ocenianie</h2>
+      {% endif %}
+      {% if is_mine and not solution.workshop_participant.qualification_result and not solution.workshop_participant.comment %}
+        <p class="alert alert-info">Twoje rozwiązanie nie zostało jeszcze ocenione</p>
+      {% else %}
+        {% crispy grading_form %}
+      {% endif %}
     </div>
     {% endif %}
   </form>

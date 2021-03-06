@@ -691,7 +691,7 @@ def workshop_solution(request, year, name, solution_id=None):
         return HttpResponseForbidden('Na te warsztaty nie można obecnie przesyłać rozwiązań')
     has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
-    if not solution_id:
+    if solution_id is None:
         # My solution
         try:
             workshop_participant = workshop.workshopparticipant_set \
@@ -715,20 +715,29 @@ def workshop_solution(request, year, name, solution_id=None):
                 .filter(workshop_participant__workshop=workshop),
             pk=solution_id)
 
-    is_editable = not solution_id and workshop.is_qualification_editable()
-    if request.method == 'POST' and not solution_id:
-        if not workshop.is_qualification_editable():
+    is_solution_editable = solution_id is None and workshop.is_qualification_editable()
+    form = SolutionForm(instance=solution, is_editable=is_solution_editable)
+    formset = SolutionFileFormSet(instance=solution, is_editable=is_solution_editable)
+    grading_form = WorkshopParticipantPointsForm(instance=solution.workshop_participant, participant_view=solution_id is None)
+
+    if request.method == 'POST' and solution_id is None:
+        if not is_solution_editable:
             return HttpResponseForbidden()
-        form = SolutionForm(request.POST, request.FILES, instance=solution)
-        formset = SolutionFileFormSet(request.POST, request.FILES, instance=solution)
+        form = SolutionForm(request.POST, request.FILES, instance=solution, is_editable=is_solution_editable)
+        formset = SolutionFileFormSet(request.POST, request.FILES, instance=solution, is_editable=is_solution_editable)
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
             messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('workshop_my_solution', year, name)
-    else:
-        form = SolutionForm(instance=solution, is_editable=is_editable)
-        formset = SolutionFileFormSet(instance=solution, is_editable=is_editable)
+    if request.method == 'POST' and solution_id is not None:
+        if not has_perm_to_edit:
+            return HttpResponseForbidden()
+        grading_form = WorkshopParticipantPointsForm(request.POST, instance=solution.workshop_participant)
+        if grading_form.is_valid():
+            grading_form.save()
+            messages.info(request, 'Zapisano.')
+            return redirect('workshop_solution', year, name, solution.pk)
 
     context = {}
     context['title'] = workshop.title
@@ -736,8 +745,9 @@ def workshop_solution(request, year, name, solution_id=None):
     context['solution'] = solution
     context['form'] = form
     context['form_attachments'] = formset
-    context['is_editable'] = is_editable
-    context['is_mine'] = not solution_id
+    context['grading_form'] = grading_form
+    context['is_editable'] = is_solution_editable
+    context['is_mine'] = solution_id is None
     context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = has_perm_to_edit or request.user.has_perm('wwwapp.see_all_workshops')

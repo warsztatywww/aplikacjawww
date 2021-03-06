@@ -12,7 +12,6 @@
     <th>Rozwiązania</th>
     {% endif %}
     <th>Liczba punktów</th>
-    <th></th>
     <th>Komentarz</th>
     <th></th>
     <th>Zakwalifikowano</th>
@@ -34,7 +33,7 @@
         </td>
         {% if workshop.is_qualifying %}
           {% if workshop.solution_uploads_enabled and not workshop_participant.solution %}
-            <td class="align-middle text-center" colspan="5">
+            <td class="align-middle text-center" colspan="4">
               Nie przesłano rozwiązań
             </td>
           {% else %}
@@ -50,11 +49,6 @@
                 {{ workshop_participant.qualification_result | default_if_none:'' }}
               {% endif %}
             </td>
-            <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
-              {% if has_perm_to_edit %}
-                <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.qualification_result.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
-              {% endif %}
-            </td>
             <td style="vertical-align: middle; width: 20%;">
               {% if has_perm_to_edit %}
                 {{ workshop_participant.form.comment }}
@@ -63,8 +57,9 @@
               {% endif %}
             </td>
             <td style="vertical-align: middle; width: 1px; white-space: nowrap;">
+              <input type="hidden" name="id" value="{{ workshop_participant.id }}">
               {% if has_perm_to_edit %}
-                <button class="btn btn-outline-primary" style="padding: 6px 12px;" data-save="#{{ workshop_participant.form.comment.id_for_label }}" data-participant-id="{{ workshop_participant.id }}"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
+                <button class="btn btn-outline-primary savePointsButton" style="padding: 6px 12px;"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
               {% endif %}
             </td>
           {% endif %}

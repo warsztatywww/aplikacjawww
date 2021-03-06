@@ -407,8 +407,8 @@ class WorkshopParticipant(models.Model):
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE)
     participant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
-    qualification_result = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
-    comment = models.CharField(max_length=1000, null=True, default=None, blank=True)
+    qualification_result = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, verbose_name='Liczba punktów')
+    comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
 
     def is_qualified(self):
         if not self.workshop.is_qualifying:
