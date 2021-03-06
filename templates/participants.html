@@ -41,6 +41,9 @@
                   <a href="{% url 'profile' person.user.id %}">
                     {{ person.user.get_full_name | question_mark_on_empty_string }}
                   </a>
+                  {% if not person.has_completed_profile %}
+                    <span class="text-warning" data-toggle="tooltip" data-placement="top" title="Niekompletny profil"><i class="fas fa-exclamation-circle"></i></span>
+                  {% endif %}
                 </td>
                 <td data-order="{{ person.birth | date:"U" }}">
                   {{ person.birth | question_mark_on_none_value }}
@@ -70,7 +73,7 @@
                   {{ person.accepted_workshop_count }}
                 </td>
                 <td>
-                  {{ person.has_letter | qualified_mark }}
+                  {{ person.has_cover_letter | qualified_mark }}
                 </td>
                 <td>
                   {% if person.status == 'Z' %}

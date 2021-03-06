@@ -126,7 +126,7 @@ window.handle_registration_change = function(workshop_name_txt, register) {
                 $("#" + workshop_name_txt).replaceWith(json.content);
                 if (no_workshop_card_header)
                     $("#" + workshop_name_txt).find('.card-header').replaceWith('');
-                $("#" + workshop_name_txt).find('.enable-tooltip').tooltip();
+                $("#" + workshop_name_txt).find('[data-toggle="tooltip"]').tooltip();
             }
         },
         error: function(xhr, errmsg, errcode) {
@@ -136,6 +136,7 @@ window.handle_registration_change = function(workshop_name_txt, register) {
 }
 
 $(function () {
+    $('[data-toggle="tooltip"]').tooltip();
     $('[data-toggle="popover"]').popover();
 
     // Automatically hide 'Saved successfully' alerts after 4 seconds

@@ -27,6 +27,9 @@
           <a href="{% url 'profile' workshop_participant.participant.user.id %}">
             {{ workshop_participant.participant.user.get_full_name }}
           </a>
+          {% if not workshop_participant.participant.is_completed %}
+            <span class="text-warning" data-toggle="tooltip" data-placement="top" title="Niekompletny profil"><i class="fas fa-exclamation-circle"></i></span>
+          {% endif %}
         </td>
         <td class="align-middle">
           {{ workshop_participant.participant.user.email }}

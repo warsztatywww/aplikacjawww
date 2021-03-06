@@ -40,7 +40,7 @@
           <div class="col-6 col-lg-4">Zadania kwalifikacyjne:</div>
           <div class="col-6 col-lg-8">
             {% if workshop.is_qualifying %}
-              <span class="d-inline-block enable-tooltip w-100-on-sm mb-1 mb-md-0"
+              <span class="d-inline-block w-100-on-sm mb-1 mb-md-0"
                 {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
                 {% if not workshop.qualification_problems %}data-toggle="tooltip" data-placement="right" title="Zadania kwalifikacyjne pojawią się wkrótce"{% endif %}
               >
@@ -52,7 +52,7 @@
               </span>
 
               {% if workshop.can_access_solution_upload and workshop.are_solutions_editable %}
-                <span class="d-inline-block enable-tooltip w-100-on-sm mb-1 mb-md-0"
+                <span class="d-inline-block w-100-on-sm mb-1 mb-md-0"
                     {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
                     {% if not registered %}data-toggle="tooltip" data-placement="right" title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"{% endif %}
                 >
