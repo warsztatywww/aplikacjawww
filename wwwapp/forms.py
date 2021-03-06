@@ -189,7 +189,7 @@ class WorkshopForm(ModelForm):
         model = Workshop
         fields = ['title', 'name', 'type', 'category', 'proposition_description',
                   'qualification_problems', 'is_qualifying', 'solution_uploads_enabled',
-                  'max_points', 'qualification_threshold',
+                  'max_points', 'qualification_threshold', 'short_description',
                   'page_content', 'page_content_is_public']
         labels = {
             'title': 'Tytuł',
@@ -199,10 +199,12 @@ class WorkshopForm(ModelForm):
             'solution_uploads_enabled': 'Czy przesyłanie rozwiązań przez stronę jest włączone',
             'max_points': 'Maksymalna liczba punktów możliwa do uzyskania',
             'qualification_threshold': 'Minimalna liczba punktów potrzebna do kwalifikacji',
+            'short_description': 'Krótki opis warsztatów',
             'page_content': 'Strona warsztatów',
             'page_content_is_public': 'Zaznacz, jeśli opis jest gotowy i może już być publiczny.'
         }
         help_texts = {
+            'short_description': 'Zachęć uczestnika do zainteresowania się Twoimi warsztatami w max 140 znakach. Wyświetlany na stronie z programem.',
             'is_qualifying': '(odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
             'solution_uploads_enabled': 'Od edycji 2021 uczestnicy przesyłają rozwiązania zadań kwalifikacyjnych przez stronę zamiast maila. Jeśli z jakiegoś powodu bardzo chcesz wyłączyć tą funkcję, skontaktuj się z organizatorami.',
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
@@ -286,6 +288,7 @@ class WorkshopForm(ModelForm):
         )
         self.fieldset_public_page = Fieldset(
             "Strona warsztatów",
+            'short_description',
             'page_content',
             'page_content_is_public'
         )
@@ -297,7 +300,7 @@ class WorkshopForm(ModelForm):
         if not self.instance or not self.instance.is_publicly_visible():
             for field in [
                   'qualification_problems', 'is_qualifying', 'solution_uploads_enabled',
-                  'max_points', 'qualification_threshold',
+                  'max_points', 'qualification_threshold', 'short_description',
                   'page_content', 'page_content_is_public']:
                 del self.fields[field]
 
