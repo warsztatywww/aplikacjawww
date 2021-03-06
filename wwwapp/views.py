@@ -177,7 +177,7 @@ def mydata_profile_view(request):
         if user_form.is_valid() and user_profile_form.is_valid():
             user_form.save()
             user_profile_form.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_profile')
     else:
         user_form = UserForm(instance=request.user)
@@ -198,7 +198,7 @@ def mydata_profile_page_view(request):
         user_profile_page_form = UserProfilePageForm(request.POST, instance=request.user.userprofile)
         if user_profile_page_form.is_valid():
             user_profile_page_form.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_profile_page')
     else:
         user_profile_page_form = UserProfilePageForm(instance=request.user.userprofile)
@@ -217,7 +217,7 @@ def mydata_cover_letter_view(request):
         user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.userprofile)
         if user_cover_letter_form.is_valid():
             user_cover_letter_form.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_cover_letter')
     else:
         user_cover_letter_form = UserCoverLetterForm(instance=request.user.userprofile)
@@ -398,7 +398,7 @@ def workshop_edit_view(request, year, name=None):
                         reverse('mydata_status')
                     ))
                 else:
-                    messages.info(request, 'Zapisano.')
+                    messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
                 return redirect('workshop_edit', form.instance.year.pk, form.instance.name)
         else:
             if workshop and workshop.is_publicly_visible() and not workshop.page_content:
@@ -724,7 +724,7 @@ def workshop_solution(request, year, name, solution_id=None):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('workshop_my_solution', year, name)
     else:
         form = SolutionForm(instance=solution, is_editable=is_editable)
@@ -910,7 +910,7 @@ def article_edit_view(request, name=None):
             article.modified_by = request.user
             article.save()
             form.save_m2m()
-            messages.info(request, 'Zapisano.')
+            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('article', form.instance.name)
     else:
         form = ArticleForm(request.user, article_url, instance=art)
