@@ -256,6 +256,7 @@ def mydata_status_view(request):
 
     context['title'] = 'Mój profil'
     context['gender'] = user_profile.gender
+    context['has_completed_profile'] = user_profile.is_completed
     context['has_cover_letter'] = len(user_profile.cover_letter) >= 50
     context['current_status'] = current_status
     context['past_status'] = past_status

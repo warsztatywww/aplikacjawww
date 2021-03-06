@@ -183,6 +183,18 @@ class UserProfile(models.Model):
         except WorkshopUserProfile.DoesNotExist:
             return None
 
+    @property
+    def is_completed(self) -> bool:
+        """
+        Check if all required info (except cover letter and profile page) is filled in
+        """
+        return self.gender is not None and \
+               self.school is not None and \
+               self.matura_exam_year is not None and \
+               self.user.first_name is not None and \
+               self.user.last_name is not None and \
+               self.user.email is not None
+
     def __str__(self):
         return "{0.first_name} {0.last_name}".format(self.user)
 

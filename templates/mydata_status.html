@@ -6,6 +6,9 @@
     <h2>Edycja {{ current_year }}
       <span class="small-on-md">{% include '_statusLabel.html' with status=current_status %}</span>
       {% if current_status and current_status.type == 'participant' and not current_status.status %}
+        {% if not has_completed_profile %}
+          <span class="badge badge-dark" style="font-size: 50%;">Niekompletny profil</span>
+        {% endif %}
         {% if not has_cover_letter %}
           <span class="badge badge-dark" style="font-size: 50%;">Brak listu motywacyjnego</span>
         {% endif %}
@@ -52,7 +55,7 @@
             {% endif %}
           </p>
         {% elif not current_status.status %}
-          {% if not has_cover_letter %}
+          {% if not has_completed_profile or not has_cover_letter %}
             <p>
                 {% if gender == 'F' %}
                   Zapisałaś się na warsztaty, ale nie wypełniłaś wymaganych danych.
