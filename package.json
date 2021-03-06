@@ -49,7 +49,7 @@
     "datatables.net-colreorder-bs4": "^1.5.3",
     "datatables.net-plugins": "^1.10.22",
     "eonasdan-bootstrap-datetimepicker": "^4.17.49",
-    "jquery": "^3.5.1",
+    "jquery": "^3.6.0",
     "jszip": "^3.6.0",
     "konami": "^1.6.2",
     "moment": "^2.29.1",
