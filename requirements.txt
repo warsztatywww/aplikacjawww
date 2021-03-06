@@ -19,5 +19,5 @@ freezegun==1.1.0
 coverage==5.4
 django-coverage-plugin==1.8.0
 
-mypy==0.800
+mypy==0.812
 django-stubs==1.7.0
