@@ -570,13 +570,23 @@ def participants_view(request, year=None):
         if year:
             for wp in participant.workshopparticipant_set.all():
                 assert wp.workshop.year == year
-                if wp.workshop.is_qualifying and wp.qualification_result:
-                    people[participant.id]['points'] += float(wp.result_in_percent())
-                people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
-                    title=wp.workshop.title,
-                    result=wp.result_in_percent() if wp.workshop.is_qualifying and wp.qualification_result else 0,
-                    comment=wp.comment if wp.comment else ""
-                ))
+                if wp.workshop.is_qualifying:
+                    if wp.qualification_result:
+                        people[participant.id]['points'] += float(wp.result_in_percent())
+                    if wp.workshop.solution_uploads_enabled and not hasattr(wp, 'solution'):
+                        people[participant.id]['infos'].append("{title} : Nie przesłano rozwiązań".format(
+                            title=wp.workshop.title
+                        ))
+                    else:
+                        people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
+                            title=wp.workshop.title,
+                            result=wp.result_in_percent() if wp.qualification_result else 0,
+                            comment=wp.comment if wp.comment else ""
+                        ))
+                else:
+                    people[participant.id]['infos'].append("{title} : Warsztaty bez kwalifikacji".format(
+                        title=wp.workshop.title
+                    ))
                 people[participant.id]['workshop_count'] += 1
                 if wp.is_qualified():
                     people[participant.id]['accepted_workshop_count'] += 1
