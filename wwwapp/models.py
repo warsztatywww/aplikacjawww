@@ -260,9 +260,11 @@ class Article(models.Model):
     content = models.TextField(max_length=100000, blank=True)
     modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL)
     on_menubar = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0, blank=False, null=False)
 
     class Meta:
         permissions = (('can_put_on_menubar', 'Can put on menubar'),)
+        ordering = ['order']
 
     def content_history(self):
         return ArticleContentHistory.objects.filter(article=self).order_by('-version')
