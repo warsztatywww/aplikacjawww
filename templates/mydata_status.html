@@ -5,12 +5,17 @@
   <div class="jumbotron">
     <h2>Edycja {{ current_year }}
       <span class="small-on-md">{% include '_statusLabel.html' with status=current_status %}</span>
+      {% if current_status and current_status.type == 'participant' and not current_status.status %}
+        {% if not has_cover_letter %}
+          <span class="badge badge-dark" style="font-size: 50%;">Brak listu motywacyjnego</span>
+        {% endif %}
+      {% endif %}
     </h2>
     {% if not current_status %}
       <div>
         Nie zgłosiłeś się na żadne warsztaty. Przejdź do zakładki <a href="{% url 'program' current_year.pk %}">Program</a>,
         zapisz się na interesujące Cię tematy i rozwiąż na nie zadania kwalifikacyjne. Wypełnij także swój
-        <a href="{% url 'mydata_profile' %}">profil</a> i list motywacyjny.
+        <a href="{% url 'mydata_profile' %}">profil</a> i <a href="{% url 'mydata_cover_letter' %}">list motywacyjny</a>.
       </div>
     {% else %}
       {% if current_status.type == 'lecturer' %}
@@ -48,9 +53,13 @@
           </p>
         {% elif not current_status.status %}
           {% if not has_cover_letter %}
-            <p style="font-size: 300%;">Brak listu motywacyjnego</p>
             <p>
-                Uzupełnij swój <a href="{% url 'mydata_cover_letter' %}">list motywacyjny</a>.
+                {% if gender == 'F' %}
+                  Zapisałaś się na warsztaty, ale nie wypełniłaś wymaganych danych.
+                {% else %}
+                  Zapisałeś się na warsztaty, ale nie wypełniłeś wymaganych danych.
+                {% endif %}
+                Uzupełnij swój <a href="{% url 'mydata_profile' %}">profil</a> i <a href="{% url 'mydata_cover_letter' %}">list motywacyjny</a>.
             </p>
           {% else %}
             <p>
