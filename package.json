@@ -22,7 +22,7 @@
   "homepage": "https://github.com/warsztatywww/aplikacjawww#readme",
   "devDependencies": {
     "@beyonk/google-fonts-webpack-plugin": "^1.5.0",
-    "autoprefixer": "^10.2.0",
+    "autoprefixer": "^10.2.5",
     "css-loader": "^5.0.1",
     "css-minimizer-webpack-plugin": "^1.1.5",
     "expose-loader": "^1.0.3",
