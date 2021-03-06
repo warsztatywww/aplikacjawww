@@ -171,4 +171,16 @@ $(function () {
     }
     fixBrokenUnresponsiveFacebook();
     $(window).resize(fixBrokenUnresponsiveFacebook);
+
+    // Make sure the year selector is always initially scrolled to the selected one
+    function yearSelectorToCurrent() {
+        var nav = $('nav.year-navigation');
+        if (nav.length === 0)
+            return;
+        var selected = nav.find('.active');
+        if (selected.length === 1)
+            nav.scrollLeft(selected.offset().left - nav.offset().left + nav.scrollLeft() - (nav.width() - selected.width()) / 2);
+    }
+    yearSelectorToCurrent();
+    $(window).resize(yearSelectorToCurrent);
 });
