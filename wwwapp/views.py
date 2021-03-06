@@ -574,7 +574,7 @@ def participants_view(request, year=None):
                     people[participant.id]['points'] += float(wp.result_in_percent())
                 people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
                     title=wp.workshop.title,
-                    result=wp.result_in_percent() if wp.qualification_result else 0,
+                    result=wp.result_in_percent() if wp.workshop.is_qualifying and wp.qualification_result else 0,
                     comment=wp.comment if wp.comment else ""
                 ))
                 people[participant.id]['workshop_count'] += 1
