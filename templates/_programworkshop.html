@@ -12,7 +12,7 @@
         {% if workshop.status == 'X' %}&nbsp;&nbsp;<span class="text-danger">(odwołane)</span>{% endif %}
         </h4>
       </div>
-      <div class="col-12 col-lg-4 text-right">
+      <div class="col-12 col-lg-4 text-right mt-2 mt-lg-0">
         <h5 class="m-0">
         {% for lecturer in workshop.lecturer.all %}
           <span class="d-inline-block"> {# this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name #}
