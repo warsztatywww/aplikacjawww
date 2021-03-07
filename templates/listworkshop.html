@@ -43,7 +43,7 @@
                   {% endfor %}
                   </td>
                   <td>
-                      <p>{{ workshop.type }}</p>
+                      <p>{{ workshop.type.name }}</p>
                   </td>
                   <td>
                     {% if workshop.is_qualifying and workshop.qualification_threshold and workshop.is_publicly_visible %}
