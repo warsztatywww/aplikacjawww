@@ -1,3 +1,4 @@
+import os.path
 from decimal import Decimal
 
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert, AppendedText
@@ -242,6 +243,12 @@ class WorkshopForm(ModelForm):
         year = self.instance.year
         self.fields['category'].queryset = WorkshopCategory.objects.filter(year=year)
         self.fields['type'].queryset = WorkshopType.objects.filter(year=year)
+
+        # Display link to current qualification tasks:
+        if self.instance.qualification_problems:
+            self.fields['qualification_problems'].help_text = format_html('Aktualnie: <a href="{}" target="_blank">{}</a>', reverse('qualification_problems', args=[self.instance.year.pk, self.instance.name]), os.path.basename(self.instance.qualification_problems.path))
+        else:
+            self.fields['qualification_problems'].help_text = 'Aktualnie: brak'
 
         # Configure TinyMCE settings
         mce_attrs = {}
