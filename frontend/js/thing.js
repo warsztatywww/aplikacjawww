@@ -3,6 +3,8 @@ const Konami = require('konami');
 $(function() {
     function colorChange()
     {
+        $(".navbar").removeClass('bg-primary');
+        $(".navbar").css("transition", "background 1s");
         $(".navbar").css("background", '#'+((1<<24)*(Math.random()+1)|0).toString(16).substr(1));
     }
 
