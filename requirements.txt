@@ -11,7 +11,7 @@ django-admin-sortable2==0.7.8
 django-imagekit==4.0.2
 Pillow==8.1.2
 python-dateutil==2.8.1
-Faker==6.5.0
+Faker==6.5.2
 psycopg2==2.8.6
 
 mock==4.0.3
