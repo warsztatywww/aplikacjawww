@@ -41,7 +41,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.34",
     "@fortawesome/free-solid-svg-icons": "^5.15.2",
     "bootstrap": "^4.5.3",
-    "datatables.net": "^1.10.23",
+    "datatables.net": "^1.10.24",
     "datatables.net-bs4": "^1.10.24",
     "datatables.net-buttons": "^1.6.5",
     "datatables.net-buttons-bs4": "^1.7.0",
