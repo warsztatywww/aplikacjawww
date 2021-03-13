@@ -19,7 +19,7 @@ window.gen_datatables_config = (overwrites) => {
 
   function strip_tags_and_newlines(data, row, column, node)
   {
-    return strip_tags(data, row, column, node).replace('\n', ', ');
+    return strip_tags(data, row, column, node).replace(/\n|\r/g, ', ');
   }
 
   return Object.assign({
