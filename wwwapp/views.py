@@ -256,6 +256,7 @@ def mydata_status_view(request):
 
     context['title'] = 'Mój profil'
     context['gender'] = user_profile.gender
+    context['has_completed_profile'] = user_profile.is_completed
     context['has_cover_letter'] = len(user_profile.cover_letter) >= 50
     context['current_status'] = current_status
     context['past_status'] = past_status
@@ -556,7 +557,8 @@ def participants_view(request, year=None):
             'matura_exam_year': participant.matura_exam_year,
             'accepted_workshop_count': 0,
             'workshop_count': 0,
-            'has_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
+            'has_completed_profile': participant.is_completed,
+            'has_cover_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
             'status': workshop_profile.status if workshop_profile else None,
             'status_display': workshop_profile.get_status_display if workshop_profile else None,
             'participation_data': participation_data,
