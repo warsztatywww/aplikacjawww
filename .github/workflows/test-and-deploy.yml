@@ -57,9 +57,12 @@ jobs:
       
   deploy:
     # The type of runner that the job will run on
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     needs: test
-    if: github.ref == 'refs/heads/master'
+    environment:
+      name: production
+      url: https://warsztatywww.pl
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Runs a single command using the runners shell
