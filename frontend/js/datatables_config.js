@@ -27,6 +27,7 @@ window.gen_datatables_config = (overwrites) => {
     colReorder: true,
     deferRender: true,
     createdRow: (row) => {
+      $(row).find('[data-toggle="tooltip"]').tooltip();
       $(row).find('[data-toggle="popover"]').popover();
     },
     buttons: {
