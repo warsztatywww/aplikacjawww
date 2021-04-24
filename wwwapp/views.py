@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import json
+import mimetypes
 import os
 import sys
 from urllib.parse import urljoin
@@ -797,7 +798,19 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
             pk=solution_id)
 
     solution_file = get_object_or_404(solution.files.all(), pk=file_pk)
-    return sendfile(request, solution_file.file.path)
+
+    # Guess the mimetype based on the extension. This is what sendfile does by default, but we want to override the value in some cases.
+    mimetype, encoding = mimetypes.guess_type(solution_file.file.path)
+    if not mimetype:
+        mimetype = 'application/octet-stream'
+
+    # Only some file extensions are allowed to be viewed inline. Force a file download if it's not one of them.
+    attachment = False
+    if mimetype not in ['application/pdf', 'image/png', 'image/jpeg']:
+        mimetype = 'application/octet-stream'
+        attachment = True
+
+    return sendfile(request, solution_file.file.path, mimetype=mimetype, encoding=encoding, attachment=attachment)
 
 
 @permission_required('wwwapp.export_workshop_registration')
