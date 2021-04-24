@@ -325,3 +325,25 @@ class SolutionUploadViews(TestCase):
 
         response = self.client.get(reverse('workshop_solution_file', args=[self.workshop.year.pk, self.workshop.name, solution.id, solution_file.id]))
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_solution_file', args=[self.workshop.year.pk, self.workshop.name, solution.id, solution_file.id]))
+
+    def test_download_safe_extension(self):
+        solution = Solution.objects.create(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, participant=self.participant_user.userprofile), message='To są testy')
+        solution_file = solution.files.create(file=SimpleUploadedFile('solution.pdf', os.urandom(1024 * 1024)))
+
+        self.client.force_login(self.lecturer_user)
+        response = self.client.get(reverse('workshop_solution_file', args=[self.workshop.year.pk, self.workshop.name, solution.id, solution_file.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertNotIn('attachment', response['Content-Disposition'])
+
+    def test_download_unsafe_extension(self):
+        solution = Solution.objects.create(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, participant=self.participant_user.userprofile), message='To są testy')
+        solution_file = solution.files.create(file=SimpleUploadedFile('solution.js', os.urandom(1024 * 1024)))
+
+        self.client.force_login(self.lecturer_user)
+        response = self.client.get(reverse('workshop_solution_file', args=[self.workshop.year.pk, self.workshop.name, solution.id, solution_file.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+        self.assertEqual(response['Content-Type'], 'application/octet-stream')
+        self.assertIn('attachment', response['Content-Disposition'])
