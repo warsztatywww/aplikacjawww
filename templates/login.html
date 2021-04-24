@@ -14,7 +14,7 @@
       <div class="col-md-6" style="padding-bottom: 2em;">
         <a href="{% url 'admin:login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" class="btn btn-outline-primary" role="button" style="display: block; box-sizing: border-box; height: 52px; padding: 11px;">
           <div style="height: 24px; line-height: 24px; vertical-align: middle;">
-            <span style="display: inline-block; vertical-align: middle; padding-left: 42px; padding-right: 42px;">{{ "Django" | provider_signin_text }}</span>
+            <span style="display: inline-block; vertical-align: middle;">{{ "Django" | provider_signin_text }}</span>
           </div>
           </a>
       </div>
