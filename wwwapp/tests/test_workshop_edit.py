@@ -547,7 +547,7 @@ class WorkshopEditViews(TestCase):
                 WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
                 WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
             ],
-            'qualification_problems': io.BytesIO(data),
+            'qualification_problems': SimpleUploadedFile('problems.pdf', data),
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
@@ -563,6 +563,33 @@ class WorkshopEditViews(TestCase):
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b''.join(response.streaming_content), data)
+
+    def test_edit_qual_problems_add_insecure(self):
+        self.workshop.status = Workshop.STATUS_ACCEPTED
+        self.workshop.save()
+        self.client.force_login(self.normal_user)
+
+        data = os.urandom(1024 * 1024)
+
+        url = reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name])
+        response = self.client.post(url, {
+            'title': 'Bardzo fajne warsztaty',
+            'name': 'bardzofajne',
+            'type': WorkshopType.objects.get(year=2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
+            ],
+            'qualification_problems': SimpleUploadedFile('problems.js', data),
+            'is_qualifying': 'on',
+            'qualification_threshold': '',
+            'max_points': '',
+            'solution_uploads_enabled': 'on',
+            'page_content': '',
+            'page_content_is_public': '',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(response, 'form', 'qualification_problems', 'Rozszerzenie pliku „js” jest niedozwolone. Dozwolone rozszerzenia to: pdf.')
 
     def test_edit_qual_problems_change(self):
         self.workshop.qualification_problems = SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024))
@@ -581,7 +608,7 @@ class WorkshopEditViews(TestCase):
                 WorkshopCategory.objects.get(year=2020, name='This category 1').pk,
                 WorkshopCategory.objects.get(year=2020, name='This category 2').pk,
             ],
-            'qualification_problems': io.BytesIO(data),
+            'qualification_problems': SimpleUploadedFile('problems.pdf', data),
             'is_qualifying': 'on',
             'qualification_threshold': '',
             'max_points': '',
@@ -651,7 +678,18 @@ class WorkshopEditViews(TestCase):
         self.workshop.save()
         response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertNotIn('attachment', response['Content-Disposition'])
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
         self.assertEqual(b''.join(response.streaming_content), data)
+
+    def test_view_qual_problems_insecure(self):
+        data = os.urandom(1024 * 1024)
+        self.workshop.qualification_problems = SimpleUploadedFile('problems.js', data)
+        self.workshop.status = Workshop.STATUS_ACCEPTED
+        self.workshop.save()
+        response = self.client.get(reverse('qualification_problems', args=[self.workshop.year.pk, self.workshop.name]))
+        self.assertEqual(response.status_code, 400)
 
     def test_view_public_page_proposal(self):
         # Nobody can see the public page until the proposal is accepted

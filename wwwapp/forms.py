@@ -6,6 +6,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Div, HTML, Field
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField
@@ -192,7 +193,8 @@ class WorkshopForm(ModelForm):
     type = TypeChoiceField(label="Rodzaj zajęć", queryset=WorkshopType.objects.all(),
                            widget=Select2Widget(attrs={'width': '200px'}))
 
-    qualification_problems = FileField(required=False, widget=FileInput(), label='Zadania kwalifikacyjne (zalecany format PDF):')
+    qualification_problems = FileField(required=False, widget=FileInput(), label='Zadania kwalifikacyjne (wymagany format PDF):',
+                                       validators=[FileExtensionValidator(allowed_extensions=['pdf'])])
 
     class Meta:
         model = Workshop

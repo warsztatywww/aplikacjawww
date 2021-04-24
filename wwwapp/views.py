@@ -893,7 +893,11 @@ def qualification_problems_view(request, year, name):
     if not workshop.qualification_problems:
         return HttpResponseNotFound("Nie ma jeszcze zadań kwalifikacyjnych")
 
-    return sendfile(request, workshop.qualification_problems.path)
+    mimetype, encoding = mimetypes.guess_type(workshop.qualification_problems.path)
+    if mimetype != 'application/pdf':
+        raise SuspiciousOperation('Zadania kwalifikacyjne nie są PDFem')
+
+    return sendfile(request, workshop.qualification_problems.path, mimetype='application/pdf')
 
 
 def article_view(request, name):
