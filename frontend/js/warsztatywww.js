@@ -124,8 +124,12 @@ window.handle_registration_change = function(workshop_name_txt, register) {
             }
             if (json.content) {
                 $("#" + workshop_name_txt).replaceWith(json.content);
-                if (no_workshop_card_header)
+                if (no_workshop_card_header) {
                     $("#" + workshop_name_txt).find('.card-header').replaceWith('');
+                    $("#" + workshop_name_txt).find('.button-div').removeClass('d-none d-md-block');
+                    $("#" + workshop_name_txt).find('.solutions-button').removeClass('d-none d-md-inline-block');
+                    $("#" + workshop_name_txt).find('.solutions-button').addClass('d-inline-block');
+                }
                 $("#" + workshop_name_txt).find('[data-toggle="tooltip"]').tooltip();
             }
         },
