@@ -233,3 +233,5 @@ GALLERY_FOOTER_INFO = 'Wakacyjne Warsztaty Wielodyscyplinarne'
 GALLERY_FOOTER_EMAIL = ''
 
 X_FRAME_OPTIONS = 'DENY'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
