@@ -15,7 +15,6 @@ FROM    python:3.9-alpine3.13 AS runner
 WORKDIR /usr/src/app
 
 
-# RUN apk update && apk add postgresql-dev gcc python3-dev musl-dev libffi-dev zlib-dev jpeg-dev
 RUN     apk update \
 &&      apk add \
                 cargo \
