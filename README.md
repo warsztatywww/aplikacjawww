@@ -17,6 +17,7 @@ Django-based application to manage registration of people for [scientific summer
 - `./manage.py populate_with_test_data` - script to populate the database with data for development
 
 ### Run:
+- install postgresql
 - activate virtualenv (if not yet activated)
 - `pip install -r requirements.txt`
 - `./manage.py runserver`

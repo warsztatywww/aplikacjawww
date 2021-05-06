@@ -1,39 +1,61 @@
-FROM node:current-alpine AS build_frontend
-WORKDIR /app
+FROM	node:16-alpine3.13 AS build-frontend
+WORKDIR	/app
 
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY webpack.config.js .
-COPY frontend ./frontend
-RUN npm run build
+COPY	package.json \
+	package-lock.json \
+	./
+RUN	npm clean-install
+
+COPY	webpack.config.js .
+COPY	frontend ./frontend
+RUN	npm run build
 
 
+FROM	python:3.9-alpine3.13 AS runner
+WORKDIR	/usr/src/app
 
-FROM python:alpine
-WORKDIR /usr/src/app
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
 
-RUN apk update && apk add postgresql-dev gcc python3-dev musl-dev libffi-dev zlib-dev jpeg-dev
+# RUN apk update && apk add postgresql-dev gcc python3-dev musl-dev libffi-dev zlib-dev jpeg-dev
+RUN	apk update \
+&&	apk add \
+		cargo \
+		gcc \
+		jpeg-dev \
+		libffi-dev \
+		musl-dev \
+		openssl-dev \
+		postgresql-dev \
+		python3-dev \
+		zlib-dev \
+;
 
-RUN pip install --upgrade pip
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-RUN pip install gunicorn
+ENV	PYTHONDONTWRITEBYTECODE=1 \
+	PYTHONUNBUFFERED=1
 
-COPY . .
-COPY --from=build_frontend /app/static/dist static/dist
+RUN	pip install --upgrade pip setuptools
+COPY	requirements.txt .
+RUN	pip install gunicorn -r requirements.txt
 
-RUN echo "import os" > wwwapp/local_settings.py
-RUN echo "SECRET_KEY = os.environ['SECRET_KEY']" >> wwwapp/local_settings.py
-RUN echo "ALLOWED_HOSTS = ['*']" >> wwwapp/local_settings.py
-RUN echo "DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql_psycopg2', 'HOST': 'db', 'NAME': 'aplikacjawww', 'USER': 'app', 'PASSWORD': 'app'}}" >> wwwapp/local_settings.py
-RUN echo "GOOGLE_ANALYTICS_KEY = None" >> wwwapp/local_settings.py
-RUN echo "MEDIA_ROOT = os.environ['MEDIA_ROOT']" >> wwwapp/local_settings.py
-RUN echo "SENDFILE_ROOT = os.environ['SENDFILE_ROOT']" >> wwwapp/local_settings.py
-RUN echo "USE_X_FORWARDED_HOST = True" >> wwwapp/local_settings.py
-RUN echo "SESSION_COOKIE_SECURE = False" >> wwwapp/local_settings.py
-RUN echo "CSRF_COOKIE_SECURE = False" >> wwwapp/local_settings.py
+COPY --from=build-frontend \
+	/app/static/dist \
+	static/dist
+COPY	. .
 
-CMD gunicorn wwwapp.wsgi:application --bind 0.0.0.0:8000
-ENTRYPOINT ["./entrypoint.sh"]
+RUN	echo "import os" >>wwwapp/local_settings.py \
+&&	echo "DEBUG = True" >>wwwapp/local_settings.py \
+&&	echo "SECRET_KEY = os.environ['SECRET_KEY']" >>wwwapp/local_settings.py \
+&&	echo "ALLOWED_HOSTS = ['*']" >>wwwapp/local_settings.py \
+&&	echo "class Anything: __contains__ = lambda *args: True" >>wwwapp/local_settings.py \
+&&	echo "INTERNAL_IPS = Anything()" >>wwwapp/local_settings.py \
+&&	echo "DATABASES = {'default': {'ENGINE': 'django.db.backends.postgresql_psycopg2', 'HOST': 'db', 'NAME': 'aplikacjawww', 'USER': 'app', 'PASSWORD': 'app'}}" >>wwwapp/local_settings.py \
+&&	echo "GOOGLE_ANALYTICS_KEY = None" >>wwwapp/local_settings.py \
+&&	echo "MEDIA_ROOT = os.environ['MEDIA_ROOT']" >>wwwapp/local_settings.py \
+&&	echo "SENDFILE_ROOT = os.environ['SENDFILE_ROOT']" >>wwwapp/local_settings.py \
+&&	echo "USE_X_FORWARDED_HOST = True" >>wwwapp/local_settings.py \
+&&	echo "SESSION_COOKIE_SECURE = False" >>wwwapp/local_settings.py \
+&&	echo "CSRF_COOKIE_SECURE = False" >>wwwapp/local_settings.py \
+;
+
+
+EXPOSE	8000
+CMD	./entrypoint.sh
