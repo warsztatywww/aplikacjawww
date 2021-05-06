@@ -1,0 +1,6 @@
+coverage==5.5
+django-coverage-plugin==1.8.0
+django-stubs==1.7.0
+freezegun==1.1.0
+mock==4.0.3
+mypy==0.812
