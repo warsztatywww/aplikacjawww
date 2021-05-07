@@ -35,6 +35,11 @@ class InitializedTinyMCE(tinymce.widgets.TinyMCE):
 
 
 class UserProfilePageForm(ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['profile_page']
+        labels = {'profile_page': "Strona profilowa"}
+
     def __init__(self, *args, **kwargs):
         super(UserProfilePageForm, self).__init__(*args, **kwargs)
         self.helper = FormHelper(self)
@@ -45,11 +50,12 @@ class UserProfilePageForm(ModelForm):
             css_class='text-right'
         ))
 
-    class Meta:
-        model = UserProfile
-        fields = ['profile_page']
-        labels = {'profile_page': "Strona profilowa"}
-        widgets = {'profile_page': InitializedTinyMCE()}
+        mce_attrs = {}
+        if self.instance and self.instance.pk:
+            mce_attrs = settings.TINYMCE_DEFAULT_CONFIG_WITH_IMAGES.copy()
+            mce_attrs['automatic_uploads'] = True
+            mce_attrs['images_upload_url'] = reverse('mydata_profile_upload')
+        self.fields['profile_page'].widget = InitializedTinyMCE(mce_attrs=mce_attrs)
 
 
 class UserCoverLetterForm(ModelForm):

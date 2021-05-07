@@ -459,7 +459,7 @@ def workshop_participants_view(request, year, name):
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))
-    
+
     return render(request, 'workshopparticipants.html', context)
 
 
@@ -1070,5 +1070,14 @@ def workshop_edit_upload_file(request, year, name):
     if not has_perm_to_edit or not workshop.is_publicly_visible() or not workshop.is_workshop_editable():
         return HttpResponseForbidden()
     target_dir = "images/workshops/{}/{}/".format(workshop.year.pk, workshop.name)
+
+    return _upload_file(request, target_dir)
+
+
+@login_required()
+@require_POST
+@csrf_exempt
+def mydata_profile_upload_file(request):
+    target_dir = "images/profiles/{}/".format(request.user.pk)
 
     return _upload_file(request, target_dir)

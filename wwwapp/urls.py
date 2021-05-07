@@ -27,6 +27,7 @@ urlpatterns = [
     path('accounts/verified/', finish_merge_verification, name='finish_merge_verification'),
     path('profile/<int:user_id>/', views.profile_view, name='profile'),
     path('me/profile/', views.mydata_profile_view, name='mydata_profile'),
+    path('me/profile/upload/', views.mydata_profile_upload_file, name='mydata_profile_upload'),
     path('me/profile_page/', views.mydata_profile_page_view, name='mydata_profile_page'),
     path('me/cover_letter/', views.mydata_cover_letter_view, name='mydata_cover_letter'),
     path('me/status/', views.mydata_status_view, name='mydata_status'),
