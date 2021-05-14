@@ -86,6 +86,35 @@ $theme-colors: (
   }
 }
 
+// DateTime picker styling
+.bootstrap-datetimepicker-widget.dropdown-menu {
+  background-color: $light !important;
+}
+.bootstrap-datetimepicker-widget table thead tr:first-child th:hover,
+.bootstrap-datetimepicker-widget table td span:hover,
+.bootstrap-datetimepicker-widget table td.day:hover,
+.bootstrap-datetimepicker-widget table td.hour:hover,
+.bootstrap-datetimepicker-widget table td.minute:hover,
+.bootstrap-datetimepicker-widget table td.second:hover {
+  background: $primary !important;
+  color: #ffffff !important;
+}
+
+.bootstrap-datetimepicker-widget table td span.active,
+.bootstrap-datetimepicker-widget table td.active,
+.bootstrap-datetimepicker-widget table td.active:hover {
+  background: $dark !important;
+}
+
+// these are trying to be glyphicons from bootstrap3, but we have bootstrap4 and fontawesome instead
+// I'm to lazy to figure out how to modify their template, so let's just do this for now
+.bootstrap-datetimepicker-widget .prev::before {
+  content: "\00ab";
+}
+.bootstrap-datetimepicker-widget .next::before {
+  content: "\00bb";
+}
+
 // Center the navbar while collapsed
 .navbar-collapse {
   text-align: center;

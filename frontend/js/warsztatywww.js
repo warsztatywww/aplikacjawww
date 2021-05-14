@@ -149,9 +149,12 @@ $(function () {
     });
 
     $('.dateinput').each(function (i, x) {
-        var dates = [];
-        for(var date = moment($(x).data('start-date')); date <= moment($(x).data('end-date')); date.add(1, 'days'))
-            dates.push(date.toDate());
+        var dates = null;
+        if ($(x).data('start-date') && $(x).data('end-date')) {
+            dates = [];
+            for(var date = moment($(x).data('start-date')); date <= moment($(x).data('end-date')); date.add(1, 'days'))
+                dates.push(date.toDate());
+        }
         $(x).datetimepicker({
             format: 'L',
             locale: 'pl',
