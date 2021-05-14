@@ -556,8 +556,9 @@ def participants_view(request, year=None):
             'birth': birth,
             'is_adult': is_adult,
             'matura_exam_year': participant.matura_exam_year,
-            'accepted_workshop_count': 0,
             'workshop_count': 0,
+            'solution_count': 0,
+            'accepted_workshop_count': 0,
             'has_completed_profile': participant.is_completed,
             'has_cover_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
             'status': workshop_profile.status if workshop_profile else None,
@@ -576,6 +577,9 @@ def participants_view(request, year=None):
                 if wp.workshop.is_qualifying:
                     if wp.qualification_result:
                         people[participant.id]['points'] += float(wp.result_in_percent())
+                    if wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution'):
+                            people[participant.id]['solution_count'] += 1
+
                     if wp.workshop.solution_uploads_enabled and not hasattr(wp, 'solution'):
                         people[participant.id]['infos'].append("{title} : Nie przesłano rozwiązań".format(
                             title=wp.workshop.title
