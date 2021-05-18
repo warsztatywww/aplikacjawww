@@ -217,7 +217,7 @@ class WorkshopForm(ModelForm):
         help_texts = {
             'short_description': 'Zachęć uczestnika do zainteresowania się Twoimi warsztatami w max 140 znakach. Wyświetlany na stronie z programem.',
             'is_qualifying': '(odznacz, jeśli nie zamierzasz dodawać zadań i robić kwalifikacji)',
-            'solution_uploads_enabled': 'Od edycji 2021 uczestnicy przesyłają rozwiązania zadań kwalifikacyjnych przez stronę zamiast maila. Jeśli z jakiegoś powodu bardzo chcesz wyłączyć tą funkcję, skontaktuj się z organizatorami.',
+            'solution_uploads_enabled': 'Od edycji 2021 uczestnicy przesyłają rozwiązania zadań kwalifikacyjnych przez stronę zamiast maila. Jeśli z jakiegoś powodu bardzo chcesz wyłączyć tę funkcję, skontaktuj się z organizatorami.',
             'qualification_threshold': '(wpisz dopiero po sprawdzeniu zadań)',
             'max_points': '(możesz postawić punkty bonusowe powyżej tej wartości, ale tylko do max. {}%)'.format(settings.MAX_POINTS_PERCENT)
         }
