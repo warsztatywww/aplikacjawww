@@ -499,7 +499,7 @@ class WorkshopQualificationViews(TestCase):
             'id': participant.id,
             'qualification_result': -1
         })
-        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Nie możesz postawić ujemnej liczby punktów'})
+        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Upewnij się, że ta wartość jest większa lub równa 0.'})
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_unknownmax(self):

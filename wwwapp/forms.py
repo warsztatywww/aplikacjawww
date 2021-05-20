@@ -431,9 +431,6 @@ class WorkshopParticipantPointsForm(ModelForm):
             if self.cleaned_data['qualification_result'] > self.instance.workshop.max_points * (Decimal(settings.MAX_POINTS_PERCENT) / 100):
                 raise ValidationError({'qualification_result': 'Nie możesz postawić więcej niż {}% maksymalnej liczby punktów'.format(settings.MAX_POINTS_PERCENT)})
 
-            if self.cleaned_data['qualification_result'] < 0:
-                raise ValidationError({'qualification_result': 'Nie możesz postawić ujemnej liczby punktów'})
-
 
 class SolutionForm(ModelForm):
     class Meta:

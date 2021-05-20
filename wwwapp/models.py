@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
 from django.core.files.storage import FileSystemStorage
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_save, pre_delete
@@ -346,8 +347,8 @@ class Workshop(models.Model):
     qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification", storage=UploadStorage())
     solution_uploads_enabled = models.BooleanField(default=True)
     participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
-    qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
-    max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5)
+    qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, validators=[MinValueValidator(0)])
+    max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, validators=[MinValueValidator(0)])
 
     def is_workshop_editable(self) -> bool:
         return self.year.are_workshops_editable()
@@ -420,7 +421,7 @@ class WorkshopParticipant(models.Model):
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE)
     participant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
-    qualification_result = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, verbose_name='Liczba punktów')
+    qualification_result = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
 
     def is_qualified(self):
