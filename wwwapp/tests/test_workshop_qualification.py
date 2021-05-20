@@ -403,7 +403,7 @@ class WorkshopQualificationViews(TestCase):
         wp2 = WorkshopParticipant.objects.create(workshop=self.workshop,
                                                  participant=self.participant_user2.userprofile)
         user1_data = (self.participant_user, [
-                "4,0 / 10,0",
+                "4,00 / 10,00",
                 "No mogło być lepiej...",
                 wwwtags.qualified_mark(False)
             ])
@@ -417,7 +417,7 @@ class WorkshopQualificationViews(TestCase):
         self.assertUsersSeeOnlyTheirOwn(reverse('mydata_status'), [
             user1_data,
             (self.participant_user2, [
-                "12,0 / 10,0",
+                "12,00 / 10,00",
                 "Świetnie!!! Poza skalą!",
                 wwwtags.qualified_mark(True)
             ]),
@@ -447,9 +447,9 @@ class WorkshopQualificationViews(TestCase):
         self.client.force_login(self.lecturer_user)
         response = self.client.post(reverse('save_points'), {
             'id': participant.id,
-            'qualification_result': 5.25
+            'qualification_result': 5.125
         })
-        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Upewnij się, że liczba ma nie więcej niż 1 cyfrę po przecinku.'})
+        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Upewnij się, że liczba ma nie więcej niż 2 cyfry po przecinku.'})
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_toomanydigits(self):
@@ -461,7 +461,19 @@ class WorkshopQualificationViews(TestCase):
             'id': participant.id,
             'qualification_result': 100000
         })
-        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Upewnij się, że łącznie nie ma więcej niż 5 cyfr.'})
+        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Upewnij się, że liczba ma nie więcej niż 4 cyfry przed przecinkiem.'})
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_submit_invalid_score_toomanydigits2(self):
+        participant = WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile)
+
+        # Check save response
+        self.client.force_login(self.lecturer_user)
+        response = self.client.post(reverse('save_points'), {
+            'id': participant.id,
+            'qualification_result': 1000000
+        })
+        self.assertJSONEqual(response.content, {'error': '* qualification_result\n  * Upewnij się, że łącznie nie ma więcej niż 6 cyfr.'})
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_notdigits(self):

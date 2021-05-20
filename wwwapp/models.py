@@ -347,8 +347,8 @@ class Workshop(models.Model):
     qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification", storage=UploadStorage())
     solution_uploads_enabled = models.BooleanField(default=True)
     participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
-    qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, validators=[MinValueValidator(0)])
-    max_points = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, validators=[MinValueValidator(0)])
+    qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
+    max_points = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
 
     def is_workshop_editable(self) -> bool:
         return self.year.are_workshops_editable()
@@ -421,7 +421,7 @@ class WorkshopParticipant(models.Model):
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE)
     participant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
 
-    qualification_result = models.DecimalField(null=True, blank=True, decimal_places=1, max_digits=5, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
+    qualification_result = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
 
     def is_qualified(self):
