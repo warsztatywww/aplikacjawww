@@ -424,7 +424,7 @@ class WorkshopParticipantPointsForm(ModelForm):
         if not self.instance.workshop.is_qualification_editable():
             raise ValidationError('Nie można edytować warsztatów z poprzednich lat')
 
-        if self.cleaned_data['qualification_result'] is not None:
+        if 'qualification_result' in self.cleaned_data and self.cleaned_data['qualification_result'] is not None:
             if not self.instance.workshop.max_points:
                 raise ValidationError({'qualification_result': 'Przed wpisaniem wyników, ustaw maksymalną liczbę punktów możliwą do uzyskania'})
 
