@@ -8,7 +8,7 @@
     <article>
       <h1>{{ title }}</h1>
       <div class="table-responsive">
-        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people %}[[ 1, "asc" ]]{% else %}[[ 12, "desc" ], [ 1, "asc" ]]{% endif %}'>
+        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people %}[[ 1, "asc" ]]{% else %}[[ 13, "desc" ], [ 1, "asc" ]]{% endif %}'>
           <thead>
             <tr>
               <th data-visible="true"  data-searchable="false" data-orderable="false"></th>
@@ -22,6 +22,7 @@
               <th data-visible="true"  data-searchable="false" data-orderable="true">Punkty</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zapisanych">L.zap.</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba przesłanych rozwiązań">L.rozw.</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba sprawdzonych rozwiązań">L.spr.rozw.</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zakwalifikowanych">L.zak.</th>
               <th data-visible="true"  data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="List motywacyjny uzupełniony?">List?</th>
               <th data-visible="true"  data-searchable="false" data-orderable="true">Status</th>
@@ -72,6 +73,15 @@
                 </td>
                 <td>
                   {{ person.solution_count }}
+                </td>
+                <td data-order="{{ person.checked_solution_percentage | unlocalize }}">
+                  {% if person.to_be_checked_solution_count == 0 %}
+                    {{ person.checked_solution_count }} / {{ person.to_be_checked_solution_count }}
+                  {% elif person.checked_solution_count == person.to_be_checked_solution_count %}
+                    <span class="text-success">{{ person.checked_solution_count }} / {{ person.to_be_checked_solution_count }}</span>
+                  {% else %}
+                    <span class="text-danger">{{ person.checked_solution_count }} / {{ person.to_be_checked_solution_count }}</span>
+                  {% endif %}
                 </td>
                 <td>
                   {{ person.accepted_workshop_count }}

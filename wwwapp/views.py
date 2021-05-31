@@ -549,6 +549,8 @@ def participants_view(request, year=None):
             'matura_exam_year': participant.matura_exam_year,
             'workshop_count': 0,
             'solution_count': 0,
+            'checked_solution_count': 0,
+            'to_be_checked_solution_count': 0,
             'accepted_workshop_count': 0,
             'has_completed_profile': participant.is_completed,
             'has_cover_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
@@ -566,8 +568,13 @@ def participants_view(request, year=None):
             for wp in participant.workshopparticipant_set.all():
                 assert wp.workshop.year == year
                 if wp.workshop.is_qualifying:
+                    if not wp.workshop.solution_uploads_enabled or hasattr(wp, 'solution'):
+                        people[participant.id]['to_be_checked_solution_count'] += 1
+
                     if wp.qualification_result:
                         people[participant.id]['points'] += float(wp.result_in_percent())
+                        people[participant.id]['checked_solution_count'] += 1
+
                     if wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution'):
                             people[participant.id]['solution_count'] += 1
 
@@ -594,6 +601,11 @@ def participants_view(request, year=None):
 
     for person in people.values():
         person['infos'] = list(map(lambda x: x[1], sorted(person['infos'], key=lambda x: x[0], reverse=True)))
+
+        if person['to_be_checked_solution_count'] == 0:
+            person['checked_solution_percentage'] = -1
+        else:
+            person['checked_solution_percentage'] = person['checked_solution_count'] / person['to_be_checked_solution_count'] * 100.0
 
     people = list(people.values())
 
