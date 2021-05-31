@@ -159,6 +159,9 @@ def profile_view(request, user_id):
             for participation in context['participation_data']:
                 participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
 
+    if can_see_all_workshops:
+        context['results_data'] = user.userprofile.workshop_results_by_year()
+
     if can_see_all_workshops or is_my_profile:
         context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').all().order_by('year')
     else:
@@ -239,19 +242,7 @@ def mydata_status_view(request):
     ).get(user=request.user)
     current_year = Camp.current()
 
-    participation_data = user_profile.all_participation_data()
-    for p in participation_data:
-        p['qualification_results'] = []
-
-    qualifications = WorkshopParticipant.objects.filter(participant=user_profile).select_related('workshop', 'workshop__year', 'solution').all()
-    for q in qualifications:
-        participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
-        if participation_for_year is None:
-            participation_for_year = {'year': q.workshop.year, 'type': 'participant', 'status': None, 'qualification_results': []}
-            participation_data.append(participation_for_year)
-        participation_for_year['qualification_results'].append(q)
-    participation_data.sort(key=lambda x: x['year'].year, reverse=True)
-
+    participation_data = user_profile.workshop_results_by_year()
     current_status = next(filter(lambda x: x['year'] == current_year, participation_data), None)
     past_status = list(filter(lambda x: x['year'] != current_year, participation_data))
 
@@ -584,11 +575,14 @@ def participants_view(request, year=None):
                         people[participant.id]['infos'].append("{title} : Nie przesłano rozwiązań".format(
                             title=wp.workshop.title
                         ))
+                    elif wp.qualification_result is None:
+                        people[participant.id]['infos'].append("{title} : Jeszcze nie sprawdzone".format(
+                            title=wp.workshop.title
+                        ))
                     else:
-                        people[participant.id]['infos'].append("{title} : {result:.1f}% : {comment}".format(
+                        people[participant.id]['infos'].append("{title} : {result:.1f}%".format(
                             title=wp.workshop.title,
-                            result=wp.result_in_percent() if wp.qualification_result else 0,
-                            comment=wp.comment if wp.comment else ""
+                            result=wp.result_in_percent()
                         ))
                 else:
                     people[participant.id]['infos'].append("{title} : Warsztaty bez kwalifikacji".format(

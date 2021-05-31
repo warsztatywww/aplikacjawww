@@ -81,6 +81,23 @@
           </table>
         {% endif %}
 
+        {% if results_data %}
+          {% for status in results_data %}
+            {% if status.qualification_results %}
+              <div class="card mb-3 w-100">
+                <h4 class="card-header p-2">
+                  {{ status.year }}
+                </h4>
+                <div class="card-body p-0">
+                  {% if status.qualification_results %}
+                    {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results is_my_profile=False %}
+                  {% endif %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
         {% if lecturer_workshops %}
           <h3>Prowadził{% if gender == 'F' %}a{% endif %} warsztaty:</h3>
           <ul>

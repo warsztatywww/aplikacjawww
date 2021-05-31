@@ -117,7 +117,7 @@
               {% include '_workshopStatusTable.html' with your_workshops=status.workshops %}
             {% endif %}
             {% if status.qualification_results %}
-              {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results %}
+              {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results is_my_profile=True %}
             {% endif %}
           </div>
         </div>

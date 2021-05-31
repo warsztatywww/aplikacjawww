@@ -236,3 +236,8 @@ nav.year-navigation .page-item {
 	display: inline-block; /* Required for scrolling (and accidentaly gives a cool effect of the items being separated a little) */
 	vertical-align: middle;
 }
+
+// Increase width of results popover
+.popover {
+    max-width: 100%;
+}

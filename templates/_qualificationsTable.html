@@ -17,13 +17,25 @@
           </a>
         </th>
         {% if not workshop_participant.solution and workshop_participant.workshop.can_access_solution_upload and workshop_participant.workshop.are_solutions_editable %}
-          <td colspan="2">
-            <a role="button" class="btn btn-primary btn-sm" href="{% url 'workshop_my_solution' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}"><i class="fas fa-paper-plane"></i> Prześlij rozwiązania!</a>
-          </td>
+          {% if is_my_profile %}
+            <td colspan="2">
+              <a role="button" class="btn btn-primary btn-sm" href="{% url 'workshop_my_solution' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}"><i class="fas fa-paper-plane"></i> Prześlij rozwiązania!</a>
+            </td>
+          {% else %}
+            <td colspan="2">
+              <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Nie przesłano rozwiązań</span>
+            </td>
+          {% endif %}
         {% elif workshop_participant.workshop.is_qualifying and not workshop_participant.workshop.qualification_problems %}
-          <td colspan="2">
-            <span class="text-warning"><i class="fas fa-exclamation-circle"></i> Poczekaj na opublikowanie zadań</span>
-          </td>
+          {% if is_my_profile %}
+            <td colspan="2">
+              <span class="text-warning"><i class="fas fa-exclamation-circle"></i> Poczekaj na opublikowanie zadań</span>
+            </td>
+          {% else %}
+            <td colspan="2">
+              <span class="text-warning"><i class="fas fa-exclamation-circle"></i> Nie opublikowano jeszcze zadań na te warsztaty</span>
+            </td>
+          {% endif %}
         {% elif workshop_participant.workshop.is_qualifying %}
           <td>
             {{ workshop_participant.qualification_result | default_if_none:'?' }} / {{ workshop_participant.workshop.max_points | default_if_none:'?' }}
@@ -63,18 +75,38 @@
       {% for workshop_participant in your_qualifications %}
       <tr>
         <th scope="row">
+          {% if is_my_profile %}
           <a href="{% url 'workshop_page' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}">
             {{ workshop_participant.workshop.title }}
           </a>
+          {% elif workshop_participant.solution %}
+            <a href="{% url 'workshop_solution' workshop_participant.workshop.year.pk workshop_participant.workshop.name workshop_participant.solution.pk %}">
+              {{ workshop_participant.workshop.title }}
+            </a>
+          {% else %}
+            {{ workshop_participant.workshop.title }}
+          {% endif %}
         </th>
         {% if not workshop_participant.solution and workshop_participant.workshop.can_access_solution_upload and workshop_participant.workshop.are_solutions_editable %}
-          <td colspan="2">
-            <a role="button" class="btn btn-primary btn-sm" href="{% url 'workshop_my_solution' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}"><i class="fas fa-paper-plane"></i> Prześlij rozwiązania!</a>
-          </td>
+          {% if is_my_profile %}
+            <td colspan="2">
+              <a role="button" class="btn btn-primary btn-sm" href="{% url 'workshop_my_solution' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}"><i class="fas fa-paper-plane"></i> Prześlij rozwiązania!</a>
+            </td>
+          {% else %}
+            <td colspan="2">
+              <span class="text-danger"><i class="fas fa-exclamation-circle"></i> Nie przesłano rozwiązań</span>
+            </td>
+          {% endif %}
         {% elif workshop_participant.workshop.is_qualifying and not workshop_participant.workshop.qualification_problems %}
-          <td colspan="2">
-            <span class="text-warning"><i class="fas fa-exclamation-circle"></i> Poczekaj na opublikowanie zadań</span>
-          </td>
+          {% if is_my_profile %}
+            <td colspan="2">
+              <span class="text-warning"><i class="fas fa-exclamation-circle"></i> Poczekaj na opublikowanie zadań</span>
+            </td>
+          {% else %}
+            <td colspan="2">
+              <span class="text-warning"><i class="fas fa-exclamation-circle"></i> Nie opublikowano jeszcze zadań na te warsztaty</span>
+            </td>
+          {% endif %}
         {% elif workshop_participant.workshop.is_qualifying %}
           <td>
             {{ workshop_participant.qualification_result | default_if_none:'?' }} / {{ workshop_participant.workshop.max_points | default_if_none:'?' }}
