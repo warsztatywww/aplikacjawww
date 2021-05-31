@@ -407,8 +407,28 @@ class Workshop(models.Model):
     def registered_count(self):
         return self.workshopparticipant_set.count()
 
-    def solutions_count(self):
+    def solution_count(self):
+        if not self.solution_uploads_enabled:
+            raise Exception('Solution uploads are not enabled')
         return self.workshopparticipant_set.filter(solution__isnull=False).count()
+
+    def checked_solution_count(self):
+        if self.solution_uploads_enabled:
+            return self.workshopparticipant_set.filter(qualification_result__isnull=False, solution__isnull=False).count()
+        else:
+            return self.workshopparticipant_set.filter(qualification_result__isnull=False).count()
+
+    def to_be_checked_solution_count(self):
+        if self.solution_uploads_enabled:
+            return self.solution_count()
+        else:
+            return self.registered_count()
+
+    def checked_solution_percentage(self):
+        if self.to_be_checked_solution_count() == 0:
+            return -1
+        else:
+            return self.checked_solution_count() / self.to_be_checked_solution_count() * 100.0
 
     def qualified_count(self):
         if self.qualification_threshold is None:
