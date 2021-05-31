@@ -572,25 +572,28 @@ def participants_view(request, year=None):
                             people[participant.id]['solution_count'] += 1
 
                     if wp.workshop.solution_uploads_enabled and not hasattr(wp, 'solution'):
-                        people[participant.id]['infos'].append("{title} : Nie przesłano rozwiązań".format(
+                        people[participant.id]['infos'].append((-2, "{title} : Nie przesłano rozwiązań".format(
                             title=wp.workshop.title
-                        ))
+                        )))
                     elif wp.qualification_result is None:
-                        people[participant.id]['infos'].append("{title} : Jeszcze nie sprawdzone".format(
+                        people[participant.id]['infos'].append((-1, "{title} : Jeszcze nie sprawdzone".format(
                             title=wp.workshop.title
-                        ))
+                        )))
                     else:
-                        people[participant.id]['infos'].append("{title} : {result:.1f}%".format(
+                        people[participant.id]['infos'].append((wp.result_in_percent(), "{title} : {result:.1f}%".format(
                             title=wp.workshop.title,
                             result=wp.result_in_percent()
-                        ))
+                        )))
                 else:
-                    people[participant.id]['infos'].append("{title} : Warsztaty bez kwalifikacji".format(
+                    people[participant.id]['infos'].append((-3, "{title} : Warsztaty bez kwalifikacji".format(
                         title=wp.workshop.title
-                    ))
+                    )))
                 people[participant.id]['workshop_count'] += 1
                 if wp.is_qualified():
                     people[participant.id]['accepted_workshop_count'] += 1
+
+    for person in people.values():
+        person['infos'] = list(map(lambda x: x[1], sorted(person['infos'], key=lambda x: x[0], reverse=True)))
 
     people = list(people.values())
 
