@@ -153,6 +153,20 @@ class UserProfile(models.Model):
             data.append({'year': year, 'status': status, 'type': participation_type, 'workshops': workshops})
         return data
 
+    def workshop_results_by_year(self):
+        participation_data = self.all_participation_data()
+        for p in participation_data:
+            p['qualification_results'] = []
+        qualifications = WorkshopParticipant.objects.filter(participant=self).select_related('workshop', 'workshop__year', 'solution').all()
+        for q in qualifications:
+            participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
+            if participation_for_year is None:
+                participation_for_year = {'year': q.workshop.year, 'type': 'participant', 'status': None, 'qualification_results': []}
+                participation_data.append(participation_for_year)
+            participation_for_year['qualification_results'].append(q)
+        participation_data.sort(key=lambda x: x['year'].year, reverse=True)
+        return participation_data
+
     def all_participation_years(self) -> Set[Camp]:
         """
         All years user was qualified or had a lecture
