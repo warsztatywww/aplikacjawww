@@ -10,6 +10,9 @@
         {% if workshop.status == 'X' %}</del>{% endif %}
         {% if workshop.page_content_is_public %}</a>{% endif %}
         {% if workshop.status == 'X' %}&nbsp;&nbsp;<span class="text-danger">(odwołane)</span>{% endif %}
+        {% for category in workshop.category.all %}
+          <span class="badge badge-secondary">{{ category.name }}</span>
+        {% endfor %}
         </h4>
       </div>
       <div class="col-12 col-lg-4 text-right mt-2 mt-lg-0">
@@ -25,18 +28,16 @@
   </div>
   {% endif %}
   <div class="card-body">
-    {% if workshop.short_description %}
     <div class="row">
       <div class="col-md-10">
-        <blockquote class="blockquote">
-          {{ workshop.short_description }}
-        </blockquote>
-      </div>
-    </div>
-    {% endif %}
-    <div class="row">
-      <div class="col-md-10">
-        <div class="row mt-2 mb-3">
+        <div class="row mt-2">
+          {% if workshop.short_description %}
+            <div class="col-md-12">
+                <blockquote class="blockquote">
+                  {{ workshop.short_description }}
+                </blockquote>
+            </div>
+          {% endif %}
           <div class="col-6 col-lg-4">Zadania kwalifikacyjne:</div>
           <div class="col-6 col-lg-8">
             {% if workshop.is_qualifying %}
@@ -68,21 +69,12 @@
             {% endif %}
           </div>
         </div>
-
-        <div class="row mt-2 mb-3">
-          <div class="col-6 col-lg-4">Kategorie:</div>
-          <div class="col-6 col-lg-8">
-            {% for category in workshop.category.all %}
-            <span class="badge badge-secondary">{{ category.name }}</span>
-            {% endfor %}
-          </div>
-        </div>
       </div>
-      <div class="col-md-2 text-center button-div {% if not no_workshop_card_header %}d-none d-md-block{% endif %}">
+      <div class="col-md-2 text-center align-middle button-div {% if not no_workshop_card_header %}d-none d-md-block{% endif %}">
         {% if workshop.is_qualification_editable %}
           {% if registered %}
             <div onclick="handle_registration_change('{{ workshop.name }}', false);" style="cursor: pointer;">
-              <button class="btn btn-warning btn-circle" type="button">
+              <button class="btn btn-warning btn-circle mt-2" type="button">
                 <i class="fas fa-minus"></i>
               </button>
               <br/>
@@ -90,7 +82,7 @@
             </div>
           {% else %}
             <div onclick="handle_registration_change('{{ workshop.name }}', true);" style="cursor: pointer;">
-              <button class="btn btn-success btn-circle" type="button">
+              <button class="btn btn-success btn-circle mt-2" type="button">
                 <i class="fas fa-plus"></i>
               </button>
               <br/>
@@ -100,7 +92,7 @@
         {% else %}
           {% if registered %}
             <div>
-              <button class="btn btn-success btn-circle" type="button" disabled="disabled">
+              <button class="btn btn-success btn-circle mt-2" type="button" disabled="disabled">
                 <i class="fas fa-check"></i>
               </button>
               <br/>
