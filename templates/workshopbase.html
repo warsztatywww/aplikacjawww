@@ -2,7 +2,13 @@
 
 {% block content %}
     <article>
-      <h1>{% block workshop_page_title %}{{ title }}{% endblock %}</h1>
+      <h1>
+        {% block workshop_page_title %}{{ title }}
+          {% for category in workshop.category.all %}
+            <span class="badge badge-secondary mb-1">{{ category.name }}</span>
+          {% endfor %}
+        {% endblock %}
+      </h1>
 
       {% if workshop %}
         <h3>Prowadzący: {% for lecturer in workshop.lecturer.all %}<a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</h3>
