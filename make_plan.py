@@ -5,6 +5,7 @@ from copy import deepcopy
 import json
 import sys
 import time
+from datetime import datetime
 
 if len(sys.argv) != 2:
     print "Usage {file} data.json".format(file=sys.argv[0])
@@ -15,7 +16,7 @@ with open(sys.argv[1]) as f:
     data = json.load(f)
 
 workshops = {ws['wid']:ws for ws in data['workshops']}
-workshops_per_block = len(workshops) / 6
+workshops_per_block = len(workshops) / 6.0
 
 points_not_allowed = 10**3
 points_wrong_workshops_per_block = 10**4
@@ -26,14 +27,19 @@ users = {u['uid']: u for u in data['users']}
 for uid in users.keys():
     users[uid]['part'] = set()
     users[uid]['blocks'] = set()
+    arrive = datetime.strptime(users[uid]['start'], "%Y-%m-%d")
+    depart = datetime.strptime(users[uid]['end'], "%Y-%m-%d")
     del users[uid]['start']
     del users[uid]['end']
-    users[uid]['blocks'].add(0)
-    users[uid]['blocks'].add(1)
-    users[uid]['blocks'].add(2)
-    users[uid]['blocks'].add(3)
-    users[uid]['blocks'].add(4)
-    users[uid]['blocks'].add(5)
+    if arrive <= datetime(2021, 8, 17) and depart >= datetime(2021, 8, 19):
+        users[uid]['blocks'].add(0)
+        users[uid]['blocks'].add(1)
+    if arrive <= datetime(2021, 8, 21) and depart >= datetime(2021, 8, 23):
+        users[uid]['blocks'].add(2)
+        users[uid]['blocks'].add(3)
+    if arrive <= datetime(2021, 8, 26) and depart >= datetime(2021, 8, 28):
+        users[uid]['blocks'].add(4)
+        users[uid]['blocks'].add(5)
 
 wid_list = list(workshops.keys())
 
@@ -173,7 +179,7 @@ class Plan(object):
                     points -= 10**6
 
         for wid in all_wids:
-            for disallowed_block in workshops[wid]['disallowed_blocks']:
+            for disallowed_block in workshops[wid].get('disallowed_blocks', []):
                 if wid in self.blocks[disallowed_block]:
                     if verbose:
                         print "DISALLOWED BLOCK"
@@ -184,7 +190,7 @@ class Plan(object):
             if abs(workshops_per_block - len(block)) > 0.9:
                 if verbose:
                     print "WRONG NUMBER OF WORKSHOPS IN BLOCK {block}".format(block=block)
-            points -= abs(workshops_per_block - len(block)) * points_wrong_workshops_per_block
+                points -= abs(workshops_per_block - len(block)) * points_wrong_workshops_per_block
 
 
         col_counter = {wid:0 for wid in all_wids}
