@@ -7,8 +7,9 @@ import sys
 import time
 from datetime import datetime
 
-if len(sys.argv) != 2:
+if len(sys.argv) not in [2, 3]:
     print "Usage {file} data.json".format(file=sys.argv[0])
+    print "Usage {file} data.json [[1, 2, 3], [4, 5, 6]]".format(file=sys.argv[0])
     sys.exit(1)
 
 # Reads data in format of dataForPlan.
@@ -54,9 +55,9 @@ for ws in workshops.values():
 
 class Plan(object):
     def __init__(self, tab=None):
+        self.workshops = dict()
         if tab is None:
             self.blocks = [set() for i in xrange(6)]
-            self.workshops = dict()
         else:
             self.blocks = [set() for i in xrange(6)]
             for i in xrange(6):
@@ -219,7 +220,7 @@ class Plan(object):
         for wid in col_counter.keys():
             points_col -= col_counter[wid]**2
         
-        return points * 1 + points_col
+        return points * 5 + points_col
         
 
 # print workshops
@@ -252,32 +253,49 @@ def improve(plan, points):
     return plan, points
 
 
-pnp = [Plan.make_random_plan() for i in xrange(1000)]
-pnp = [(plan, plan.evaluate()) for plan in pnp]
+def generate_plan():
 
-BEST = pnp[0][1]
-last_print_time = 0
+    pnp = [Plan.make_random_plan() for i in xrange(1000)]
+    pnp = [(plan, plan.evaluate()) for plan in pnp]
 
-try:
-    while True:
-        for i in xrange(len(pnp)):
-            pnp[i] = improve(pnp[i][0], pnp[i][1])
-            if pnp[i][1] > BEST:
-                BEST = pnp[i][1]
-            if verbose:
-                print BEST, pnp[i][1]
-        if last_print_time < time.time() - 1.0:
-            print BEST
-            last_print_time = time.time()
-        
-except KeyboardInterrupt:
-    print "ABORTED"
+    BEST = pnp[0][1]
+    last_print_time = 0
 
-for i in xrange(len(pnp)):
-    if pnp[i][1] == BEST:
-        pnp[i][0].evaluate(True)
-        pnp[i][0].describe()
-        print "points:", pnp[i][1]
-        print "TAB for later use:"
-        print pnp[i][0].tab()
-        break
+    try:
+        while True:
+            for i in xrange(len(pnp)):
+                pnp[i] = improve(pnp[i][0], pnp[i][1])
+                if pnp[i][1] > BEST:
+                    BEST = pnp[i][1]
+                if verbose:
+                    print BEST, pnp[i][1]
+            if last_print_time < time.time() - 1.0:
+                print BEST
+                last_print_time = time.time()
+            
+    except KeyboardInterrupt:
+        print "ABORTED"
+
+    for i in xrange(len(pnp)):
+        if pnp[i][1] == BEST:
+            return pnp[i][0]
+
+
+def print_plan(plan):
+    pts = plan.evaluate(True)
+    plan.describe()
+    print "points:", pts
+    print "TAB for later use:"
+    print plan.tab()
+
+if len(sys.argv) == 2:
+    plan = generate_plan()
+    print_plan(plan)
+elif len(sys.argv) == 3:
+    import json
+    plan_tab = json.loads(sys.argv[2])
+    plan = Plan(plan_tab)
+    print_plan(plan)
+else:
+    print "Invalid number of arguments"
+
