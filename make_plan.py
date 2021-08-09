@@ -161,6 +161,7 @@ class Plan(object):
 
     def evaluate(self, verbose=False):
         all_wids = set()
+        all_lecturer_uids = set()
         for widset in self.blocks:
             all_wids.update(widset)
         
@@ -173,6 +174,7 @@ class Plan(object):
         
         for wid in all_wids:
             for lec_uid in workshops[wid]['lecturers']:
+                all_lecturer_uids.add(lec_uid)
                 if self.workshops[wid] not in users[lec_uid]['blocks']:
                     if verbose:
                         print "COLLISION OF LECTURER"
@@ -195,7 +197,7 @@ class Plan(object):
 
 
         col_counter = {wid:0 for wid in all_wids}
-        for uid in users.keys():
+        for uid in (uid for uid in users.keys() if uid not in all_lecturer_uids):
             user_blocks = dict()
             for wid in users[uid]['part']:
                 if self.workshops[wid] in users[uid]['blocks']:
