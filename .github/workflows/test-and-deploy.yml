@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.8, 3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -26,7 +26,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     - name: Install JS/CSS dependencies
-      run: npm install
+      run: npm ci
     - name: Build JS/CSS with webpack
       run: npm run build
     - name: Lint with flake8
@@ -50,7 +50,7 @@ jobs:
         file: ./coverage.xml
         fail_ci_if_error: true
         verbose: true
-      if: matrix.python-version == 3.8
+      if: matrix.python-version == 3.9
       
   deploy:
     if: github.ref == 'refs/heads/master'
