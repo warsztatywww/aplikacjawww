@@ -7,3 +7,7 @@ venv
 database.sqlite3
 .env
 .coverage
+docker-compose.yml
+Dockerfile
+.git
+.dockerignore
