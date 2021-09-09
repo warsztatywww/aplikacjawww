@@ -71,7 +71,7 @@ class Image(models.Model):
         self.data.open()
         with pImage.open(self.data) as img:
             if hasattr(img, '_getexif'):
-                info = img.getexif()
+                info = img._getexif()
                 if not info:
                     return {}
                 for tag, value in info.items():
@@ -96,7 +96,8 @@ class Image(models.Model):
         self.exif_iso = exif_data.get('ISOSpeedRatings')
 
         self.exif_date_taken = None
-        original_exif = exif_data.get('DateTimeOriginal')
+        original_exif = exif_data.get('DateTimeOriginal',
+                            exif_data.get('DateTime'))
         if original_exif:
             try:
                 # EXIF is not timezone aware, but Django requires a timezone, so the best we can do is assume UTC
