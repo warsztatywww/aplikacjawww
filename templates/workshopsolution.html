@@ -31,14 +31,17 @@
         (<a href="{% url 'qualification_problems' workshop.year.pk workshop.name %}">zadania</a>)
       </div>
     </div>
+    {% if not is_mine %}
     <div class="form-group">
       <label>
         Autor rozwiązania
       </label>
       <div class="px-3">
-        <a href="{% url 'profile' solution.workshop_participant.participant.user.pk %}">{{ solution.workshop_participant.participant.user.get_full_name }}</a>
+        <a href="{% url 'profile' solution.workshop_participant.participant.user.pk %}">{{ solution.workshop_participant.participant.user.get_full_name }}</a>;
+        <a href="mailto:{{ solution.workshop_participant.participant.user.email }}">{{ solution.workshop_participant.participant.user.email }}</a>
       </div>
     </div>
+    {% endif %}
     <div class="form-group">
       <label>
         Ostatnia zmiana
