@@ -76,7 +76,11 @@ class Image(models.Model):
                     return {}
                 for tag, value in info.items():
                     decoded = TAGS.get(tag, tag)
-                    exif_data[decoded] = value
+                    if isinstance(value, str):
+                        # EXIF data can sometimes contain NULL bytes (see issue #561)
+                        exif_data[decoded] = value.replace('\x00', '')
+                    else:
+                        exif_data[decoded] = value
                 # Process some data for easy rendering in template
                 exif_data['Camera'] = exif_data.get('Model', '')
                 if exif_data.get('Make', '') not in exif_data['Camera']:  # Work around for Canon
