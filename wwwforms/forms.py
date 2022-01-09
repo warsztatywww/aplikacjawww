@@ -65,7 +65,8 @@ class FormForm(forms.Form):
             if question.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_MULTIPLE_CHOICE, FormQuestion.TYPE_SELECT):
                 field_kwargs['queryset'] = question.options.all()
                 field_kwargs['blank'] = not question.is_required
-
+            if question.is_locked:
+                question.is_required=False
             self.fields[field_name] = field_type(label=question.title, required=question.is_required,
                                                  initial=value, disabled=question.is_locked,
                                                  **field_kwargs)
@@ -95,34 +96,32 @@ class FormForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-
         if self.form.arrival_date and self.form.departure_date:
             arrival_date_field = self.field_name_for_question(self.form.arrival_date)
             departure_date_field = self.field_name_for_question(self.form.departure_date)
             current_year = Camp.objects.latest()
             if current_year.start_date and current_year.end_date:
                 errors = {}
-
-                if self.cleaned_data[arrival_date_field]:
+                arrival_date_set = arrival_date_field in self.cleaned_data and self.cleaned_data[arrival_date_field]
+                departure_date_set = departure_date_field in self.cleaned_data and self.cleaned_data[departure_date_field]
+                if arrival_date_set:
                     if self.cleaned_data[arrival_date_field] < current_year.start_date:
                         errors[arrival_date_field] = 'Warsztaty rozpoczynają się ' + str(current_year.start_date)
                     if self.cleaned_data[arrival_date_field] > current_year.end_date:
                         errors[arrival_date_field] = 'Warsztaty kończą się ' + str(current_year.end_date)
 
-                if self.cleaned_data[departure_date_field]:
+                if departure_date_set:
                     if self.cleaned_data[departure_date_field] < current_year.start_date:
                         errors[departure_date_field] = 'Warsztaty rozpoczynają się ' + str(current_year.start_date)
                     if self.cleaned_data[departure_date_field] > current_year.end_date:
                         errors[departure_date_field] = 'Warsztaty kończą się ' + str(current_year.end_date)
-
-                if not errors and self.cleaned_data[arrival_date_field] and self.cleaned_data[departure_date_field]:
+                if not errors and departure_date_set and arrival_date_set:
                     if self.cleaned_data[arrival_date_field] > self.cleaned_data[departure_date_field]:
                         errors[arrival_date_field] = 'Nie możesz wyjechać wcześniej niż przyjechać! :D'
                         errors[departure_date_field] = 'Nie możesz wyjechać wcześniej niż przyjechać! :D'
 
                 if errors:
                     raise ValidationError(errors)
-
         return cleaned_data
 
     def save(self):
