@@ -8,6 +8,7 @@ from typing import Tuple, List, Union
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
 import random
+import datetime
 
 from wwwforms.models import Form, FormQuestion
 
@@ -188,6 +189,14 @@ class Command(BaseCommand):
             articles.append(self.fake_article(users, i))
 
         year = Camp.objects.get()  # The year object for the current year is created by the initial migration
+        print(year)
+        # Adding default years for start and end of camp
+        current_date=datetime.date.today()
+        delta_date=datetime.timedelta(days=60)
+
+        year.start_date=current_date-delta_date
+        year.end_date=current_date+delta_date
+        year.save()
 
         types = []
         for i in range(self.NUM_OF_TYPES):
