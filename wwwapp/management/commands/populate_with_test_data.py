@@ -189,7 +189,7 @@ class Command(BaseCommand):
             articles.append(self.fake_article(users, i))
 
         year = Camp.objects.get()  # The year object for the current year is created by the initial migration
-        print(year)
+
         # Adding default years for start and end of camp
         current_date=datetime.date.today()
         delta_date=datetime.timedelta(days=60)
