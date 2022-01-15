@@ -192,10 +192,13 @@ class Command(BaseCommand):
 
         # Adding default years for start and end of camp
         current_date=datetime.date.today()
-        delta_date=datetime.timedelta(days=60)
+        if(current_date.month<7):
+            year.year=current_date.year+1
+        else:
+            year.year=current_date.year
 
-        year.start_date=current_date-delta_date
-        year.end_date=current_date+delta_date
+        year.start_date=datetime.datetime(year.year,7,1)
+        year.end_date=datetime.datetime(year.year,8,1)
         year.save()
 
         types = []
