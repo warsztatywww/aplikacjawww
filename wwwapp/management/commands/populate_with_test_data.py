@@ -191,14 +191,14 @@ class Command(BaseCommand):
         year = Camp.objects.get()  # The year object for the current year is created by the initial migration
 
         # Adding default years for start and end of camp
-        current_date=datetime.date.today()
-        if(current_date.month<7):
-            year.year=current_date.year+1
+        current_date = datetime.date.today()
+        if (current_date.month < 7):
+            year.year = current_date.year + 1
         else:
-            year.year=current_date.year
+            year.year = current_date.year
 
-        year.start_date=datetime.datetime(year.year,7,1)
-        year.end_date=datetime.datetime(year.year,8,1)
+        year.start_date = datetime.datetime(year.year, 7, 1)
+        year.end_date = datetime.datetime(year.year, 8, 1)
         year.save()
 
         types = []
