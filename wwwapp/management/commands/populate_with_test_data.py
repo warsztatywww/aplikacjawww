@@ -192,10 +192,11 @@ class Command(BaseCommand):
         current_date = datetime.date.today()
 
         if current_date.month < 7:
-            year, created = Camp.objects.get_or_create(year=current_date.year)
+            target_year = current_date.year
         else:
-            year, created = Camp.objects.get_or_create(year=current_date.year + 1)
+            target_year = current_date.year + 1
 
+        year, created = Camp.objects.get_or_create(year=target_year)
         year.start_date = datetime.datetime(year.year, 7, 1)
         year.end_date = datetime.datetime(year.year, 8, 1)
         year.save()
