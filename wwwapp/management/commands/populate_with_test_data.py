@@ -188,14 +188,13 @@ class Command(BaseCommand):
         for i in range(self.NUM_OF_ARTICLES):
             articles.append(self.fake_article(users, i))
 
-        year = Camp.objects.get()  # The year object for the current year is created by the initial migration
-
         # Adding default years for start and end of camp
         current_date = datetime.date.today()
-        if (current_date.month < 7):
-            year.year = current_date.year + 1
+
+        if current_date.month < 7:
+            year, created = Camp.objects.get_or_create(year=current_date.year)
         else:
-            year.year = current_date.year
+            year, created = Camp.objects.get_or_create(year=current_date.year + 1)
 
         year.start_date = datetime.datetime(year.year, 7, 1)
         year.end_date = datetime.datetime(year.year, 8, 1)
