@@ -14,7 +14,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_PASSWORD = None  # set in local_settings
 
 # Database
-# https://docs.djangoproject.com/en/3.1/ref/settings/#databases
+# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 DATABASES = {
     'default': {
