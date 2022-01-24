@@ -17,7 +17,7 @@ ROOT_URLCONF = 'wwwapp.urls'
 WSGI_APPLICATION = 'wwwapp.wsgi.application'
 
 # Database
-# https://docs.djangoproject.com/en/3.1/ref/settings/#databases
+# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 DATABASES = {
     'default': {
