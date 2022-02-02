@@ -66,33 +66,36 @@ class CampQualificationViews(TestCase):
         self.workshop2.lecturer.add(self.lecturer_user.user_profile)
         self.workshop2.save()
 
-        WorkshopParticipant.objects.create(workshop=self.workshop1, user_profile=self.participant_user.user_profile,
-                                           qualification_result=7.5, comment='Dobrze')
-        WorkshopParticipant.objects.create(workshop=self.workshop2, user_profile=self.participant_user.user_profile,
-                                           qualification_result=2.5, comment='Słabo')
+        cp = CampParticipant.objects.create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop1, qualification_result=7.5, comment='Dobrze')
+        cp.workshop_participation.create(workshop=self.workshop2, qualification_result=2.5, comment='Słabo')
 
     def test_percentage_result(self):
+        cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
+
         self.assertEqual(
-            WorkshopParticipant.objects.get(workshop=self.workshop1, user_profile=self.participant_user.user_profile).result_in_percent(),
+            cp.workshop_participation.get(workshop=self.workshop1).result_in_percent(),
             75.0)
         self.assertEqual(
-            WorkshopParticipant.objects.get(workshop=self.workshop2, user_profile=self.participant_user.user_profile).result_in_percent(),
+            cp.workshop_participation.get(workshop=self.workshop2).result_in_percent(),
             25.0)
 
         sum = 0.0
-        for participant in WorkshopParticipant.objects.filter(user_profile=self.participant_user.user_profile):
+        for participant in cp.workshop_participation.all():
             sum += float(participant.result_in_percent())
         self.assertEqual(sum, 100.0)
 
     @override_settings(MAX_POINTS_PERCENT=200)
     def test_percentage_huge(self):
-        participant = WorkshopParticipant.objects.get(workshop=self.workshop1, user_profile=self.participant_user.user_profile)
+        cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
+        participant = cp.workshop_participation.get(workshop=self.workshop1)
         participant.qualification_result = 2137
         participant.save()
         self.assertEqual(participant.result_in_percent(), 200.0)
 
     def test_percentage_negative(self):
-        participant = WorkshopParticipant.objects.get(workshop=self.workshop1, user_profile=self.participant_user.user_profile)
+        cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
+        participant = cp.workshop_participation.get(workshop=self.workshop1)
         participant.qualification_result = -2137
         participant.save()
         self.assertEqual(participant.result_in_percent(), 0.0)
@@ -214,7 +217,9 @@ class CampQualificationViews(TestCase):
             response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'reject'})
             save.assert_not_called()
             self.assertRedirects(response, reverse('login') + '?next=' + reverse('profile', args=[self.participant_user.pk]))
-        CampParticipant.objects.create(year=self.year_2020, user_profile=self.participant_user.user_profile, status=CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        cp.status = CampParticipant.STATUS_ACCEPTED
+        cp.save()
         with mock.patch('wwwapp.models.CampParticipant.save', autospec=True, side_effect=CampParticipant.save) as save:
             response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'delete'})
             save.assert_not_called()
@@ -234,7 +239,9 @@ class CampQualificationViews(TestCase):
             response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'reject'})
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
-        CampParticipant.objects.create(year=self.year_2020, user_profile=self.participant_user.user_profile, status=CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        cp.status = CampParticipant.STATUS_ACCEPTED
+        cp.save()
         with mock.patch('wwwapp.models.CampParticipant.save', autospec=True, side_effect=CampParticipant.save) as save:
             response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'delete'})
             save.assert_not_called()
@@ -249,8 +256,8 @@ class CampQualificationViews(TestCase):
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'accept'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        wup = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
-        self.assertEqual(wup.status, CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertEqual(cp.status, CampParticipant.STATUS_ACCEPTED)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
@@ -260,31 +267,38 @@ class CampQualificationViews(TestCase):
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'reject'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        wup = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
-        self.assertEqual(wup.status, CampParticipant.STATUS_REJECTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertEqual(cp.status, CampParticipant.STATUS_REJECTED)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
 
     def test_admin_can_cancel(self):
-        CampParticipant.objects.create(year=self.year_2020, user_profile=self.participant_user.user_profile, status=CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        cp.status = CampParticipant.STATUS_ACCEPTED
+        cp.save()
+
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'cancel'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        wup = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
-        self.assertEqual(wup.status, CampParticipant.STATUS_CANCELLED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertEqual(cp.status, CampParticipant.STATUS_CANCELLED)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="text-info">😞')
 
     def test_admin_can_delete_status(self):
-        CampParticipant.objects.create(year=self.year_2020, user_profile=self.participant_user.user_profile, status=CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        cp.status = CampParticipant.STATUS_ACCEPTED
+        cp.save()
+
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'delete'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        self.assertFalse(CampParticipant.objects.filter(year=self.year_2020, user_profile=self.participant_user.user_profile).exists())
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertIsNone(cp.status)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertNotContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
@@ -292,25 +306,31 @@ class CampQualificationViews(TestCase):
         self.assertNotContains(response, '<span class="text-info">😞')
 
     def test_admin_cannot_double_accept(self):
-        CampParticipant.objects.create(year=self.year_2020, user_profile=self.participant_user.user_profile, status=CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        cp.status = CampParticipant.STATUS_ACCEPTED
+        cp.save()
+
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'accept'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        wup = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
-        self.assertEqual(wup.status, CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertEqual(cp.status, CampParticipant.STATUS_ACCEPTED)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
 
     def test_admin_cannot_double_reject(self):
-        CampParticipant.objects.create(year=self.year_2020, user_profile=self.participant_user.user_profile, status=CampParticipant.STATUS_REJECTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        cp.status = CampParticipant.STATUS_REJECTED
+        cp.save()
+
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'reject'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        wup = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
-        self.assertEqual(wup.status, CampParticipant.STATUS_REJECTED)
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertEqual(cp.status, CampParticipant.STATUS_REJECTED)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
@@ -320,7 +340,8 @@ class CampQualificationViews(TestCase):
         response = self.client.post(reverse('profile', args=[self.participant_user.pk]), {'qualify': 'delete'})
         self.assertRedirects(response, reverse('profile', args=[self.participant_user.pk]))
 
-        self.assertFalse(CampParticipant.objects.filter(year=self.year_2020, user_profile=self.participant_user.user_profile).exists())
+        cp = CampParticipant.objects.get(year=self.year_2020, user_profile=self.participant_user.user_profile)
+        self.assertIsNone(cp.status)
 
         response = self.client.get(reverse('profile', args=[self.participant_user.pk]))
         self.assertNotContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
