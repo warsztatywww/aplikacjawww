@@ -113,7 +113,6 @@ class UserProfile(models.Model):
     matura_exam_year = models.PositiveSmallIntegerField(null=True, default=None, blank=True)
     how_do_you_know_about = models.CharField(max_length=1000, default="", blank=True)
     profile_page = models.TextField(max_length=100000, blank=True, default="")
-    cover_letter = models.TextField(max_length=100000, blank=True, default="")
 
     def is_participating_in(self, year: Camp) -> bool:
         return self.is_participant_in(year) or self.is_lecturer_in(year)
@@ -245,6 +244,8 @@ class CampParticipant(models.Model):
 
     year = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='participants')
     user_profile = models.ForeignKey('UserProfile', null=True, related_name='camp_participation', on_delete=models.CASCADE)
+
+    cover_letter = models.TextField(max_length=100000, blank=True, default="")
 
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,

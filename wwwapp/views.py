@@ -236,14 +236,20 @@ def mydata_profile_page_view(request):
 def mydata_cover_letter_view(request):
     context = {}
 
-    if request.method == "POST":
-        user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.user_profile)
-        if user_cover_letter_form.is_valid():
-            user_cover_letter_form.save()
-            messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
-            return redirect('mydata_cover_letter')
+    user_profile = request.user.user_profile
+    camp_participation = user_profile.camp_participation_for(Camp.current())
+
+    if camp_participation is not None:
+        if request.method == "POST":
+            user_cover_letter_form = UserCoverLetterForm(request.POST, instance=camp_participation)
+            if user_cover_letter_form.is_valid():
+                user_cover_letter_form.save()
+                messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
+                return redirect('mydata_cover_letter')
+        else:
+            user_cover_letter_form = UserCoverLetterForm(instance=camp_participation)
     else:
-        user_cover_letter_form = UserCoverLetterForm(instance=request.user.user_profile)
+        user_cover_letter_form = None
 
     context['user_cover_letter_form'] = user_cover_letter_form
     context['title'] = 'Mój profil'
@@ -269,11 +275,12 @@ def mydata_status_view(request):
     participation_data = user_profile.workshop_results_by_year()
     current_status = next(filter(lambda x: x['year'] == current_year, participation_data), None)
     past_status = list(filter(lambda x: x['year'] != current_year, participation_data))
+    current_camp_participant = current_status['camp_participant'] if current_status else None
 
     context['title'] = 'Mój profil'
     context['gender'] = user_profile.gender
     context['has_completed_profile'] = user_profile.is_completed
-    context['has_cover_letter'] = len(user_profile.cover_letter) >= 50
+    context['has_cover_letter'] = len(current_camp_participant.cover_letter) >= 50 if current_camp_participant else None
     context['current_status'] = current_status
     context['past_status'] = past_status
 
@@ -585,7 +592,7 @@ def participants_view(request, year=None):
             'to_be_checked_solution_count': 0,
             'accepted_workshop_count': 0,
             'has_completed_profile': participant.is_completed,
-            'has_cover_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
+            'has_cover_letter': len(camp_participation.cover_letter) > 50 if camp_participation else None,
             'status': camp_participation.status if camp_participation else None,
             'status_display': camp_participation.get_status_display if camp_participation else None,
             'participation_data': participation_data,

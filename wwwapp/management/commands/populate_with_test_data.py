@@ -60,7 +60,6 @@ class Command(BaseCommand):
                 user.user_profile.matura_exam_year = self.fake.date_this_year().year
                 user.user_profile.how_do_you_know_about = self.fake.text()
                 user.user_profile.profile_page = self.fake.text()
-                user.user_profile.cover_letter = self.fake.text()
                 user.user_profile.save()
 
                 self.question_pesel.answers.create(user=user, value_string=profile_data['ssn'])
