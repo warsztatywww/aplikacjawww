@@ -6,6 +6,9 @@
     <h2>Edycja {{ current_year }}
       <span class="small-on-md">{% include '_statusLabel.html' with status=current_status %}</span>
       {% if current_status and current_status.type == 'participant' and not current_status.status %}
+        {% if not current_status.qualification_results %}
+          <span class="badge badge-dark" style="font-size: 50%;">Nie wybrano zajęć</span>
+        {% endif %}
         {% if not has_completed_profile %}
           <span class="badge badge-dark" style="font-size: 50%;">Niekompletny profil</span>
         {% endif %}
@@ -69,6 +72,16 @@
                   Zapisałeś się na warsztaty, ale nie wypełniłeś wymaganych danych.
                 {% endif %}
                 Uzupełnij swój <a href="{% url 'mydata_profile' %}">profil</a> i <a href="{% url 'mydata_cover_letter' %}">list motywacyjny</a>.
+            </p>
+          {% elif not current_status.qualification_results %}
+            <p>
+              {% if gender == 'F' %}
+                Wyraziłaś zainteresowanie warsztatami, ale jeszcze nie zapisałaś się na żadne bloki zajęciowe.
+              {% else %}
+                Wyraziłeś zainteresowanie warsztatami, ale jeszcze nie zapisałeś się na żadne bloki zajęciowe.
+              {% endif %}
+              Przejdź na stronę <a href="{% url 'program' current_year.pk %}">Program</a>, zapisz się na interesujące Cię zajęcia
+              i rozwiąż zadania kwalifikacyjne na nie.
             </p>
           {% else %}
             <p>

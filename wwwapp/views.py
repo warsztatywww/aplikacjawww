@@ -93,9 +93,23 @@ def program_view(request, year):
     context['workshops'] = [(workshop, (workshop in workshops_participating_in)) for workshop
                             in workshops]
     context['has_results'] = has_results and year == Camp.current()
+    context['is_registered'] = camp_participation is not None
 
     context['selected_year'] = year
     return render(request, 'program.html', context)
+
+
+@login_required()
+def register_to_camp_view(request, year):
+    year = get_object_or_404(Camp, pk=year)
+
+    if not year.is_qualification_editable():
+        return HttpResponseForbidden('Kwalifikacja na te warsztaty została zakończona.')
+
+    camp_participation, created = year.participants.get_or_create(user_profile=request.user.user_profile)
+    if created:
+        messages.info(request, 'Powiadomimy się, gdy rozpocznie się rejestracja', extra_tags='auto-dismiss')
+    return redirect('program', year.pk)
 
 
 def profile_view(request, user_id):
