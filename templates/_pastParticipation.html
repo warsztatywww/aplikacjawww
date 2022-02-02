@@ -1,20 +1,20 @@
 {% for participation in participation_data %}
-  {% if participation.status %}
-    {% if participation.status == 'Z' %}
-      <span class="text-success"><i class="fas fa-check-circle"></i>
-    {% elif participation.status == 'O' %}
-      <span class="text-danger"><i class="fas fa-minus-circle"></i>
-    {% elif participation.status == 'X' %}
-      <span class="text-info">😞
-    {% else %}
-      <span class="text-secondary">{{ participation.status }}
-    {% endif %}
-
-    {% if participation.workshops %}
-      <span data-toggle="tooltip" data-placement="bottom" data-html="true" title="<b>Prowadzący:</b>{% for workshop in participation.workshops %}{% if workshop.status %}<br/>{{ workshop.title }}{% if workshop.status != 'Z' %} <i>({{ workshop.get_status_display }})</i>{% endif %}{% endif %}{% endfor %}" style="text-decoration: underline;">{{ participation.year }}</span>
-    {% else %}
-      <span data-toggle="tooltip" data-placement="bottom" data-html="true" title="<b>Uczestnik</b>">{{ participation.year }}</span>
-    {% endif %}
-    </span>
+  {% if participation.status == 'Z' %}
+    <span class="text-success"><i class="fas fa-check-circle"></i>
+  {% elif participation.status == 'O' %}
+    <span class="text-danger"><i class="fas fa-minus-circle"></i>
+  {% elif participation.status == 'X' %}
+    <span class="text-info">😞
+  {% elif not participation.status %}
+    <span class="text-secondary"><i class="fas fa-question-circle"></i>
+  {% else %}
+    <span class="text-secondary">{{ participation.status }}
   {% endif %}
+
+  {% if participation.workshops %}
+    <span data-toggle="tooltip" data-placement="bottom" data-html="true" title="<b>Prowadzący:</b>{% for workshop in participation.workshops %}{% if workshop.status %}<br/>{{ workshop.title }}{% if workshop.status != 'Z' %} <i>({{ workshop.get_status_display }})</i>{% endif %}{% endif %}{% endfor %}" style="text-decoration: underline;">{{ participation.year }}</span>
+  {% else %}
+    <span data-toggle="tooltip" data-placement="bottom" data-html="true" title="<b>Uczestnik</b>">{{ participation.year }}</span>
+  {% endif %}
+  </span>
 {% endfor %}
