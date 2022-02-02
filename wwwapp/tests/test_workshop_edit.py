@@ -45,7 +45,7 @@ class WorkshopEditViews(TestCase):
         )
         self.workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 1'))
         self.workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 2'))
-        self.workshop.lecturer.add(self.normal_user.userprofile)
+        self.workshop.lecturer.add(self.normal_user.user_profile)
         self.workshop.save()
 
     @freeze_time('2020-05-01 12:00:00')
@@ -106,7 +106,7 @@ class WorkshopEditViews(TestCase):
             WorkshopCategory.objects.get(year=self.year_2020, name='This category 2'),
         })
         self.assertHTMLEqual(workshop.proposition_description, '<p>Na tych warsztatach będziemy testować fajną stronę</p>')
-        self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.userprofile})
+        self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.user_profile})
         self.assertIsNone(workshop.status)
 
     @freeze_time('2020-05-01 12:00:00')
@@ -153,7 +153,7 @@ class WorkshopEditViews(TestCase):
         )
         workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 1'))
         workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 2'))
-        workshop.lecturer.add(self.normal_user.userprofile)
+        workshop.lecturer.add(self.normal_user.user_profile)
         with self.assertRaisesRegexp(ValidationError, 'Typ warsztatów nie jest z tego roku'):
             workshop.full_clean()
 
@@ -165,7 +165,7 @@ class WorkshopEditViews(TestCase):
             type=WorkshopType.objects.get(year=self.year_2020, name='This type 1')
         )
         workshop.category.add(WorkshopCategory.objects.get(year=self.year_2019, name='Not this category'))
-        workshop.lecturer.add(self.normal_user.userprofile)
+        workshop.lecturer.add(self.normal_user.user_profile)
         workshop.save()
         with self.assertRaisesRegexp(ValidationError, 'Kategoria warsztatów nie jest z tego roku'):
             workshop.full_clean()
@@ -319,7 +319,7 @@ class WorkshopEditViews(TestCase):
                     WorkshopCategory.objects.get(year=self.year_2020, name='This category 3'),
                 })
                 self.assertHTMLEqual(workshop.proposition_description, '<p>PRZEGRAŁEM!!</p>')
-                self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.userprofile})
+                self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.user_profile})
 
     def test_edit_proposal_unauthenticated(self):
         # Unauthenticated user can't view or edit the proposal

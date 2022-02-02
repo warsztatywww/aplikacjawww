@@ -121,7 +121,7 @@ class TestArticleViews(TestCase):
         self.assertEqual(article.on_menubar, True)
         self.assertEqual(article.modified_by, self.supermegaeditor_user)
 
-        article_history = article.content_history()
+        article_history = article.content_history.all()
         self.assertEqual(len(article_history), 1)
         self.assertHTMLEqual(article_history[0].content, '<p>Treść</p>')
         self.assertEqual(article_history[0].modified_by, self.supermegaeditor_user)
@@ -155,7 +155,7 @@ class TestArticleViews(TestCase):
         self.assertEqual(article.on_menubar, False)  # This should not be set!
         self.assertEqual(article.modified_by, self.supereditor_user)
 
-        article_history = article.content_history()
+        article_history = article.content_history.all()
         self.assertEqual(len(article_history), 1)
         self.assertHTMLEqual(article_history[0].content, '<p>Treść</p>')
         self.assertEqual(article_history[0].modified_by, self.supereditor_user)
@@ -217,7 +217,7 @@ class TestArticleViews(TestCase):
         self.assertEqual(article.on_menubar, True)
         self.assertEqual(article.modified_by, self.supermegaeditor_user)
 
-        article_history = article.content_history()
+        article_history = article.content_history.all()
         self.assertEqual(len(article_history), 2)
         self.assertHTMLEqual(article_history[0].content, '<p>Treść</p>')
         self.assertEqual(article_history[0].modified_by, self.supermegaeditor_user)
@@ -254,7 +254,7 @@ class TestArticleViews(TestCase):
         self.assertEqual(article.on_menubar, False)  # This should not be set!
         self.assertEqual(article.modified_by, self.editor_user)
 
-        article_history = article.content_history()
+        article_history = article.content_history.all()
         self.assertEqual(len(article_history), 2)
         self.assertHTMLEqual(article_history[0].content, '<p>Treść</p>')
         self.assertEqual(article_history[0].modified_by, self.editor_user)
@@ -278,7 +278,7 @@ class TestArticleViews(TestCase):
         })
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Article.objects.filter(name='edited_article').exists())
-        self.assertEqual(len(Article.objects.get(name='test_article').content_history()), 1)
+        self.assertEqual(len(Article.objects.get(name='test_article').content_history.all()), 1)
 
     def test_edit_article_unauthenticated(self):
         response = self.client.get(reverse('article_edit', args=['test_article']))
@@ -292,7 +292,7 @@ class TestArticleViews(TestCase):
         })
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('article_edit', args=['test_article']))
         self.assertFalse(Article.objects.filter(name='edited_article').exists())
-        self.assertEqual(len(Article.objects.get(name='test_article').content_history()), 1)
+        self.assertEqual(len(Article.objects.get(name='test_article').content_history.all()), 1)
 
     def test_edit_special_article(self):
         # Trying to edit name, title or menubar for index page should fail
@@ -322,7 +322,7 @@ class TestArticleViews(TestCase):
         self.assertEqual(article.on_menubar, False)  # This should not be set!
         self.assertEqual(article.modified_by, self.admin_user)
 
-        article_history = article.content_history()
+        article_history = article.content_history.all()
         self.assertEqual(len(article_history), 2)
         self.assertHTMLEqual(article_history[0].content, '<p>Treść</p>')
         self.assertEqual(article_history[0].modified_by, self.admin_user)

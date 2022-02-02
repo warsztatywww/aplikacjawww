@@ -101,7 +101,7 @@ def protect_last_camp(sender, instance, using, **kwargs):
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
 
     gender = models.CharField(max_length=10, choices=[('M', 'Mężczyzna'), ('F', 'Kobieta'),],
                               null=True, default=None, blank=True)
@@ -262,9 +262,9 @@ class PESELField(models.CharField):
 
 class ArticleContentHistory(models.Model):
     version = models.IntegerField(editable=False)
-    article = models.ForeignKey('Article', null=True, on_delete=models.SET_NULL)
+    article = models.ForeignKey('Article', null=True, on_delete=models.SET_NULL, related_name='content_history')
     content = models.TextField()
-    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL)
+    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL, related_name='+')
     time = models.DateTimeField(auto_now_add=True, null=True, editable=False)
 
     def __str__(self):
@@ -276,6 +276,7 @@ class ArticleContentHistory(models.Model):
 
     class Meta:
         unique_together = ('version', 'article',)
+        ordering = ('article', '-version')
 
     def save(self, *args, **kwargs):
         # start with version 1 and increment it for each version
@@ -289,7 +290,7 @@ class Article(models.Model):
     name = models.SlugField(max_length=50, null=False, blank=False, unique=True)
     title = models.CharField(max_length=50, null=True, blank=True)
     content = models.TextField(max_length=100000, blank=True)
-    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL)
+    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL, related_name='+')
     on_menubar = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0, blank=False, null=False)
 
@@ -297,16 +298,13 @@ class Article(models.Model):
         permissions = (('can_put_on_menubar', 'Can put on menubar'),)
         ordering = ['order']
 
-    def content_history(self):
-        return ArticleContentHistory.objects.filter(article=self).order_by('-version')
-
     def __str__(self):
         return '{} "{}"'.format(self.name, self.title)
 
     def save(self, *args, **kwargs):
         super(Article, self).save(*args, **kwargs)
         # save summary history
-        content_history = self.content_history()
+        content_history = self.content_history.all()
         if not content_history or self.content != content_history[0].content:
             new_content = ArticleContentHistory(article=self, content=self.content)
             new_content.save()

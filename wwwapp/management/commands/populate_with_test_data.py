@@ -55,13 +55,13 @@ class Command(BaseCommand):
                 user.last_name = self.fake.last_name()
                 user.save()
 
-                user.userprofile.gender = profile_data['sex']
-                user.userprofile.school = "TEST"
-                user.userprofile.matura_exam_year = self.fake.date_this_year().year
-                user.userprofile.how_do_you_know_about = self.fake.text()
-                user.userprofile.profile_page = self.fake.text()
-                user.userprofile.cover_letter = self.fake.text()
-                user.userprofile.save()
+                user.user_profile.gender = profile_data['sex']
+                user.user_profile.school = "TEST"
+                user.user_profile.matura_exam_year = self.fake.date_this_year().year
+                user.user_profile.how_do_you_know_about = self.fake.text()
+                user.user_profile.profile_page = self.fake.text()
+                user.user_profile.cover_letter = self.fake.text()
+                user.user_profile.save()
 
                 self.question_pesel.answers.create(user=user, value_string=profile_data['ssn'])
                 self.question_address.answers.create(user=user, value_string=profile_data['address'])
@@ -69,7 +69,7 @@ class Command(BaseCommand):
             except django.db.utils.IntegrityError:
                 ok = False
 
-        return user, user.userprofile
+        return user, user.user_profile
 
     """
     Returns a zero padded string representation of the given number
