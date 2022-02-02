@@ -115,7 +115,7 @@ class UserProfile(models.Model):
         return self.is_participant_in(year) or self.is_lecturer_in(year)
 
     def is_participant_in(self, year: Camp) -> bool:
-        return self.participant_status_for(year) == 'Z'
+        return self.camp_participation_status_for(year) == 'Z'
 
     def is_lecturer_in(self, year: Camp) -> bool:
         return self.lecturer_workshops.filter(year=year, status='Z').exists()
@@ -124,7 +124,7 @@ class UserProfile(models.Model):
         """
         Returns the participation data from UserWorkshopProfile joined with data about lectures
         """
-        participant_data = [p for p in self.workshop_profile.all()]
+        participant_data = [p for p in self.camp_participation.all()]
         lecturer_data = [p for p in self.lecturer_workshops.all()]
         years = set([profile.year for profile in participant_data] + [workshop.year for workshop in lecturer_data])
         data = []
@@ -179,7 +179,7 @@ class UserProfile(models.Model):
         Years user qualified
         :return: list of years (integers)
         """
-        return set([profile.year for profile in self.workshop_profile.filter(status=WorkshopUserProfile.STATUS_ACCEPTED)])
+        return set([profile.year for profile in self.camp_participation.filter(status=CampParticipant.STATUS_ACCEPTED)])
 
     def lecturer_years(self) -> Set[Camp]:
         """
@@ -188,14 +188,14 @@ class UserProfile(models.Model):
         """
         return set([workshop.year for workshop in self.lecturer_workshops.filter(status='Z')])
 
-    def participant_status_for(self, year: Camp) -> Optional[str]:
-        profile = self.workshop_profile_for(year)
+    def camp_participation_status_for(self, year: Camp) -> Optional[str]:
+        profile = self.camp_participation_for(year)
         return profile.status if profile else None
 
-    def workshop_profile_for(self, year: Camp) -> Optional['WorkshopUserProfile']:
+    def camp_participation_for(self, year: Camp) -> Optional['CampParticipant']:
         try:
-            return self.workshop_profile.get(year=year)
-        except WorkshopUserProfile.DoesNotExist:
+            return self.camp_participation.get(year=year)
+        except CampParticipant.DoesNotExist:
             return None
 
     @property
@@ -224,7 +224,7 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.get_or_create(user=instance)
 
 
-class WorkshopUserProfile(models.Model):
+class CampParticipant(models.Model):
     # for each year
     STATUS_ACCEPTED = 'Z'
     STATUS_REJECTED = 'O'
@@ -234,12 +234,15 @@ class WorkshopUserProfile(models.Model):
         (STATUS_REJECTED, 'Odrzucony'),
         (STATUS_CANCELLED, 'Odwołany')
     ]
-    user_profile = models.ForeignKey('UserProfile', null=True, related_name='workshop_profile', on_delete=models.CASCADE)
+    user_profile = models.ForeignKey('UserProfile', null=True, related_name='camp_participation', on_delete=models.CASCADE)
 
-    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='participants')
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,
                               null=True, default=None, blank=True)
+
+    class Meta:
+        unique_together = ('user_profile', 'year')
 
     def __str__(self):
         return '%s: %s, %s' % (self.year, self.user_profile, self.status)

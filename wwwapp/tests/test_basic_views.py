@@ -5,7 +5,7 @@ from django.test.testcases import TestCase
 from django.urls import reverse
 
 from wwwapp.models import Camp, WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant, Article, \
-    WorkshopUserProfile
+    CampParticipant
 
 
 # Check if all of the important views at least load without crashing
@@ -49,8 +49,8 @@ class TestBasicViews(TestCase):
         WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile,
                                            qualification_result=7.5, comment='Dobrze')
 
-        WorkshopUserProfile.objects.create(user_profile=self.participant_user.userprofile, year=self.year_2020,
-                                           status=WorkshopUserProfile.STATUS_ACCEPTED)
+        CampParticipant.objects.create(user_profile=self.participant_user.userprofile, year=self.year_2020,
+                                       status=CampParticipant.STATUS_ACCEPTED)
 
         self.article = Article.objects.create(name='test_article', title='Testowy', content='<b>Test</b>',
                                               modified_by=self.admin_user, on_menubar=True)

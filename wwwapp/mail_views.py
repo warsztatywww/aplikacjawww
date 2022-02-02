@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render, get_object_or_404
 
 from .forms import MailFilterForm
-from .models import Workshop, WorkshopUserProfile, Camp
+from .models import Workshop, CampParticipant, Camp
 from .views import get_context
 
 _registered_filters = dict()
@@ -62,13 +62,13 @@ def _all_participants(year):
 @_register_as_email_filter('allQualified', 'wszyscy uczestnicy o statusie zakwalifikowanym')
 def _all_qualified(year):
     return [profile.user_profile.user for profile in
-            WorkshopUserProfile.objects.filter(year=year) if profile.status == 'Z']
+            year.participants.all() if profile.status == 'Z']
 
 
 @_register_as_email_filter('allRefused', 'wszyscy uczestnicy o statusie odrzuconym')
 def _all_refused(year):
     return [profile.user_profile.user for profile in
-            WorkshopUserProfile.objects.filter(year=year) if profile.status == 'O']
+            year.participants.all() if profile.status == 'O']
 
 
 @login_required()

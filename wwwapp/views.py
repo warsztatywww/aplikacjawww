@@ -38,7 +38,7 @@ from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload, SolutionFileFormSet, SolutionForm
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission, Camp, Solution
+    CampParticipant, ResourceYearPermission, Camp, Solution
 from .templatetags.wwwtags import qualified_mark
 
 
@@ -109,7 +109,7 @@ def profile_view(request, user_id):
     user = get_object_or_404(User.objects.prefetch_related(
         'userprofile',
         'userprofile__user',
-        'userprofile__workshop_profile',
+        'userprofile__camp_participation',
         'userprofile__lecturer_workshops',
         'userprofile__lecturer_workshops__year',
     ), pk=user_id)
@@ -120,24 +120,23 @@ def profile_view(request, user_id):
 
     can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
     context['can_qualify'] = can_qualify
-    context['workshop_profile'] = WorkshopUserProfile.objects.filter(
-        user_profile=user.userprofile, year=Camp.current())
+    context['camp_participation'] = user.userprofile.camp_participation_for(year=Camp.current())
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return redirect_to_login(reverse('profile', args=[user_id]))
         if not can_qualify:
             return HttpResponseForbidden()
-        (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
+        (edition_profile, _) = CampParticipant.objects.get_or_create(
             user_profile=user.userprofile, year=Camp.current())
         if request.POST['qualify'] == 'accept':
-            edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
+            edition_profile.status = CampParticipant.STATUS_ACCEPTED
             edition_profile.save()
         elif request.POST['qualify'] == 'reject':
-            edition_profile.status = WorkshopUserProfile.STATUS_REJECTED
+            edition_profile.status = CampParticipant.STATUS_REJECTED
             edition_profile.save()
         elif request.POST['qualify'] == 'cancel':
-            edition_profile.status = WorkshopUserProfile.STATUS_CANCELLED
+            edition_profile.status = CampParticipant.STATUS_CANCELLED
             edition_profile.save()
         elif request.POST['qualify'] == 'delete':
             edition_profile.delete()
@@ -236,7 +235,7 @@ def mydata_cover_letter_view(request):
 def mydata_status_view(request):
     context = {}
     user_profile = UserProfile.objects.prefetch_related(
-        'workshop_profile',
+        'camp_participation',
         'lecturer_workshops',
         'lecturer_workshops__year',
     ).get(user=request.user)
@@ -488,8 +487,8 @@ def participants_view(request, year=None):
     participants = UserProfile.objects \
         .select_related('user') \
         .prefetch_related(
-        'workshop_profile',
-        'workshop_profile__year',
+        'camp_participation',
+        'camp_participation__year',
         'lecturer_workshops',
         'lecturer_workshops__year',
     )
@@ -530,11 +529,11 @@ def participants_view(request, year=None):
             else:
                 is_adult = datetime.date.today() >= birth + relativedelta(years=18)
 
-        workshop_profile = None
+        camp_participation = None
         if year is not None:
-            workshop_profile = participant.workshop_profile.all()
-            workshop_profile = list(filter(lambda x: x.year == year, workshop_profile))
-            workshop_profile = workshop_profile[0] if workshop_profile else None
+            camp_participation = participant.camp_participation.all()
+            camp_participation = list(filter(lambda x: x.year == year, camp_participation))
+            camp_participation = camp_participation[0] if camp_participation else None
 
         participation_data = participant.all_participation_data()
         if not request.user.has_perm('wwwapp.see_all_workshops'):
@@ -554,8 +553,8 @@ def participants_view(request, year=None):
             'accepted_workshop_count': 0,
             'has_completed_profile': participant.is_completed,
             'has_cover_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
-            'status': workshop_profile.status if workshop_profile else None,
-            'status_display': workshop_profile.get_status_display if workshop_profile else None,
+            'status': camp_participation.status if camp_participation else None,
+            'status_display': camp_participation.get_status_display if camp_participation else None,
             'participation_data': participation_data,
             'school': participant.school,
             'points': 0.0,
@@ -832,7 +831,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
 
     data = {}
 
-    participant_profiles_raw = UserProfile.objects.filter(workshop_profile__year=year, workshop_profile__status='Z')
+    participant_profiles_raw = UserProfile.objects.filter(camp_participation__year=year, camp_participation__status='Z')
 
     lecturer_profiles_raw = set()
     workshop_ids = set()

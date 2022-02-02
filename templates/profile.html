@@ -22,14 +22,14 @@
                   {% if perms.wwwapp.change_workshop_user_profile %}
                     <form method="post" class="d-inline">
                       {% csrf_token %}
-                      {% if workshop_profile %}
-                        {% if workshop_profile.status == 'Z' %}
+                      {% if camp_participation %}
+                        {% if camp_participation.status == 'Z' %}
                           <button type="submit" class="btn btn-outline-primary btn-sm"
                                   name="qualify" value="cancel"
                                   onclick="return confirm('Czy na pewno chcesz odwołać przyjazd?');">
                             😞 Odwołaj przyjazd
                           </button>
-                        {% elif workshop_profile.status == 'X' %}
+                        {% elif camp_participation.status == 'X' %}
                           <button type="submit" class="btn btn-outline-primary btn-sm"
                                   name="qualify" value="accept"
                                   onclick="return confirm('Czy na pewno chcesz odwołać odwołanie przyjazdu?');">

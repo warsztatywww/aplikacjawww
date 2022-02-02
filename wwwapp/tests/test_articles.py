@@ -6,7 +6,7 @@ from django.test.testcases import TestCase
 from django.urls import reverse
 
 from wwwapp.models import Camp, WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant, Article, \
-    WorkshopUserProfile
+    CampParticipant
 
 
 class TestArticleViews(TestCase):
