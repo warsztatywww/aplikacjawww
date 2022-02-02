@@ -27,7 +27,6 @@ class CampQualificationViews(TestCase):
             username='participant', email='participant@example.com', password='user123')
 
         self.participant_user.user_profile.profile_page = '<p>O mnie</p>'
-        self.participant_user.user_profile.cover_letter = '<p>Jestem fajny</p>'
         self.participant_user.user_profile.how_do_you_know_about = 'nie wiem'
         self.participant_user.user_profile.save()
 
@@ -69,6 +68,8 @@ class CampQualificationViews(TestCase):
         cp = CampParticipant.objects.create(user_profile=self.participant_user.user_profile, year=self.year_2020)
         cp.workshop_participation.create(workshop=self.workshop1, qualification_result=7.5, comment='Dobrze')
         cp.workshop_participation.create(workshop=self.workshop2, qualification_result=2.5, comment='Słabo')
+        cp.cover_letter = '<p>Jestem fajny</p>'
+        cp.save()
 
     def test_percentage_result(self):
         cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
@@ -206,7 +207,20 @@ class CampQualificationViews(TestCase):
         self.assertEqual(self.participant_user.user_profile.matura_exam_year, 2038)
         self.assertEqual(self.participant_user.user_profile.how_do_you_know_about, 'GitHub')
         self.assertHTMLEqual(self.participant_user.user_profile.profile_page, '<p>mój profil</p>')
-        self.assertHTMLEqual(self.participant_user.user_profile.cover_letter, '<p>mój list</p>')
+        self.assertHTMLEqual(self.participant_user.user_profile.camp_participation_for(self.year_2020).cover_letter, '<p>mój list</p>')
+
+    def test_edit_cover_letter_without_registration(self):
+        self.client.force_login(self.participant_user)
+
+        self.participant_user.user_profile.camp_participation.all().delete()
+
+        response = self.client.post(reverse('mydata_cover_letter'), {
+            'cover_letter': '<p>mój list</p>',
+        })
+        self.assertEqual(response.status_code, 200)
+        messages = get_messages(response.wsgi_request)
+        self.assertEqual(len(messages), 0)
+        self.assertContains(response, 'Nie jesteś jeszcze zapisany na warsztaty')
 
     def test_unauthed_cannot_set_status(self):
         with mock.patch('wwwapp.models.CampParticipant.save', autospec=True, side_effect=CampParticipant.save) as save:
