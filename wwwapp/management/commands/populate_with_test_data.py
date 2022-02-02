@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
 from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, WorkshopCategory, \
-    WorkshopType, WorkshopParticipant, Camp
+    WorkshopType, WorkshopParticipant, Camp, CampParticipant
 from typing import Tuple, List, Union
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
@@ -141,8 +141,9 @@ class Command(BaseCommand):
         workshop.save()
 
         for participant in participants:
+            camp_participant, _ = CampParticipant.objects.get_or_create(year=workshop.year, user_profile=participant)
             info = WorkshopParticipant(workshop=workshop,
-                                       user_profile=participant,
+                                       camp_participation=camp_participant,
                                        comment=self.fake.paragraph())
             info.save()
 

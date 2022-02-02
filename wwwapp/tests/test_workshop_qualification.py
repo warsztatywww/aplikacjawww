@@ -9,7 +9,7 @@ from django.urls import reverse
 from freezegun import freeze_time
 
 from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, \
-    WorkshopParticipant, Camp
+    WorkshopParticipant, Camp, CampParticipant
 from wwwapp.templatetags import wwwtags
 
 
@@ -108,7 +108,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_view_program_can_unregister_user(self):
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
         self.client.force_login(self.participant_user)
         response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, 'Wypisz się')
@@ -120,7 +121,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-12-01 12:00:00')
     def test_view_program_cannot_unregister(self):
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
         self.client.force_login(self.participant_user)
         response = self.client.get(reverse('program', args=[2020]))
         self.assertNotContains(response, 'Wypisz się')
@@ -146,12 +148,13 @@ class WorkshopQualificationViews(TestCase):
         self.assertNotIn('error', data)
         self.assertIn('content', data)
         self.assertIn('Wypisz się', data['content'])
-        self.assertTrue(WorkshopParticipant.objects.filter(workshop=self.workshop, user_profile=self.participant_user.user_profile).exists())
+        self.assertTrue(WorkshopParticipant.objects.filter(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile).exists())
 
     @freeze_time('2020-05-01 12:00:00')
     def test_cant_register_user_again(self):
         # User already registered, can't register again
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
         self.client.force_login(self.participant_user)
         response = self.client.post(reverse('register_to_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
@@ -162,7 +165,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_can_unregister_user(self):
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
         self.client.force_login(self.participant_user)
         response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
@@ -170,7 +174,8 @@ class WorkshopQualificationViews(TestCase):
         self.assertNotIn('error', data)
         self.assertIn('content', data)
         self.assertIn('Zapisz się', data['content'])
-        self.assertFalse(WorkshopParticipant.objects.filter(workshop=self.workshop, user_profile=self.participant_user.user_profile).exists())
+        self.assertFalse(WorkshopParticipant.objects.filter(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile).exists())
+        self.assertTrue(CampParticipant.objects.filter(year=self.workshop.year, user_profile=self.participant_user.user_profile).exists())  # the CampParticipation should not be removed even if empty
 
     @freeze_time('2020-05-01 12:00:00')
     def test_cant_unregister_user_again(self):
@@ -193,12 +198,13 @@ class WorkshopQualificationViews(TestCase):
         self.assertIn('error', data)
         self.assertNotIn('content', data)
         self.assertEqual(data['error'], 'Kwalifikacja na te warsztaty została zakończona.')
-        self.assertFalse(WorkshopParticipant.objects.filter(workshop=self.workshop, user_profile=self.participant_user.user_profile).exists())
+        self.assertFalse(WorkshopParticipant.objects.filter(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile).exists())
 
     @freeze_time('2020-12-01 12:00:00')
     def test_cannot_unregister(self):
         # After workshops started, registration cannot be changed
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
         self.client.force_login(self.participant_user)
         response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
@@ -206,12 +212,13 @@ class WorkshopQualificationViews(TestCase):
         self.assertIn('error', data)
         self.assertNotIn('content', data)
         self.assertEqual(data['error'], 'Kwalifikacja na te warsztaty została zakończona.')
-        self.assertTrue(WorkshopParticipant.objects.filter(workshop=self.workshop, user_profile=self.participant_user.user_profile).exists())
+        self.assertTrue(WorkshopParticipant.objects.filter(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile).exists())
 
     @freeze_time('2020-05-01 12:00:00')
     def test_cannot_unregister_with_results(self):
         # User cannot unregister after he has qualification results for this workshop
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile, qualification_result=15)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop, qualification_result=15)
         self.client.force_login(self.participant_user)
         response = self.client.post(reverse('unregister_from_workshop', args=[self.workshop.year.pk, self.workshop.name]))
         data = response.json()
@@ -219,10 +226,11 @@ class WorkshopQualificationViews(TestCase):
         self.assertIn('error', data)
         self.assertNotIn('content', data)
         self.assertEqual(data['error'], 'Masz już wyniki z tej kwalifikacji - nie możesz się wycofać.')
-        self.assertTrue(WorkshopParticipant.objects.filter(workshop=self.workshop, user_profile=self.participant_user.user_profile).exists())
+        self.assertTrue(WorkshopParticipant.objects.filter(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile).exists())
 
     def _test_can_edit_points(self, user, can_view, can_edit):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         url = reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name])
 
@@ -264,7 +272,7 @@ class WorkshopQualificationViews(TestCase):
                 self.assertEqual(data['qualification_result'], '2.5')
                 self.assertEqual(data['comment'], 'Dobrze!')
 
-                participant = WorkshopParticipant.objects.get(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+                participant = WorkshopParticipant.objects.get(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile)
                 self.assertEqual(participant.qualification_result, 2.5)
                 self.assertEqual(participant.comment, 'Dobrze!')
 
@@ -312,7 +320,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_mark_accepted(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -334,7 +343,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_mark_rejected(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -359,7 +369,8 @@ class WorkshopQualificationViews(TestCase):
         self.workshop.qualification_threshold = None
         self.workshop.max_points = 10
         self.workshop.save()
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -395,13 +406,14 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_user_can_see_grade(self):
-        WorkshopParticipant.objects.create(workshop=self.workshop,
-                                           user_profile=self.participant_user.user_profile,
-                                           qualification_result=4,
-                                           comment="No mogło być lepiej...")
+        cp1, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp1.workshop_participation.create(workshop=self.workshop,
+                                          qualification_result=4,
+                                          comment="No mogło być lepiej...")
 
-        wp2 = WorkshopParticipant.objects.create(workshop=self.workshop,
-                                                 user_profile=self.participant_user2.user_profile)
+        cp2, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user2.user_profile, year=self.year_2020)
+        wp2 = cp2.workshop_participation.create(workshop=self.workshop)
+
         user1_data = (self.participant_user, [
                 "4,00 / 10,00",
                 "No mogło być lepiej...",
@@ -428,10 +440,10 @@ class WorkshopQualificationViews(TestCase):
         self.client.force_login(self.participant_user)
         response = self.client.get(reverse('program', args=[2020]))
         self.assertNotContains(response, "Sprawdź wyniki w zakładce")
-        WorkshopParticipant.objects.create(workshop=self.workshop,
-                                           user_profile=self.participant_user.user_profile,
-                                           qualification_result=4,
-                                           comment="No mogło być lepiej...")
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop,
+                                         qualification_result=4,
+                                         comment="No mogło być lepiej...")
         response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, "Sprawdź wyniki w zakładce")
         response = self.client.get(reverse('program', args=[2019]))
@@ -441,7 +453,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_toomanydecimal(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -453,7 +466,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_toomanydigits(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -465,7 +479,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_toomanydigits2(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -477,7 +492,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_notdigits(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -491,7 +507,8 @@ class WorkshopQualificationViews(TestCase):
     def test_submit_invalid_score_abovemax(self):
         self.workshop.max_points = 10
         self.workshop.save()
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -503,7 +520,8 @@ class WorkshopQualificationViews(TestCase):
 
     @freeze_time('2020-05-01 12:00:00')
     def test_submit_invalid_score_belowzero(self):
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
@@ -517,7 +535,8 @@ class WorkshopQualificationViews(TestCase):
     def test_submit_invalid_score_unknownmax(self):
         self.workshop.max_points = None
         self.workshop.save()
-        participant = WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile)
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        participant = cp.workshop_participation.create(workshop=self.workshop)
 
         # Check save response
         self.client.force_login(self.lecturer_user)
