@@ -81,19 +81,18 @@ def program_view(request, year):
     context['title'] = 'Program %s' % str(year)
 
     if request.user.is_authenticated:
-        user_participation = set(year.workshops.filter(participants__user=request.user).all())
+        user_profile = request.user.userprofile
+        workshop_participation = user_profile.workshop_participation.filter(workshop__year=year).all()
+        workshops_participated_in = set(wp.workshop for wp in workshop_participation)
+        has_results = any(wp.qualification_result is not None for wp in workshop_participation)
     else:
-        user_participation = set()
+        workshops_participated_in = set()
+        has_results = False
 
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
-    context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
+    context['workshops'] = [(workshop, (workshop in workshops_participated_in)) for workshop
                             in workshops]
-    if request.user.is_authenticated and year == Camp.current():
-        context['has_results'] = WorkshopParticipant.objects.filter(
-            workshop__year=year, participant=request.user.userprofile, qualification_result__isnull=False
-        ).exists()
-    else:
-        context['has_results'] = False
+    context['has_results'] = has_results and year == Camp.current()
 
     context['selected_year'] = year
     return render(request, 'program.html', context)
@@ -287,7 +286,7 @@ def workshop_page_view(request, year, name):
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
     if request.user.is_authenticated:
-        registered = workshop.participants.filter(user=request.user).exists()
+        registered = workshop.participants.filter(user_profile__user=request.user).exists()
     else:
         registered = False
 
@@ -445,8 +444,8 @@ def workshop_participants_view(request, year, name):
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
 
-    context['workshop_participants'] = WorkshopParticipant.objects.filter(workshop=workshop).select_related(
-            'workshop', 'workshop__year', 'participant', 'participant__user', 'solution')
+    context['workshop_participants'] = workshop.participants.select_related(
+            'workshop', 'workshop__year', 'user_profile', 'user_profile__user', 'solution')
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))
@@ -495,15 +494,15 @@ def participants_view(request, year=None):
 
     if year is not None:
         year = get_object_or_404(Camp, pk=year)
-        participants = participants.filter(workshops__year=year)
+        participants = participants.filter(workshop_participation__workshop__year=year)
 
         lecturers = Workshop.objects.filter(year=year).values_list('lecturer__user__id').distinct()
         participants = participants.exclude(user__id__in=lecturers)
 
         participants = participants.prefetch_related(
-            Prefetch('workshopparticipant_set', queryset=WorkshopParticipant.objects.filter(workshop__year=year)),
-            'workshopparticipant_set__workshop',
-            'workshopparticipant_set__workshop__year',
+            Prefetch('workshop_participation', queryset=WorkshopParticipant.objects.filter(workshop__year=year)),
+            'workshop_participation__workshop',
+            'workshop_participation__workshop__year',
         )
 
     participants = participants.all()
@@ -564,7 +563,7 @@ def participants_view(request, year=None):
         }
 
         if year:
-            for wp in participant.workshopparticipant_set.all():
+            for wp in participant.workshop_participation.all():
                 assert wp.workshop.year == year
                 if wp.workshop.is_qualifying:
                     if not wp.workshop.solution_uploads_enabled or hasattr(wp, 'solution'):
@@ -664,7 +663,7 @@ def register_to_workshop_view(request, year, name):
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
 
-    _, created = WorkshopParticipant.objects.get_or_create(participant=UserProfile.objects.get(user=request.user), workshop=workshop)
+    _, created = WorkshopParticipant.objects.get_or_create(user_profile=UserProfile.objects.get(user=request.user), workshop=workshop)
 
     context = {}
     context['workshop'] = workshop
@@ -683,7 +682,7 @@ def unregister_from_workshop_view(request, year, name):
 
     workshop = get_object_or_404(Workshop.objects.prefetch_related('lecturer', 'lecturer__user', 'type', 'category'), year__pk=year, name=name)
     profile = UserProfile.objects.get(user=request.user)
-    workshop_participant = WorkshopParticipant.objects.filter(workshop=workshop, participant=profile).first()
+    workshop_participant = workshop.participants.filter(user_profile=profile).first()
 
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
@@ -719,9 +718,9 @@ def workshop_solution(request, year, name, solution_id=None):
     if solution_id is None:
         # My solution
         try:
-            workshop_participant = workshop.workshopparticipant_set \
-                .select_related('solution', 'participant__user') \
-                .get(participant__user=request.user)
+            workshop_participant = workshop.participants \
+                .select_related('solution', 'user_profile__user') \
+                .get(user_profile__user=request.user)
         except WorkshopParticipant.DoesNotExist:
             return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
         solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
@@ -736,7 +735,7 @@ def workshop_solution(request, year, name, solution_id=None):
             return HttpResponseForbidden()
         solution = get_object_or_404(
             Solution.objects
-                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .select_related('workshop_participant', 'workshop_participant__user_profile__user')
                 .filter(workshop_participant__workshop=workshop),
             pk=solution_id)
 
@@ -790,9 +789,9 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
     if not solution_id:
         # My solution
         try:
-            workshop_participant = workshop.workshopparticipant_set \
-                .select_related('solution', 'participant__user') \
-                .get(participant__user=request.user)
+            workshop_participant = workshop.participants \
+                .select_related('solution', 'user_profile__user') \
+                .get(user_profile__user=request.user)
         except WorkshopParticipant.DoesNotExist:
             return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
         solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
@@ -805,7 +804,7 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
             return HttpResponseForbidden()
         solution = get_object_or_404(
             Solution.objects
-                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .select_related('workshop_participant', 'workshop_participant__user_profile__user')
                 .filter(workshop_participant__workshop=workshop),
             pk=solution_id)
 
@@ -885,10 +884,10 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     data['users'] = users
 
     participation = []
-    for wp in WorkshopParticipant.objects.filter(workshop__id__in=workshop_ids, participant__id__in=user_ids):
+    for wp in WorkshopParticipant.objects.filter(workshop__id__in=workshop_ids, user_profile__id__in=user_ids):
         participation.append({
             'wid': wp.workshop.id,
-            'uid': wp.participant.id,
+            'uid': wp.user_profile.id,
         })
     data['participation'] = participation
 

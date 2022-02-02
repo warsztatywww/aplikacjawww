@@ -55,7 +55,7 @@ def _all_participants(year):
     participants = set()
     for workshop in all_workshops:
         for participant in workshop.participants.all():
-            participants.add(participant.user)
+            participants.add(participant.user_profile.user)
     return participants
 
 

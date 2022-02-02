@@ -142,7 +142,7 @@ class Command(BaseCommand):
 
         for participant in participants:
             info = WorkshopParticipant(workshop=workshop,
-                                       participant=participant,
+                                       user_profile=participant,
                                        comment=self.fake.paragraph())
             info.save()
 

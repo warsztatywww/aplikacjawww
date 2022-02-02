@@ -46,7 +46,7 @@ class TestBasicViews(TestCase):
         self.workshop.lecturer.add(self.lecturer_user.userprofile)
         self.workshop.save()
 
-        WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile,
+        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.userprofile,
                                            qualification_result=7.5, comment='Dobrze')
 
         CampParticipant.objects.create(user_profile=self.participant_user.userprofile, year=self.year_2020,

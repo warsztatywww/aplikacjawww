@@ -66,33 +66,33 @@ class CampQualificationViews(TestCase):
         self.workshop2.lecturer.add(self.lecturer_user.userprofile)
         self.workshop2.save()
 
-        WorkshopParticipant.objects.create(workshop=self.workshop1, participant=self.participant_user.userprofile,
+        WorkshopParticipant.objects.create(workshop=self.workshop1, user_profile=self.participant_user.userprofile,
                                            qualification_result=7.5, comment='Dobrze')
-        WorkshopParticipant.objects.create(workshop=self.workshop2, participant=self.participant_user.userprofile,
+        WorkshopParticipant.objects.create(workshop=self.workshop2, user_profile=self.participant_user.userprofile,
                                            qualification_result=2.5, comment='Słabo')
 
     def test_percentage_result(self):
         self.assertEqual(
-            WorkshopParticipant.objects.get(workshop=self.workshop1, participant=self.participant_user.userprofile).result_in_percent(),
+            WorkshopParticipant.objects.get(workshop=self.workshop1, user_profile=self.participant_user.userprofile).result_in_percent(),
             75.0)
         self.assertEqual(
-            WorkshopParticipant.objects.get(workshop=self.workshop2, participant=self.participant_user.userprofile).result_in_percent(),
+            WorkshopParticipant.objects.get(workshop=self.workshop2, user_profile=self.participant_user.userprofile).result_in_percent(),
             25.0)
 
         sum = 0.0
-        for participant in WorkshopParticipant.objects.filter(participant=self.participant_user.userprofile):
+        for participant in WorkshopParticipant.objects.filter(user_profile=self.participant_user.userprofile):
             sum += float(participant.result_in_percent())
         self.assertEqual(sum, 100.0)
 
     @override_settings(MAX_POINTS_PERCENT=200)
     def test_percentage_huge(self):
-        participant = WorkshopParticipant.objects.get(workshop=self.workshop1, participant=self.participant_user.userprofile)
+        participant = WorkshopParticipant.objects.get(workshop=self.workshop1, user_profile=self.participant_user.userprofile)
         participant.qualification_result = 2137
         participant.save()
         self.assertEqual(participant.result_in_percent(), 200.0)
 
     def test_percentage_negative(self):
-        participant = WorkshopParticipant.objects.get(workshop=self.workshop1, participant=self.participant_user.userprofile)
+        participant = WorkshopParticipant.objects.get(workshop=self.workshop1, user_profile=self.participant_user.userprofile)
         participant.qualification_result = -2137
         participant.save()
         self.assertEqual(participant.result_in_percent(), 0.0)

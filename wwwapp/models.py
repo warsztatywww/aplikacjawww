@@ -157,7 +157,7 @@ class UserProfile(models.Model):
         participation_data = self.all_participation_data()
         for p in participation_data:
             p['qualification_results'] = []
-        qualifications = WorkshopParticipant.objects.filter(participant=self).select_related('workshop', 'workshop__year', 'solution').all()
+        qualifications = self.workshop_participation.select_related('workshop', 'workshop__year', 'solution').all()
         for q in qualifications:
             participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
             if participation_for_year is None:
@@ -234,9 +234,10 @@ class CampParticipant(models.Model):
         (STATUS_REJECTED, 'Odrzucony'),
         (STATUS_CANCELLED, 'Odwołany')
     ]
-    user_profile = models.ForeignKey('UserProfile', null=True, related_name='camp_participation', on_delete=models.CASCADE)
 
     year = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='participants')
+    user_profile = models.ForeignKey('UserProfile', null=True, related_name='camp_participation', on_delete=models.CASCADE)
+
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,
                               null=True, default=None, blank=True)
@@ -363,7 +364,6 @@ class Workshop(models.Model):
     is_qualifying = models.BooleanField(default=True)
     qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification", storage=UploadStorage())
     solution_uploads_enabled = models.BooleanField(default=True)
-    participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
     max_points = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
 
@@ -408,18 +408,18 @@ class Workshop(models.Model):
         return str(self.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title
 
     def registered_count(self):
-        return self.workshopparticipant_set.count()
+        return self.participants.count()
 
     def solution_count(self):
         if not self.solution_uploads_enabled:
             raise Exception('Solution uploads are not enabled')
-        return self.workshopparticipant_set.filter(solution__isnull=False).count()
+        return self.participants.filter(solution__isnull=False).count()
 
     def checked_solution_count(self):
         if self.solution_uploads_enabled:
-            return self.workshopparticipant_set.filter(qualification_result__isnull=False, solution__isnull=False).count()
+            return self.participants.filter(qualification_result__isnull=False, solution__isnull=False).count()
         else:
-            return self.workshopparticipant_set.filter(qualification_result__isnull=False).count()
+            return self.participants.filter(qualification_result__isnull=False).count()
 
     def to_be_checked_solution_count(self):
         if self.solution_uploads_enabled:
@@ -436,7 +436,7 @@ class Workshop(models.Model):
     def qualified_count(self):
         if self.qualification_threshold is None:
             return None
-        return self.workshopparticipant_set.filter(qualification_result__gte=self.qualification_threshold).count()
+        return self.participants.filter(qualification_result__gte=self.qualification_threshold).count()
 
     def is_publicly_visible(self):
         """
@@ -451,12 +451,12 @@ class Workshop(models.Model):
 
         Used if max_points is not set (e.g. in old [< 2020] workshops that didn't have this value)
         """
-        return self.workshopparticipant_set.aggregate(max_points=models.Max('qualification_result'))['max_points']
+        return self.participants.aggregate(max_points=models.Max('qualification_result'))['max_points']
 
 
 class WorkshopParticipant(models.Model):
-    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE)
-    participant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='participants')
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='workshop_participation')
 
     qualification_result = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
@@ -481,10 +481,10 @@ class WorkshopParticipant(models.Model):
         return max(min(self.qualification_result / max_points * 100, settings.MAX_POINTS_PERCENT), 0)
 
     class Meta:
-        unique_together = [('workshop', 'participant')]
+        unique_together = [('workshop', 'user_profile')]
 
     def __str__(self):
-        return '{}: {}'.format(self.workshop, self.participant)
+        return '{}: {}'.format(self.workshop, self.user_profile)
 
 
 class Solution(models.Model):
@@ -495,7 +495,7 @@ class Solution(models.Model):
 
 def solutions_dir(instance, filename):
     workshop_participant = instance.solution.workshop_participant
-    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.participant.user.pk}/{filename}'
+    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.user_profile.user.pk}/{filename}'
 
 
 class SoftDeletionQuerySet(models.QuerySet):
