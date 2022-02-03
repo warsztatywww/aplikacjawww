@@ -140,6 +140,10 @@ class FormQuestion(models.Model):
     def is_orderable(self):
         return self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_NUMBER, FormQuestion.TYPE_DATE)
 
+    @property
+    def is_enum(self):
+        return self.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_SELECT)
+
     def value_field_name(self):
         if self.data_type == FormQuestion.TYPE_NUMBER:
             return 'value_number'

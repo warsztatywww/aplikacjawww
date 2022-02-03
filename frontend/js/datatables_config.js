@@ -1,4 +1,16 @@
-import datatables_Polish from '../datatables/Polish.json';
+import datatables_Polish from 'datatables.net-plugins/i18n/pl.json';
+import { Base64 } from 'js-base64';
+
+// Remove once my i18n contributions at https://datatables.net/plug-ins/i18n/ make it into the release
+datatables_Polish.searchPanes.emptyPanes = 'Brak filtrów';
+datatables_Polish.searchPanes.loadMessage = 'Ładuję filtry...';
+datatables_Polish.searchPanes.title = 'Aktywne filtry - %d';
+datatables_Polish.searchPanes.showMessage = 'Pokaż wszystkie';
+datatables_Polish.searchPanes.collapseMessage = 'Ukryj wszystkie';
+datatables_Polish.searchPanes.collapse = {
+  "0": "Filtry",
+  "_": "Filtry (%d)"
+};
 
 window.gen_datatables_config = (overwrites) => {
   const column_selector = (idx, data, node) => {
@@ -23,7 +35,7 @@ window.gen_datatables_config = (overwrites) => {
   }
 
   return Object.assign({
-    dom: 'Bfrtipl',
+    dom: 'BPfrtipl',
     colReorder: true,
     deferRender: true,
     createdRow: (row) => {
@@ -90,11 +102,18 @@ window.gen_datatables_config = (overwrites) => {
     "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
     "stateSave": true,
     "stateSaveCallback": function(settings, data) {
-      window.location.hash = '#' + btoa(JSON.stringify(data));
+      window.location.hash = '#' + Base64.encode(JSON.stringify(data));
     },
     "stateLoadCallback": function(settings) {
-      const data = atob(window.location.hash.substring(1));
+      const data = Base64.decode(window.location.hash.substring(1));
       return data ? JSON.parse(data) : null;
+    },
+    "searchPanes": {
+      "show": false,
+      "initCollapsed": true,
+      "orderable": false,
+      "clear": false,
+      "layout": "columns-3",
     }
   }, overwrites);
 };

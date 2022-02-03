@@ -11,6 +11,12 @@ import 'datatables.net-buttons-bs4/css/buttons.bootstrap4.css';
 import 'datatables.net-colreorder';
 import 'datatables.net-colreorder-bs4';
 import 'datatables.net-colreorder-bs4/css/colReorder.bootstrap4.css';
+import 'datatables.net-searchpanes';
+import 'datatables.net-searchpanes-bs4';
+import 'datatables.net-searchpanes-bs4/css/searchPanes.bootstrap4.css';
+import 'datatables.net-select';
+import 'datatables.net-select-bs4';
+import 'datatables.net-select-bs4/css/select.bootstrap4.css';
 import 'datatables.net-plugins/sorting/intl';
 
 $.fn.dataTable.ext.order.intl('pl');
