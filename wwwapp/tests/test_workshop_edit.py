@@ -17,7 +17,7 @@ from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, Camp, Articl
 class WorkshopEditViews(TestCase):
     def setUp(self):
         # TODO: This is weird because of the constraint that one Camp object needs to exist at all times
-        Camp.objects.all().update(year=2020, start_date=datetime.date(2020, 7, 3), end_date=datetime.date(2020, 7, 15))
+        Camp.objects.all().update(year=2020, proposal_end_date=datetime.date(2020, 4, 1), start_date=datetime.date(2020, 7, 3), end_date=datetime.date(2020, 7, 15), program_finalized=False)
         self.year_2020 = Camp.objects.get()
         self.year_2019 = Camp.objects.create(year=2019)
 
@@ -48,7 +48,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.lecturer.add(self.normal_user.user_profile)
         self.workshop.save()
 
-    @freeze_time('2020-05-01 12:00:00')
+    @freeze_time('2020-03-01 12:00:00')
     def test_create_proposal_unauthenticated(self):
         response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
         self.assertRedirects(response, reverse('login')+'?next='+reverse('workshops_add', args=[self.year_2020.pk]))
@@ -65,10 +65,8 @@ class WorkshopEditViews(TestCase):
         })
         self.assertRedirects(response, reverse('login')+'?next='+reverse('workshops_add', args=[self.year_2020.pk]))
 
-    @freeze_time('2020-05-01 12:00:00')
+    @freeze_time('2020-03-01 12:00:00')
     def test_create_proposal_authenticated(self):
-        # Proposal end date is not configured and defaults to workshops start
-
         # Load the form
         self.client.force_login(self.normal_user)
         response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
@@ -109,7 +107,7 @@ class WorkshopEditViews(TestCase):
         self.assertSetEqual(set(workshop.lecturer.all()), {self.normal_user.user_profile})
         self.assertIsNone(workshop.status)
 
-    @freeze_time('2020-05-01 12:00:00')
+    @freeze_time('2020-03-01 12:00:00')
     def test_create_proposal_wrong_type_year(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
@@ -127,7 +125,7 @@ class WorkshopEditViews(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertFormError(response, 'form', 'type', 'Wybierz poprawną wartość. Podana nie jest jednym z dostępnych wyborów.')
 
-    @freeze_time('2020-05-01 12:00:00')
+    @freeze_time('2020-03-01 12:00:00')
     def test_create_proposal_wrong_category_year(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
@@ -170,7 +168,7 @@ class WorkshopEditViews(TestCase):
         with self.assertRaisesRegexp(ValidationError, 'Kategoria warsztatów nie jest z tego roku'):
             workshop.full_clean()
 
-    @freeze_time('2020-05-01 12:00:00')
+    @freeze_time('2020-03-01 12:00:00')
     def test_create_proposal_duplicate_slug(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
@@ -187,7 +185,7 @@ class WorkshopEditViews(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertFormError(response, 'form', None, 'Workshop z tymi Year i Name już istnieje.')
 
-    @freeze_time('2021-05-01 12:00:00')
+    @freeze_time('2021-03-01 12:00:00')
     def test_create_proposal_duplicate_slug_different_year(self):
         year_2021 = Camp.objects.create(year=2021)
         type = WorkshopType.objects.create(year=year_2021, name='Future type')
@@ -241,9 +239,38 @@ class WorkshopEditViews(TestCase):
             self.assertContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
 
     @freeze_time('2020-05-01 12:00:00')
-    def test_create_proposal_closed_with_explicit_date(self):
-        # Proposal end date is configured to be an explicit date, earlier than workshops start
-        Camp.objects.filter(year=2020).update(proposal_end_date=datetime.date(2020, 3, 1))
+    def test_create_proposal_open_with_implicit_date(self):
+        # Proposal end date is not configured to be an explicit date, so it defaults to workshops start
+        Camp.objects.filter(year=2020).update(proposal_end_date=None)
+
+        # Load the form
+        self.client.force_login(self.normal_user)
+        response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
+
+        # Submit
+        with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
+            response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
+                'title': 'Fajne warsztaty',
+                'name': 'fajne',
+                'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+                'category': [
+                    WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk,
+                    WorkshopCategory.objects.get(year=self.year_2020, name='This category 2').pk
+                ],
+                'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+            })
+            save.assert_called()
+            self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
+            messages = get_messages(response.wsgi_request)
+            self.assertEqual(len(messages), 1)
+            self.assertRegex(list(messages)[0].message, r'^Twoje zgłoszenie zostało zapisane.')
+
+    @freeze_time('2020-08-01 12:00:00')
+    def test_create_proposal_closed_with_implicit_date(self):
+        # Proposal end date is not configured to be an explicit date, so it defaults to workshops start
+        Camp.objects.filter(year=2020).update(proposal_end_date=None)
 
         # Load the form
         self.client.force_login(self.normal_user)
@@ -766,6 +793,7 @@ class WorkshopEditViews(TestCase):
         self.assertNotContains(response, 'Prowadzący warsztatów nie wstawił jeszcze opisu.')
         self.assertContains(response, 'opis iks de')
 
+    @freeze_time('2020-05-01 12:00:00')
     def test_unauthed_cannot_set_workshop_status(self):
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
             response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
@@ -786,6 +814,7 @@ class WorkshopEditViews(TestCase):
             save.assert_not_called()
             self.assertRedirects(response, reverse('login') + '?next=' + reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
 
+    @freeze_time('2020-05-01 12:00:00')
     def test_user_cannot_set_workshop_status(self):
         self.client.force_login(self.normal_user)
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
@@ -807,6 +836,7 @@ class WorkshopEditViews(TestCase):
             save.assert_not_called()
             self.assertEqual(response.status_code, 403)
 
+    @freeze_time('2020-05-01 12:00:00')
     def test_admin_can_accept_workshop(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
@@ -815,6 +845,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.refresh_from_db()
         self.assertEqual(self.workshop.status, Workshop.STATUS_ACCEPTED)
 
+    @freeze_time('2020-05-01 12:00:00')
     def test_admin_can_reject_workshop(self):
         self.client.force_login(self.admin_user)
         response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'reject'})
@@ -823,6 +854,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.refresh_from_db()
         self.assertEqual(self.workshop.status, Workshop.STATUS_REJECTED)
 
+    @freeze_time('2020-05-01 12:00:00')
     def test_admin_can_cancel_workshop(self):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
@@ -833,6 +865,7 @@ class WorkshopEditViews(TestCase):
         self.workshop.refresh_from_db()
         self.assertEqual(self.workshop.status, Workshop.STATUS_CANCELLED)
 
+    @freeze_time('2020-05-01 12:00:00')
     def test_admin_can_delete_workshop_status(self):
         self.workshop.status = Workshop.STATUS_ACCEPTED
         self.workshop.save()
@@ -844,6 +877,77 @@ class WorkshopEditViews(TestCase):
         self.assertIsNone(self.workshop.status)
 
     @freeze_time('2020-05-01 12:00:00')
+    def test_admin_cannot_accept_workshop_when_program_finalized(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
+        self.assertEqual(response.status_code, 403)
+
+        self.workshop.refresh_from_db()
+        self.assertIsNone(self.workshop.status)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_admin_cannot_reject_workshop_when_program_finalized(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        self.client.force_login(self.admin_user)
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'reject'})
+        self.assertEqual(response.status_code, 403)
+
+        self.workshop.refresh_from_db()
+        self.assertIsNone(self.workshop.status)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_admin_can_cancel_workshop_when_program_finalized(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        self.workshop.status = Workshop.STATUS_ACCEPTED
+        self.workshop.save()
+        self.client.force_login(self.admin_user)
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'cancel'})
+        self.assertRedirects(response, reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
+
+        self.workshop.refresh_from_db()
+        self.assertEqual(self.workshop.status, Workshop.STATUS_CANCELLED)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_admin_can_uncancel_workshop_when_program_finalized(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        self.workshop.status = Workshop.STATUS_CANCELLED
+        self.workshop.save()
+        self.client.force_login(self.admin_user)
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'accept'})
+        self.assertRedirects(response, reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]))
+
+        self.workshop.refresh_from_db()
+        self.assertEqual(self.workshop.status, Workshop.STATUS_ACCEPTED)
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_admin_cannot_delete_workshop_status_when_program_finalized(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        self.workshop.status = Workshop.STATUS_ACCEPTED
+        self.workshop.save()
+        self.client.force_login(self.admin_user)
+        response = self.client.post(reverse('workshop_edit', args=[self.workshop.year.pk, self.workshop.name]), {'qualify': 'delete'})
+        self.assertEqual(response.status_code, 403)
+
+        self.workshop.refresh_from_db()
+        self.assertEqual(self.workshop.status, Workshop.STATUS_ACCEPTED)
+
+    @freeze_time('2020-03-01 12:00:00')
     def test_template_not_added_to_proposals(self):
         template_for_workshop_page = Article.objects.get(name="template_for_workshop_page")
         template_for_workshop_page.content = 'This is the template.'
@@ -889,7 +993,7 @@ class WorkshopEditViews(TestCase):
         workshop.refresh_from_db()
         self.assertEqual(workshop.page_content, '')
 
-    @freeze_time('2020-05-01 12:00:00')
+    @freeze_time('2020-03-01 12:00:00')
     def test_template_added_to_accepted(self):
         template_for_workshop_page = Article.objects.get(name="template_for_workshop_page")
         template_for_workshop_page.content = 'This is the template.'

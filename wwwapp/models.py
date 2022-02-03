@@ -35,6 +35,7 @@ _latest_camp = threading.local()
 class Camp(models.Model):
     year = models.IntegerField(primary_key=True, null=False, blank=False)
     proposal_end_date = models.DateField(null=True, blank=True)
+    program_finalized = models.BooleanField(default=False)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
@@ -51,6 +52,9 @@ class Camp(models.Model):
 
     def __str__(self):
         return 'WWW%d (%d)' % (self.year % 100 - 4, self.year)
+
+    def is_program_finalized(self) -> bool:
+        return not self.is_qualification_editable() or self.program_finalized
 
     def are_proposals_open(self) -> bool:
         if self.proposal_end_date:

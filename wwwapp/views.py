@@ -322,15 +322,21 @@ def workshop_edit_view(request, year, name=None):
         if not request.user.has_perm('wwwapp.change_workshop_status') or not workshop.is_workshop_editable():
             return HttpResponseForbidden()
         if request.POST['qualify'] == 'accept':
+            if workshop.year.is_program_finalized() and workshop.status != Workshop.STATUS_CANCELLED:
+                return HttpResponseForbidden()
             workshop.status = Workshop.STATUS_ACCEPTED
             workshop.save()
         elif request.POST['qualify'] == 'reject':
+            if workshop.year.is_program_finalized():
+                return HttpResponseForbidden()
             workshop.status = Workshop.STATUS_REJECTED
             workshop.save()
         elif request.POST['qualify'] == 'cancel':
             workshop.status = Workshop.STATUS_CANCELLED
             workshop.save()
         elif request.POST['qualify'] == 'delete':
+            if workshop.year.is_program_finalized():
+                return HttpResponseForbidden()
             workshop.status = None
             workshop.save()
         else:
