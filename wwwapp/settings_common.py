@@ -28,6 +28,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'social_django',
     'crispy_forms',
+    'phonenumber_field',
     'django_select2',
     'adminsortable2',
     'django_bleach',
@@ -238,3 +239,5 @@ GALLERY_FOOTER_INFO = 'Wakacyjne Warsztaty Wielodyscyplinarne'
 GALLERY_FOOTER_EMAIL = ''
 
 X_FRAME_OPTIONS = 'DENY'
+
+PHONENUMBER_DEFAULT_REGION = 'PL'

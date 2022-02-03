@@ -1,8 +1,13 @@
 from crispy_forms.bootstrap import FormActions, StrictButton
 from crispy_forms.helper import FormHelper
 from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils.text import format_lazy
+import phonenumbers
+import phonenumber_field.phonenumber
+from phonenumber_field.formfields import PhoneNumberField
 
 from wwwapp.models import Camp
 from wwwforms.models import FormQuestion, FormQuestionAnswer, pesel_validate, Form, FormQuestionOption
@@ -38,6 +43,7 @@ class FormForm(forms.Form):
         FormQuestion.TYPE_CHOICE: RadioChoiceField,
         FormQuestion.TYPE_MULTIPLE_CHOICE: CheckboxMultipleChoiceField,
         FormQuestion.TYPE_SELECT: SelectChoiceField,
+        FormQuestion.TYPE_PHONE: PhoneNumberField,
     }
 
     def field_name_for_question(self, question):
@@ -66,9 +72,26 @@ class FormForm(forms.Form):
                 field_kwargs['queryset'] = question.options.all()
                 field_kwargs['blank'] = not question.is_required
 
+            if question.data_type == FormQuestion.TYPE_PHONE:
+                # Remove after https://github.com/stefanfoulis/django-phonenumber-field/commit/1da0b6a19298934d277e456206c8f222d9ac83ae is released
+                field_kwargs['region'] = getattr(settings, "PHONENUMBER_DEFAULT_REGION", None)
+
             self.fields[field_name] = field_type(label=question.title, required=question.is_required,
                                                  initial=value, disabled=question.is_locked,
                                                  **field_kwargs)
+
+            if question.data_type == FormQuestion.TYPE_PHONE:
+                # django-phonenumber-field defaults to a landline phone in error messages without a way to change it
+                # Also, localize the error message, and remove the info that you can use international call prefix
+                # because who cares
+                region = getattr(settings, "PHONENUMBER_DEFAULT_REGION", None)
+                if region:
+                    number = phonenumbers.example_number_for_type(region, phonenumbers.PhoneNumberType.MOBILE)
+                    example_number = phonenumber_field.phonenumber.to_python(number).as_national
+                    self.fields[field_name].error_messages["invalid"] = format_lazy(
+                        "Wpisz poprawny numer telefonu (np. {example_number})",
+                        example_number=example_number
+                    )
 
             if question.data_type == FormQuestion.TYPE_DATE:
                 if question == form.arrival_date:

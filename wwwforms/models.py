@@ -104,6 +104,7 @@ class FormQuestion(models.Model):
     TYPE_MULTIPLE_CHOICE = 'm'
     TYPE_SELECT = 'C'
     TYPE_PESEL = 'P'
+    TYPE_PHONE = 'p'
 
     TYPE_CHOICES = [
         (TYPE_NUMBER, 'Liczba'),
@@ -114,6 +115,7 @@ class FormQuestion(models.Model):
         (TYPE_CHOICE, 'Wybór jednokrotny'),
         (TYPE_MULTIPLE_CHOICE, 'Wybór wielokrotny'),
         (TYPE_PESEL, 'PESEL'),
+        (TYPE_PHONE, 'Numer telefonu'),
     ]
 
     form = models.ForeignKey(Form, on_delete=models.CASCADE, related_name='questions', verbose_name='Formularz')
@@ -134,7 +136,7 @@ class FormQuestion(models.Model):
 
     @property
     def is_searchable(self):
-        return self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_PESEL)
+        return self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_PESEL, FormQuestion.TYPE_PHONE)
 
     @property
     def is_orderable(self):
@@ -147,7 +149,7 @@ class FormQuestion(models.Model):
     def value_field_name(self):
         if self.data_type == FormQuestion.TYPE_NUMBER:
             return 'value_number'
-        elif self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_TEXTBOX, FormQuestion.TYPE_PESEL):
+        elif self.data_type in (FormQuestion.TYPE_STRING, FormQuestion.TYPE_TEXTBOX, FormQuestion.TYPE_PESEL, FormQuestion.TYPE_PHONE):
             return 'value_string'
         elif self.data_type == FormQuestion.TYPE_DATE:
             return 'value_date'
