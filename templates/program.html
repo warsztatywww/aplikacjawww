@@ -22,7 +22,7 @@
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
-      {% if selected_year.are_proposals_open %}
+      {% if not selected_year.is_program_finalized %}
         <p class="alert alert-info">Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
       {% endif %}
 

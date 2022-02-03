@@ -16,7 +16,7 @@ from wwwapp.templatetags import wwwtags
 class WorkshopQualificationViews(TestCase):
     def setUp(self):
         # TODO: This is weird because of the constraint that one Camp object needs to exist at all times
-        Camp.objects.all().update(year=2020, start_date=datetime.date(2020, 7, 3), end_date=datetime.date(2020, 7, 15))
+        Camp.objects.all().update(year=2020, proposal_end_date=datetime.date(2020, 4, 1), start_date=datetime.date(2020, 7, 3), end_date=datetime.date(2020, 7, 15), program_finalized=False)
         self.year_2020 = Camp.objects.get()
         self.year_2019 = Camp.objects.create(year=2019)
 
@@ -94,6 +94,34 @@ class WorkshopQualificationViews(TestCase):
         self.assertNotContains(response, 'Bardzo fajne warsztaty')
         self.assertNotContains(response, 'To tylko propozycja')
         self.assertContains(response, 'Jakiś staroć')
+
+    @freeze_time('2020-03-01 12:00:00')
+    def test_view_program_in_proposal_period(self):
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertContains(response, 'Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_view_program_outside_proposal_period_but_not_final(self):
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertContains(response, 'Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_view_program_outside_proposal_period_final(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertNotContains(response, 'Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_view_program_in_proposal_period_but_already_final(self):
+        year = Camp.objects.get(year=2020)
+        year.program_finalized = True
+        year.save()
+
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertNotContains(response, 'Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.')
 
     @freeze_time('2020-05-01 12:00:00')
     def test_view_program_can_register_unauthenticated(self):
