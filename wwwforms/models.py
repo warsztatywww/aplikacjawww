@@ -146,6 +146,12 @@ class FormQuestion(models.Model):
     def is_enum(self):
         return self.data_type in (FormQuestion.TYPE_CHOICE, FormQuestion.TYPE_SELECT)
 
+    @property
+    def datatables_type_hint(self):
+        if self.data_type == FormQuestion.TYPE_PHONE:
+            return "phoneNumber"
+        return ""
+
     def value_field_name(self):
         if self.data_type == FormQuestion.TYPE_NUMBER:
             return 'value_number'

@@ -140,11 +140,9 @@
 
   <script>
   $(document).ready( function () {
-    const table = $('.workshop-table').DataTable(gen_datatables_config(
-      {
-        dom: 'BPfrtil',
-        paging: false,
-      }));
+    $('.workshop-table').DataTable(gen_datatables_config({
+      paging: false,
+    }));
   });
 
   $(function () {

@@ -13,7 +13,7 @@
               <th data-visible="true"  data-searchable="false" data-orderable="false"></th>
               <th data-visible="true"  data-searchable="true"  data-orderable="true">Imię i nazwisko</th>
               {% for question in questions %}
-                <th data-visible="true" data-searchable="{% if question.is_searchable or question.is_enum %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}" data-search-panes='{"show": {% if question.is_enum %}true{% else %}false{% endif %}}'>{{ question.title }}</th>
+                <th data-visible="true" data-searchable="{% if question.is_searchable or question.is_enum %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}" data-search-panes='{"show": {% if question.is_enum %}true{% else %}false{% endif %}}' data-type="{{ question.datatables_type_hint }}">{{ question.title }}</th>
               {% endfor %}
             </tr>
           </thead>
@@ -52,7 +52,7 @@
 
   <script>
     $(document).ready(() => {
-      const table = $('#lecturers-table').DataTable(gen_datatables_config({}));
+      $('#lecturers-table').DataTable(gen_datatables_config({}));
     });
   </script>
 {% endblock %}

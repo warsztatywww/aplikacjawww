@@ -62,6 +62,7 @@
     "popper.js": "^1.16.1",
     "select2": "^4.0.13",
     "tinymce": "^5.10.2",
-    "tinymce-i18n": "^20.12.25"
+    "tinymce-i18n": "^20.12.25",
+    "vcard-creator": "^0.4.2"
   }
 }

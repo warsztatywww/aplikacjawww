@@ -18,6 +18,7 @@ import 'datatables.net-select';
 import 'datatables.net-select-bs4';
 import 'datatables.net-select-bs4/css/select.bootstrap4.css';
 import 'datatables.net-plugins/sorting/intl';
+import 'datatables.net-plugins/filtering/type-based/phoneNumber';
 
 $.fn.dataTable.ext.order.intl('pl');
 
