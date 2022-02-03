@@ -88,5 +88,13 @@ window.gen_datatables_config = (overwrites) => {
     },
     "pageLength": 50,
     "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+    "stateSave": true,
+    "stateSaveCallback": function(settings, data) {
+      window.location.hash = '#' + btoa(JSON.stringify(data));
+    },
+    "stateLoadCallback": function(settings) {
+      const data = atob(window.location.hash.substring(1));
+      return data ? JSON.parse(data) : null;
+    }
   }, overwrites);
 };
