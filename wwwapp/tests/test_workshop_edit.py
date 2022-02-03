@@ -212,9 +212,10 @@ class WorkshopEditViews(TestCase):
             self.assertTrue(Workshop.objects.filter(year=self.year_2020, name='bardzofajne').count() == 1)
             self.assertTrue(Workshop.objects.filter(year=year_2021, name='bardzofajne').count() == 1)
 
-    @freeze_time('2020-12-01 12:00:00')
+    @freeze_time('2020-05-01 12:00:00')
     def test_create_proposal_closed(self):
-        # Proposal end date is not configured and defaults to workshops start
+        self.year_2020.program_finalized = True
+        self.year_2020.save()
 
         # Load the form
         self.client.force_login(self.normal_user)
@@ -237,17 +238,44 @@ class WorkshopEditViews(TestCase):
             save.assert_not_called()
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
+            self.assertNotContains(response, 'Upłynął już termin zgłaszania propozycji warsztatów.')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_create_proposal_late(self):
+        # Load the form
+        self.client.force_login(self.normal_user)
+        response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Upłynął już termin zgłaszania propozycji warsztatów.')
+
+        # Submit
+        response = self.client.post(reverse('workshops_add', args=[self.year_2020.pk]), {
+            'title': 'Fajne warsztaty',
+            'name': 'fajne',
+            'type': WorkshopType.objects.get(year=self.year_2020, name='This type 1').pk,
+            'category': [
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 1').pk,
+                WorkshopCategory.objects.get(year=self.year_2020, name='This category 2').pk
+            ],
+            'proposition_description': '<p>Na tych warsztatach będziemy testować fajną stronę</p>'
+        })
+        self.assertRedirects(response, reverse('workshop_edit', args=[2020, 'fajne']))
+        messages = get_messages(response.wsgi_request)
+        self.assertEqual(len(messages), 1)
+        self.assertRegex(list(messages)[0].message, r'^Twoje zgłoszenie zostało zapisane.')
 
     @freeze_time('2020-05-01 12:00:00')
     def test_create_proposal_open_with_implicit_date(self):
         # Proposal end date is not configured to be an explicit date, so it defaults to workshops start
-        Camp.objects.filter(year=2020).update(proposal_end_date=None)
+        self.year_2020.proposal_end_date = None
+        self.year_2020.save()
 
         # Load the form
         self.client.force_login(self.normal_user)
         response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
+        self.assertNotContains(response, 'Upłynął już termin zgłaszania propozycji warsztatów.')
 
         # Submit
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
@@ -270,13 +298,15 @@ class WorkshopEditViews(TestCase):
     @freeze_time('2020-08-01 12:00:00')
     def test_create_proposal_closed_with_implicit_date(self):
         # Proposal end date is not configured to be an explicit date, so it defaults to workshops start
-        Camp.objects.filter(year=2020).update(proposal_end_date=None)
+        self.year_2020.proposal_end_date = None
+        self.year_2020.save()
 
         # Load the form
         self.client.force_login(self.normal_user)
         response = self.client.get(reverse('workshops_add', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Zgłoszenia warsztatów nie są obecnie aktywne')
+        self.assertNotContains(response, 'Upłynął już termin zgłaszania propozycji warsztatów.')
 
         # Submit
         with mock.patch('wwwapp.models.Workshop.save', autospec=True, side_effect=Workshop.save) as save:
