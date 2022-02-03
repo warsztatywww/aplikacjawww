@@ -58,9 +58,14 @@
   {% if not workshop and not has_perm_to_edit %}
       Zgłoszenia warsztatów nie są obecnie aktywne
   {% else %}
-    <div role="tabpanel">
-      {% crispy form %}
-    </div>
+    {% if not workshop and not are_proposals_open %}
+      <div class="alert alert-warning">
+        <strong>Upłynął już termin zgłaszania propozycji warsztatów.</strong>
+        Jeśli mimo tego chcesz jeszcze dodać warsztaty, przed wypełnieniem formularza skontaktuj się z organizatorami.
+      </div>
+    {% endif %}
+
+    {% crispy form %}
   {% endif %}
 {% endblock %}
 
