@@ -9,7 +9,7 @@ django-select2==7.9.0
 social-auth-app-django==5.0.0
 django-admin-sortable2==1.0.3
 django-imagekit==4.1.0
-Pillow==9.0.0
+Pillow==9.0.1
 python-dateutil==2.8.2
 Faker==11.3.0
 psycopg2-binary==2.9.3
