@@ -25,6 +25,7 @@
           </button>
         </span>
         {% endif %}
+        {% if not workshop.year.is_program_finalized %}
         <span class="btn-group-sm" role="group">
           <button type="submit" class="btn btn-outline-primary"
                   name="qualify" value="delete"
@@ -32,7 +33,9 @@
             Usuń status
           </button>
         </span>
+        {% endif %}
       {% else %}
+        {% if not workshop.year.is_program_finalized %}
         <span class="btn-group-sm" role="group">
         <button type="submit" class="btn btn-outline-primary"
                 name="qualify" value="accept"
@@ -45,6 +48,7 @@
           <i class="fas fa-minus-circle"></i> Odrzuć
         </button>
         </span>
+        {% endif %}
       {% endif %}
     </form>
   {% endif %}
@@ -54,9 +58,14 @@
   {% if not workshop and not has_perm_to_edit %}
       Zgłoszenia warsztatów nie są obecnie aktywne
   {% else %}
-    <div role="tabpanel">
-      {% crispy form %}
-    </div>
+    {% if not workshop and not are_proposals_open %}
+      <div class="alert alert-warning">
+        <strong>Upłynął już termin zgłaszania propozycji warsztatów.</strong>
+        Jeśli mimo tego chcesz jeszcze dodać warsztaty, przed wypełnieniem formularza skontaktuj się z organizatorami.
+      </div>
+    {% endif %}
+
+    {% crispy form %}
   {% endif %}
 {% endblock %}
 

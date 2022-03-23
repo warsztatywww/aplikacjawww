@@ -308,9 +308,10 @@ def workshop_edit_view(request, year, name=None):
         year = get_object_or_404(Camp, pk=year)
         workshop = None
         title = 'Nowe warsztaty'
-        has_perm_to_edit, is_lecturer = year.are_proposals_open(), True
+        has_perm_to_edit, is_lecturer = not year.is_program_finalized(), True
     else:
         workshop = get_object_or_404(Workshop, year=year, name=name)
+        year = workshop.year
         title = workshop.title
         has_perm_to_edit, is_lecturer = can_edit_workshop(workshop, request.user)
 
@@ -322,15 +323,21 @@ def workshop_edit_view(request, year, name=None):
         if not request.user.has_perm('wwwapp.change_workshop_status') or not workshop.is_workshop_editable():
             return HttpResponseForbidden()
         if request.POST['qualify'] == 'accept':
+            if workshop.year.is_program_finalized() and workshop.status != Workshop.STATUS_CANCELLED:
+                return HttpResponseForbidden()
             workshop.status = Workshop.STATUS_ACCEPTED
             workshop.save()
         elif request.POST['qualify'] == 'reject':
+            if workshop.year.is_program_finalized():
+                return HttpResponseForbidden()
             workshop.status = Workshop.STATUS_REJECTED
             workshop.save()
         elif request.POST['qualify'] == 'cancel':
             workshop.status = Workshop.STATUS_CANCELLED
             workshop.save()
         elif request.POST['qualify'] == 'delete':
+            if workshop.year.is_program_finalized():
+                return HttpResponseForbidden()
             workshop.status = None
             workshop.save()
         else:
@@ -406,6 +413,7 @@ def workshop_edit_view(request, year, name=None):
     context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = has_perm_to_edit or has_perm_to_see_all
+    context['are_proposals_open'] = year.are_proposals_open()
 
     context['form'] = form
 
