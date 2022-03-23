@@ -11,26 +11,26 @@
         <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people %}[[ 1, "asc" ]]{% else %}[[ 13, "desc" ], [ 1, "asc" ]]{% endif %}'>
           <thead>
             <tr>
-              <th data-visible="true"  data-searchable="false" data-orderable="false"></th>
-              <th data-visible="true"  data-searchable="true"  data-orderable="true">Imię i nazwisko</th>
-              <th data-visible="false" data-searchable="false" data-orderable="true">Data Urodzenia</th>
-              <th data-visible="{% if is_all_people %}false{% else %}true{% endif %}" data-searchable="false" data-orderable="true">Pełnoletni</th>
-              <th data-visible="{% if is_all_people %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="true">Email</th>
-              <th data-visible="false" data-searchable="true"  data-orderable="true">Szkoła</th>
-              <th data-visible="false" data-searchable="false" data-orderable="true">Rok Matury</th>
+              <th data-visible="true"  data-searchable="false" data-orderable="false" data-search-panes='{"show": false}'></th>
+              <th data-visible="true"  data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Imię i nazwisko</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Data Urodzenia</th>
+              <th data-visible="{% if is_all_people %}false{% else %}true{% endif %}" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Pełnoletni</th>
+              <th data-visible="{% if is_all_people %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Email</th>
+              <th data-visible="false" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Szkoła</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Rok Matury</th>
               {% if not is_all_people %}
-              <th data-visible="true"  data-searchable="false" data-orderable="true">Punkty</th>
-              <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zapisanych">L.zap.</th>
-              <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba przesłanych rozwiązań">L.rozw.</th>
-              <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba sprawdzonych rozwiązań">L.spr.rozw.</th>
-              <th data-visible="false" data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zakwalifikowanych">L.zak.</th>
-              <th data-visible="true"  data-searchable="false" data-orderable="true" data-toggle="tooltip" data-container="body" data-placement="top" title="List motywacyjny uzupełniony?">List?</th>
-              <th data-visible="true"  data-searchable="false" data-orderable="true">Status</th>
+              <th data-visible="true"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Punkty</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zapisanych">L.zap.</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba przesłanych rozwiązań">L.rozw.</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba sprawdzonych rozwiązań">L.spr.rozw.</th>
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zakwalifikowanych">L.zak.</th>
+              <th data-visible="true"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="List motywacyjny uzupełniony?">List?</th>
+              <th data-visible="true"  data-searchable="true" data-orderable="true" data-search-panes='{"show": true, "initCollapsed": false}'>Status</th>
               {% endif %}
-              <th data-visible="true"  data-searchable="false" data-orderable="true">Poprzednie edycje</th>
-              <th data-visible="false" data-searchable="false" data-orderable="false">Skąd wiesz o WWW?</th>
+              <th data-visible="true"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Poprzednie edycje</th>
+              <th data-visible="false" data-searchable="false" data-orderable="false" data-search-panes='{"show": false}'>Skąd wiesz o WWW?</th>
               {% for question in form_questions %}
-                <th data-visible="false" data-searchable="{% if question.is_searchable %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}">{{ question.form.title }}: {{ question.title }}</th>
+                <th data-visible="false" data-searchable="{% if question.is_searchable %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}" data-search-panes='{"show": false}' data-type="{{ question.datatables_type_hint }}">{{ question.form.title }}: {{ question.title }}</th>
               {% endfor %}
             </tr>
           </thead>
@@ -132,7 +132,10 @@
 
   <script>
     $(document).ready(() => {
-      const table = $('#participants-table').DataTable(gen_datatables_config({}));
+      $('#participants-table').DataTable(gen_datatables_config({
+          vcardEnable: true,
+          vcardName: "{{ title }}",
+      }));
       $('[data-toggle="tooltip"]').tooltip({html: true});  // this is required for tooltips in past participation column to work...
     });
   </script>
