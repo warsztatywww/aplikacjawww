@@ -5,7 +5,7 @@ from django.test.testcases import TestCase
 from django.urls import reverse
 
 from wwwapp.models import Camp, WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant, Article, \
-    WorkshopUserProfile
+    CampParticipant
 
 
 # Check if all of the important views at least load without crashing
@@ -24,10 +24,10 @@ class TestBasicViews(TestCase):
         self.participant_user = User.objects.create_user(
             username='participant', email='participant@example.com', password='user123')
 
-        self.participant_user.userprofile.profile_page = '<p>O mnie</p>'
-        self.participant_user.userprofile.cover_letter = '<p>Jestem fajny</p>'
-        self.participant_user.userprofile.how_do_you_know_about = 'nie wiem'
-        self.participant_user.userprofile.save()
+        self.participant_user.user_profile.profile_page = '<p>O mnie</p>'
+        self.participant_user.user_profile.cover_letter = '<p>Jestem fajny</p>'
+        self.participant_user.user_profile.how_do_you_know_about = 'nie wiem'
+        self.participant_user.user_profile.save()
 
         self.workshop_type = WorkshopType.objects.create(year=self.year_2020, name='This type')
         self.workshop_category = WorkshopCategory.objects.create(year=self.year_2020, name='This category')
@@ -43,14 +43,14 @@ class TestBasicViews(TestCase):
             max_points=10,
         )
         self.workshop.category.add(self.workshop_category)
-        self.workshop.lecturer.add(self.lecturer_user.userprofile)
+        self.workshop.lecturer.add(self.lecturer_user.user_profile)
         self.workshop.save()
 
-        WorkshopParticipant.objects.create(workshop=self.workshop, participant=self.participant_user.userprofile,
+        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile,
                                            qualification_result=7.5, comment='Dobrze')
 
-        WorkshopUserProfile.objects.create(user_profile=self.participant_user.userprofile, year=self.year_2020,
-                                           status=WorkshopUserProfile.STATUS_ACCEPTED)
+        CampParticipant.objects.create(user_profile=self.participant_user.user_profile, year=self.year_2020,
+                                       status=CampParticipant.STATUS_ACCEPTED)
 
         self.article = Article.objects.create(name='test_article', title='Testowy', content='<b>Test</b>',
                                               modified_by=self.admin_user, on_menubar=True)

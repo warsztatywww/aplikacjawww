@@ -101,7 +101,7 @@ def protect_last_camp(sender, instance, using, **kwargs):
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_profile')
 
     gender = models.CharField(max_length=10, choices=[('M', 'Mężczyzna'), ('F', 'Kobieta'),],
                               null=True, default=None, blank=True)
@@ -115,7 +115,7 @@ class UserProfile(models.Model):
         return self.is_participant_in(year) or self.is_lecturer_in(year)
 
     def is_participant_in(self, year: Camp) -> bool:
-        return self.participant_status_for(year) == 'Z'
+        return self.camp_participation_status_for(year) == 'Z'
 
     def is_lecturer_in(self, year: Camp) -> bool:
         return self.lecturer_workshops.filter(year=year, status='Z').exists()
@@ -124,7 +124,7 @@ class UserProfile(models.Model):
         """
         Returns the participation data from UserWorkshopProfile joined with data about lectures
         """
-        participant_data = [p for p in self.workshop_profile.all()]
+        participant_data = [p for p in self.camp_participation.all()]
         lecturer_data = [p for p in self.lecturer_workshops.all()]
         years = set([profile.year for profile in participant_data] + [workshop.year for workshop in lecturer_data])
         data = []
@@ -157,7 +157,7 @@ class UserProfile(models.Model):
         participation_data = self.all_participation_data()
         for p in participation_data:
             p['qualification_results'] = []
-        qualifications = WorkshopParticipant.objects.filter(participant=self).select_related('workshop', 'workshop__year', 'solution').all()
+        qualifications = self.workshop_participation.select_related('workshop', 'workshop__year', 'solution').all()
         for q in qualifications:
             participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
             if participation_for_year is None:
@@ -179,7 +179,7 @@ class UserProfile(models.Model):
         Years user qualified
         :return: list of years (integers)
         """
-        return set([profile.year for profile in self.workshop_profile.filter(status=WorkshopUserProfile.STATUS_ACCEPTED)])
+        return set([profile.year for profile in self.camp_participation.filter(status=CampParticipant.STATUS_ACCEPTED)])
 
     def lecturer_years(self) -> Set[Camp]:
         """
@@ -188,14 +188,14 @@ class UserProfile(models.Model):
         """
         return set([workshop.year for workshop in self.lecturer_workshops.filter(status='Z')])
 
-    def participant_status_for(self, year: Camp) -> Optional[str]:
-        profile = self.workshop_profile_for(year)
+    def camp_participation_status_for(self, year: Camp) -> Optional[str]:
+        profile = self.camp_participation_for(year)
         return profile.status if profile else None
 
-    def workshop_profile_for(self, year: Camp) -> Optional['WorkshopUserProfile']:
+    def camp_participation_for(self, year: Camp) -> Optional['CampParticipant']:
         try:
-            return self.workshop_profile.get(year=year)
-        except WorkshopUserProfile.DoesNotExist:
+            return self.camp_participation.get(year=year)
+        except CampParticipant.DoesNotExist:
             return None
 
     @property
@@ -224,7 +224,7 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.get_or_create(user=instance)
 
 
-class WorkshopUserProfile(models.Model):
+class CampParticipant(models.Model):
     # for each year
     STATUS_ACCEPTED = 'Z'
     STATUS_REJECTED = 'O'
@@ -234,12 +234,16 @@ class WorkshopUserProfile(models.Model):
         (STATUS_REJECTED, 'Odrzucony'),
         (STATUS_CANCELLED, 'Odwołany')
     ]
-    user_profile = models.ForeignKey('UserProfile', null=True, related_name='workshop_profile', on_delete=models.CASCADE)
 
-    year = models.ForeignKey(Camp, on_delete=models.PROTECT)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='participants')
+    user_profile = models.ForeignKey('UserProfile', null=True, related_name='camp_participation', on_delete=models.CASCADE)
+
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,
                               null=True, default=None, blank=True)
+
+    class Meta:
+        unique_together = ('user_profile', 'year')
 
     def __str__(self):
         return '%s: %s, %s' % (self.year, self.user_profile, self.status)
@@ -258,9 +262,9 @@ class PESELField(models.CharField):
 
 class ArticleContentHistory(models.Model):
     version = models.IntegerField(editable=False)
-    article = models.ForeignKey('Article', null=True, on_delete=models.SET_NULL)
+    article = models.ForeignKey('Article', null=True, on_delete=models.SET_NULL, related_name='content_history')
     content = models.TextField()
-    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL)
+    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL, related_name='+')
     time = models.DateTimeField(auto_now_add=True, null=True, editable=False)
 
     def __str__(self):
@@ -272,6 +276,7 @@ class ArticleContentHistory(models.Model):
 
     class Meta:
         unique_together = ('version', 'article',)
+        ordering = ('article', '-version')
 
     def save(self, *args, **kwargs):
         # start with version 1 and increment it for each version
@@ -285,7 +290,7 @@ class Article(models.Model):
     name = models.SlugField(max_length=50, null=False, blank=False, unique=True)
     title = models.CharField(max_length=50, null=True, blank=True)
     content = models.TextField(max_length=100000, blank=True)
-    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL)
+    modified_by = models.ForeignKey(User, null=True, default=None, on_delete=models.SET_NULL, related_name='+')
     on_menubar = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0, blank=False, null=False)
 
@@ -293,16 +298,13 @@ class Article(models.Model):
         permissions = (('can_put_on_menubar', 'Can put on menubar'),)
         ordering = ['order']
 
-    def content_history(self):
-        return ArticleContentHistory.objects.filter(article=self).order_by('-version')
-
     def __str__(self):
         return '{} "{}"'.format(self.name, self.title)
 
     def save(self, *args, **kwargs):
         super(Article, self).save(*args, **kwargs)
         # save summary history
-        content_history = self.content_history()
+        content_history = self.content_history.all()
         if not content_history or self.content != content_history[0].content:
             new_content = ArticleContentHistory(article=self, content=self.content)
             new_content.save()
@@ -360,7 +362,6 @@ class Workshop(models.Model):
     is_qualifying = models.BooleanField(default=True)
     qualification_problems = models.FileField(null=True, blank=True, upload_to="qualification", storage=UploadStorage())
     solution_uploads_enabled = models.BooleanField(default=True)
-    participants = models.ManyToManyField(UserProfile, blank=True, related_name='workshops', through='WorkshopParticipant')
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
     max_points = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
 
@@ -405,18 +406,18 @@ class Workshop(models.Model):
         return str(self.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title
 
     def registered_count(self):
-        return self.workshopparticipant_set.count()
+        return self.participants.count()
 
     def solution_count(self):
         if not self.solution_uploads_enabled:
             raise Exception('Solution uploads are not enabled')
-        return self.workshopparticipant_set.filter(solution__isnull=False).count()
+        return self.participants.filter(solution__isnull=False).count()
 
     def checked_solution_count(self):
         if self.solution_uploads_enabled:
-            return self.workshopparticipant_set.filter(qualification_result__isnull=False, solution__isnull=False).count()
+            return self.participants.filter(qualification_result__isnull=False, solution__isnull=False).count()
         else:
-            return self.workshopparticipant_set.filter(qualification_result__isnull=False).count()
+            return self.participants.filter(qualification_result__isnull=False).count()
 
     def to_be_checked_solution_count(self):
         if self.solution_uploads_enabled:
@@ -433,7 +434,7 @@ class Workshop(models.Model):
     def qualified_count(self):
         if self.qualification_threshold is None:
             return None
-        return self.workshopparticipant_set.filter(qualification_result__gte=self.qualification_threshold).count()
+        return self.participants.filter(qualification_result__gte=self.qualification_threshold).count()
 
     def is_publicly_visible(self):
         """
@@ -448,12 +449,12 @@ class Workshop(models.Model):
 
         Used if max_points is not set (e.g. in old [< 2020] workshops that didn't have this value)
         """
-        return self.workshopparticipant_set.aggregate(max_points=models.Max('qualification_result'))['max_points']
+        return self.participants.aggregate(max_points=models.Max('qualification_result'))['max_points']
 
 
 class WorkshopParticipant(models.Model):
-    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE)
-    participant = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='participants')
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='workshop_participation')
 
     qualification_result = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
@@ -478,10 +479,10 @@ class WorkshopParticipant(models.Model):
         return max(min(self.qualification_result / max_points * 100, settings.MAX_POINTS_PERCENT), 0)
 
     class Meta:
-        unique_together = [('workshop', 'participant')]
+        unique_together = [('workshop', 'user_profile')]
 
     def __str__(self):
-        return '{}: {}'.format(self.workshop, self.participant)
+        return '{}: {}'.format(self.workshop, self.user_profile)
 
 
 class Solution(models.Model):
@@ -492,7 +493,7 @@ class Solution(models.Model):
 
 def solutions_dir(instance, filename):
     workshop_participant = instance.solution.workshop_participant
-    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.participant.user.pk}/{filename}'
+    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.user_profile.user.pk}/{filename}'
 
 
 class SoftDeletionQuerySet(models.QuerySet):

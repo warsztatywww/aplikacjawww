@@ -37,8 +37,8 @@
         Autor rozwiązania
       </label>
       <div class="px-3">
-        <a href="{% url 'profile' solution.workshop_participant.participant.user.pk %}">{{ solution.workshop_participant.participant.user.get_full_name }}</a>;
-        <a href="mailto:{{ solution.workshop_participant.participant.user.email }}">{{ solution.workshop_participant.participant.user.email }}</a>
+        <a href="{% url 'profile' solution.workshop_participant.user_profile.user.pk %}">{{ solution.workshop_participant.user_profile.user.get_full_name }}</a>;
+        <a href="mailto:{{ solution.workshop_participant.user_profile.user.email }}">{{ solution.workshop_participant.user_profile.user.email }}</a>
       </div>
     </div>
     {% endif %}

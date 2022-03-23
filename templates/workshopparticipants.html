@@ -24,15 +24,15 @@
           {{ forloop.counter }}
         </td>
         <td class="align-middle">
-          <a href="{% url 'profile' workshop_participant.participant.user.id %}">
-            {{ workshop_participant.participant.user.get_full_name }}
+          <a href="{% url 'profile' workshop_participant.user_profile.user.id %}">
+            {{ workshop_participant.user_profile.user.get_full_name }}
           </a>
-          {% if not workshop_participant.participant.is_completed %}
+          {% if not workshop_participant.user_profile.is_completed %}
             <span class="text-warning" data-toggle="tooltip" data-placement="top" title="Niekompletny profil"><i class="fas fa-exclamation-circle"></i></span>
           {% endif %}
         </td>
         <td class="align-middle">
-          {{ workshop_participant.participant.user.email }}
+          {{ workshop_participant.user_profile.user.email }}
         </td>
         {% if workshop.is_qualifying %}
           {% if workshop.solution_uploads_enabled and not workshop_participant.solution %}
@@ -77,7 +77,7 @@
   <div class="containter-fluid">
     <div class="form-group">
       <label for="participants_emails">Maile:</label>
-      <input id="participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{{ workshop_participant.participant.user.email }}{% if not forloop.last %}, {% endif %}{% endfor %}" />
+      <input id="participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{{ workshop_participant.user_profile.user.email }}{% if not forloop.last %}, {% endif %}{% endfor %}" />
     </div>
   </div>
 {% endblock %}

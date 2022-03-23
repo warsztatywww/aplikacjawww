@@ -24,7 +24,7 @@ from django.contrib.staticfiles.storage import staticfiles_storage
 
 from .templatetags.wwwtags import qualified_mark
 from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, WorkshopUserProfile, WorkshopParticipant, Camp, Solution, SolutionFile
+    WorkshopType, CampParticipant, WorkshopParticipant, Camp, Solution, SolutionFile
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):

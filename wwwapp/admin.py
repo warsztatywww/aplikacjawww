@@ -10,7 +10,7 @@ from django.http.request import HttpRequest
 
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission, Camp, Solution, SolutionFile
+    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile
 
 admin.site.unregister(User)
 
@@ -33,8 +33,8 @@ class WorkshopInline(admin.TabularInline):
     show_change_link = True
 
 
-class WorkshopUserProfileInline(admin.TabularInline):
-    model = WorkshopUserProfile
+class CampParticipantInline(admin.TabularInline):
+    model = CampParticipant
     extra = 0
     show_change_link = True
 
@@ -47,7 +47,7 @@ class WorkshopParticipantInline(admin.TabularInline):
 
 class UserProfileAdmin(admin.ModelAdmin):
     model = UserProfile
-    inlines = [WorkshopUserProfileInline, WorkshopParticipantInline, WorkshopInline]
+    inlines = [CampParticipantInline, WorkshopParticipantInline, WorkshopInline]
 
 
 admin.site.register(UserProfile, UserProfileAdmin)
@@ -187,7 +187,7 @@ class SolutionAdmin(admin.ModelAdmin):
 
 
 admin.site.register(WorkshopParticipant, WorkshopParticipantAdmin)
-admin.site.register(WorkshopUserProfile)
+admin.site.register(CampParticipant)
 admin.site.register(Solution, SolutionAdmin)
 
 admin.site.register(ResourceYearPermission)

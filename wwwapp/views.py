@@ -38,7 +38,7 @@ from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload, SolutionFileFormSet, SolutionForm
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
-    WorkshopUserProfile, ResourceYearPermission, Camp, Solution
+    CampParticipant, ResourceYearPermission, Camp, Solution
 from .templatetags.wwwtags import qualified_mark
 
 
@@ -81,19 +81,18 @@ def program_view(request, year):
     context['title'] = 'Program %s' % str(year)
 
     if request.user.is_authenticated:
-        user_participation = set(year.workshops.filter(participants__user=request.user).all())
+        user_profile = request.user.user_profile
+        workshop_participation = user_profile.workshop_participation.filter(workshop__year=year).all()
+        workshops_participated_in = set(wp.workshop for wp in workshop_participation)
+        has_results = any(wp.qualification_result is not None for wp in workshop_participation)
     else:
-        user_participation = set()
+        workshops_participated_in = set()
+        has_results = False
 
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
-    context['workshops'] = [(workshop, (workshop in user_participation)) for workshop
+    context['workshops'] = [(workshop, (workshop in workshops_participated_in)) for workshop
                             in workshops]
-    if request.user.is_authenticated and year == Camp.current():
-        context['has_results'] = WorkshopParticipant.objects.filter(
-            workshop__year=year, participant=request.user.userprofile, qualification_result__isnull=False
-        ).exists()
-    else:
-        context['has_results'] = False
+    context['has_results'] = has_results and year == Camp.current()
 
     context['selected_year'] = year
     return render(request, 'program.html', context)
@@ -107,11 +106,11 @@ def profile_view(request, user_id):
     context = {}
     user_id = int(user_id)
     user = get_object_or_404(User.objects.prefetch_related(
-        'userprofile',
-        'userprofile__user',
-        'userprofile__workshop_profile',
-        'userprofile__lecturer_workshops',
-        'userprofile__lecturer_workshops__year',
+        'user_profile',
+        'user_profile__user',
+        'user_profile__camp_participation',
+        'user_profile__lecturer_workshops',
+        'user_profile__lecturer_workshops__year',
     ), pk=user_id)
 
     is_my_profile = (request.user == user)
@@ -120,24 +119,23 @@ def profile_view(request, user_id):
 
     can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
     context['can_qualify'] = can_qualify
-    context['workshop_profile'] = WorkshopUserProfile.objects.filter(
-        user_profile=user.userprofile, year=Camp.current())
+    context['camp_participation'] = user.user_profile.camp_participation_for(year=Camp.current())
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return redirect_to_login(reverse('profile', args=[user_id]))
         if not can_qualify:
             return HttpResponseForbidden()
-        (edition_profile, _) = WorkshopUserProfile.objects.get_or_create(
-            user_profile=user.userprofile, year=Camp.current())
+        (edition_profile, _) = CampParticipant.objects.get_or_create(
+            user_profile=user.user_profile, year=Camp.current())
         if request.POST['qualify'] == 'accept':
-            edition_profile.status = WorkshopUserProfile.STATUS_ACCEPTED
+            edition_profile.status = CampParticipant.STATUS_ACCEPTED
             edition_profile.save()
         elif request.POST['qualify'] == 'reject':
-            edition_profile.status = WorkshopUserProfile.STATUS_REJECTED
+            edition_profile.status = CampParticipant.STATUS_REJECTED
             edition_profile.save()
         elif request.POST['qualify'] == 'cancel':
-            edition_profile.status = WorkshopUserProfile.STATUS_CANCELLED
+            edition_profile.status = CampParticipant.STATUS_CANCELLED
             edition_profile.save()
         elif request.POST['qualify'] == 'delete':
             edition_profile.delete()
@@ -147,25 +145,25 @@ def profile_view(request, user_id):
         return redirect('profile', user.pk)
 
     context['title'] = "{0.first_name} {0.last_name}".format(user)
-    context['profile_page'] = user.userprofile.profile_page
+    context['profile_page'] = user.user_profile.profile_page
     context['is_my_profile'] = is_my_profile
-    context['gender'] = user.userprofile.gender
+    context['gender'] = user.user_profile.gender
 
     if can_see_all_users or is_my_profile:
-        context['profile'] = user.userprofile
-        context['participation_data'] = user.userprofile.all_participation_data()
+        context['profile'] = user.user_profile
+        context['participation_data'] = user.user_profile.all_participation_data()
         if not can_see_all_workshops and not is_my_profile:
             # If the current user can't see non-public workshops, remove them from the list
             for participation in context['participation_data']:
                 participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
 
     if can_see_all_workshops:
-        context['results_data'] = user.userprofile.workshop_results_by_year()
+        context['results_data'] = user.user_profile.workshop_results_by_year()
 
     if can_see_all_workshops or is_my_profile:
-        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').all().order_by('year')
+        context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('type').all().order_by('year')
     else:
-        context['lecturer_workshops'] = user.userprofile.lecturer_workshops.prefetch_related('type').filter(Q(status='Z') | Q(status='X')).order_by('year')
+        context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('type').filter(Q(status='Z') | Q(status='X')).order_by('year')
     context['can_see_all_workshops'] = can_see_all_workshops
 
     return render(request, 'profile.html', context)
@@ -177,7 +175,7 @@ def mydata_profile_view(request):
 
     if request.method == "POST":
         user_form = UserForm(request.POST, instance=request.user)
-        user_profile_form = UserProfileForm(request.POST, instance=request.user.userprofile)
+        user_profile_form = UserProfileForm(request.POST, instance=request.user.user_profile)
         if user_form.is_valid() and user_profile_form.is_valid():
             user_form.save()
             user_profile_form.save()
@@ -185,7 +183,7 @@ def mydata_profile_view(request):
             return redirect('mydata_profile')
     else:
         user_form = UserForm(instance=request.user)
-        user_profile_form = UserProfileForm(instance=request.user.userprofile)
+        user_profile_form = UserProfileForm(instance=request.user.user_profile)
 
     context['user_form'] = user_form
     context['user_profile_form'] = user_profile_form
@@ -199,13 +197,13 @@ def mydata_profile_page_view(request):
     context = {}
 
     if request.method == "POST":
-        user_profile_page_form = UserProfilePageForm(request.POST, instance=request.user.userprofile)
+        user_profile_page_form = UserProfilePageForm(request.POST, instance=request.user.user_profile)
         if user_profile_page_form.is_valid():
             user_profile_page_form.save()
             messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_profile_page')
     else:
-        user_profile_page_form = UserProfilePageForm(instance=request.user.userprofile)
+        user_profile_page_form = UserProfilePageForm(instance=request.user.user_profile)
 
     context['user_profile_page_form'] = user_profile_page_form
     context['title'] = 'Mój profil'
@@ -218,13 +216,13 @@ def mydata_cover_letter_view(request):
     context = {}
 
     if request.method == "POST":
-        user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.userprofile)
+        user_cover_letter_form = UserCoverLetterForm(request.POST, instance=request.user.user_profile)
         if user_cover_letter_form.is_valid():
             user_cover_letter_form.save()
             messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
             return redirect('mydata_cover_letter')
     else:
-        user_cover_letter_form = UserCoverLetterForm(instance=request.user.userprofile)
+        user_cover_letter_form = UserCoverLetterForm(instance=request.user.user_profile)
 
     context['user_cover_letter_form'] = user_cover_letter_form
     context['title'] = 'Mój profil'
@@ -236,7 +234,7 @@ def mydata_cover_letter_view(request):
 def mydata_status_view(request):
     context = {}
     user_profile = UserProfile.objects.prefetch_related(
-        'workshop_profile',
+        'camp_participation',
         'lecturer_workshops',
         'lecturer_workshops__year',
     ).get(user=request.user)
@@ -288,7 +286,7 @@ def workshop_page_view(request, year, name):
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
     if request.user.is_authenticated:
-        registered = workshop.participants.filter(user=request.user).exists()
+        registered = workshop.participants.filter(user_profile__user=request.user).exists()
     else:
         registered = False
 
@@ -347,9 +345,9 @@ def workshop_edit_view(request, year, name=None):
 
     profile_warnings = []
     if is_lecturer:  # The user is one of the lecturers for this workshop
-        if len(request.user.userprofile.profile_page) <= 50:  # The user does not have their profile page filled in
+        if len(request.user.user_profile.profile_page) <= 50:  # The user does not have their profile page filled in
             profile_warnings.append(Template("""
-                    <strong>Nie uzupełnił{% if user.userprofile.gender == 'F' %}aś{% else %}eś{% endif %} swojej
+                    <strong>Nie uzupełnił{% if user.user_profile.gender == 'F' %}aś{% else %}eś{% endif %} swojej
                     <a target="_blank" href="{% url 'mydata_profile_page' %}">strony profilowej</a>.</strong>
                     Powiedz potencjalnym uczestnikom coś więcej o sobie!
                 """).render(Context({'user': request.user})))
@@ -446,8 +444,8 @@ def workshop_participants_view(request, year, name):
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
 
-    context['workshop_participants'] = WorkshopParticipant.objects.filter(workshop=workshop).select_related(
-            'workshop', 'workshop__year', 'participant', 'participant__user', 'solution')
+    context['workshop_participants'] = workshop.participants.select_related(
+            'workshop', 'workshop__year', 'user_profile', 'user_profile__user', 'solution')
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))
@@ -488,30 +486,30 @@ def participants_view(request, year=None):
     participants = UserProfile.objects \
         .select_related('user') \
         .prefetch_related(
-        'workshop_profile',
-        'workshop_profile__year',
+        'camp_participation',
+        'camp_participation__year',
         'lecturer_workshops',
         'lecturer_workshops__year',
     )
 
     if year is not None:
         year = get_object_or_404(Camp, pk=year)
-        participants = participants.filter(workshops__year=year)
+        participants = participants.filter(workshop_participation__workshop__year=year)
 
         lecturers = Workshop.objects.filter(year=year).values_list('lecturer__user__id').distinct()
         participants = participants.exclude(user__id__in=lecturers)
 
         participants = participants.prefetch_related(
-            Prefetch('workshopparticipant_set', queryset=WorkshopParticipant.objects.filter(workshop__year=year)),
-            'workshopparticipant_set__workshop',
-            'workshopparticipant_set__workshop__year',
+            Prefetch('workshop_participation', queryset=WorkshopParticipant.objects.filter(workshop__year=year)),
+            'workshop_participation__workshop',
+            'workshop_participation__workshop__year',
         )
 
     participants = participants.all()
 
-    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__userprofile__in=participants).distinct()
+    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__user_profile__in=participants).distinct()
     all_questions = [question for form in all_forms for question in form.questions.all()]
-    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__userprofile__in=participants, question__in=all_questions).all()
+    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__user_profile__in=participants, question__in=all_questions).all()
 
     people = {}
 
@@ -530,11 +528,11 @@ def participants_view(request, year=None):
             else:
                 is_adult = datetime.date.today() >= birth + relativedelta(years=18)
 
-        workshop_profile = None
+        camp_participation = None
         if year is not None:
-            workshop_profile = participant.workshop_profile.all()
-            workshop_profile = list(filter(lambda x: x.year == year, workshop_profile))
-            workshop_profile = workshop_profile[0] if workshop_profile else None
+            camp_participation = participant.camp_participation.all()
+            camp_participation = list(filter(lambda x: x.year == year, camp_participation))
+            camp_participation = camp_participation[0] if camp_participation else None
 
         participation_data = participant.all_participation_data()
         if not request.user.has_perm('wwwapp.see_all_workshops'):
@@ -554,8 +552,8 @@ def participants_view(request, year=None):
             'accepted_workshop_count': 0,
             'has_completed_profile': participant.is_completed,
             'has_cover_letter': bool(participant.cover_letter and len(participant.cover_letter) > 50),
-            'status': workshop_profile.status if workshop_profile else None,
-            'status_display': workshop_profile.get_status_display if workshop_profile else None,
+            'status': camp_participation.status if camp_participation else None,
+            'status_display': camp_participation.get_status_display if camp_participation else None,
             'participation_data': participation_data,
             'school': participant.school,
             'points': 0.0,
@@ -565,7 +563,7 @@ def participants_view(request, year=None):
         }
 
         if year:
-            for wp in participant.workshopparticipant_set.all():
+            for wp in participant.workshop_participation.all():
                 assert wp.workshop.year == year
                 if wp.workshop.is_qualifying:
                     if not wp.workshop.solution_uploads_enabled or hasattr(wp, 'solution'):
@@ -665,7 +663,7 @@ def register_to_workshop_view(request, year, name):
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
 
-    _, created = WorkshopParticipant.objects.get_or_create(participant=UserProfile.objects.get(user=request.user), workshop=workshop)
+    _, created = WorkshopParticipant.objects.get_or_create(user_profile=UserProfile.objects.get(user=request.user), workshop=workshop)
 
     context = {}
     context['workshop'] = workshop
@@ -684,7 +682,7 @@ def unregister_from_workshop_view(request, year, name):
 
     workshop = get_object_or_404(Workshop.objects.prefetch_related('lecturer', 'lecturer__user', 'type', 'category'), year__pk=year, name=name)
     profile = UserProfile.objects.get(user=request.user)
-    workshop_participant = WorkshopParticipant.objects.filter(workshop=workshop, participant=profile).first()
+    workshop_participant = workshop.participants.filter(user_profile=profile).first()
 
     if not workshop.is_qualification_editable():
         return JsonResponse({'error': u'Kwalifikacja na te warsztaty została zakończona.'})
@@ -720,9 +718,9 @@ def workshop_solution(request, year, name, solution_id=None):
     if solution_id is None:
         # My solution
         try:
-            workshop_participant = workshop.workshopparticipant_set \
-                .select_related('solution', 'participant__user') \
-                .get(participant__user=request.user)
+            workshop_participant = workshop.participants \
+                .select_related('solution', 'user_profile__user') \
+                .get(user_profile__user=request.user)
         except WorkshopParticipant.DoesNotExist:
             return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
         solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
@@ -737,7 +735,7 @@ def workshop_solution(request, year, name, solution_id=None):
             return HttpResponseForbidden()
         solution = get_object_or_404(
             Solution.objects
-                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .select_related('workshop_participant', 'workshop_participant__user_profile__user')
                 .filter(workshop_participant__workshop=workshop),
             pk=solution_id)
 
@@ -791,9 +789,9 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
     if not solution_id:
         # My solution
         try:
-            workshop_participant = workshop.workshopparticipant_set \
-                .select_related('solution', 'participant__user') \
-                .get(participant__user=request.user)
+            workshop_participant = workshop.participants \
+                .select_related('solution', 'user_profile__user') \
+                .get(user_profile__user=request.user)
         except WorkshopParticipant.DoesNotExist:
             return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
         solution = workshop_participant.solution if hasattr(workshop_participant, 'solution') else None
@@ -806,7 +804,7 @@ def workshop_solution_file(request, year, name, file_pk, solution_id=None):
             return HttpResponseForbidden()
         solution = get_object_or_404(
             Solution.objects
-                .select_related('workshop_participant', 'workshop_participant__participant__user')
+                .select_related('workshop_participant', 'workshop_participant__user_profile__user')
                 .filter(workshop_participant__workshop=workshop),
             pk=solution_id)
 
@@ -832,7 +830,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
 
     data = {}
 
-    participant_profiles_raw = UserProfile.objects.filter(workshop_profile__year=year, workshop_profile__status='Z')
+    participant_profiles_raw = UserProfile.objects.filter(camp_participation__year=year, camp_participation__status='Z')
 
     lecturer_profiles_raw = set()
     workshop_ids = set()
@@ -871,8 +869,8 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
 
     if year == current_year:
         # TODO: Form data is valid for the current year only
-        start_dates = {answer.user.userprofile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__userprofile').filter(question=F('question__form__arrival_date'), question__form__is_visible=True, user__userprofile__in=user_ids, value_date__isnull=False)}
-        end_dates = {answer.user.userprofile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__userprofile').filter(question=F('question__form__departure_date'), question__form__is_visible=True, user__userprofile__in=user_ids, value_date__isnull=False)}
+        start_dates = {answer.user.user_profile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__user_profile').filter(question=F('question__form__arrival_date'), question__form__is_visible=True, user__user_profile__in=user_ids, value_date__isnull=False)}
+        end_dates = {answer.user.user_profile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__user_profile').filter(question=F('question__form__departure_date'), question__form__is_visible=True, user__user_profile__in=user_ids, value_date__isnull=False)}
 
         for user in users:
             start_date = start_dates[user['uid']] if user['uid'] in start_dates else None
@@ -886,10 +884,10 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     data['users'] = users
 
     participation = []
-    for wp in WorkshopParticipant.objects.filter(workshop__id__in=workshop_ids, participant__id__in=user_ids):
+    for wp in WorkshopParticipant.objects.filter(workshop__id__in=workshop_ids, user_profile__id__in=user_ids):
         participation.append({
             'wid': wp.workshop.id,
-            'uid': wp.participant.id,
+            'uid': wp.user_profile.id,
         })
     data['participation'] = participation
 
