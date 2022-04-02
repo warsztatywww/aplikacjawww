@@ -65,7 +65,7 @@ class UserCoverLetterForm(ModelForm):
         ))
 
     class Meta:
-        model = UserProfile
+        model = CampParticipant
         fields = ['cover_letter']
         labels = {'cover_letter': "List motywacyjny"}
         widgets = {'cover_letter': InitializedTinyMCE()}

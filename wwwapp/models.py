@@ -113,7 +113,6 @@ class UserProfile(models.Model):
     matura_exam_year = models.PositiveSmallIntegerField(null=True, default=None, blank=True)
     how_do_you_know_about = models.CharField(max_length=1000, default="", blank=True)
     profile_page = models.TextField(max_length=100000, blank=True, default="")
-    cover_letter = models.TextField(max_length=100000, blank=True, default="")
 
     def is_participating_in(self, year: Camp) -> bool:
         return self.is_participant_in(year) or self.is_lecturer_in(year)
@@ -126,49 +125,53 @@ class UserProfile(models.Model):
 
     def all_participation_data(self):
         """
-        Returns the participation data from UserWorkshopProfile joined with data about lectures
+        Returns the participation data from CampParticipant objects joined with data about lectures
         """
-        participant_data = [p for p in self.camp_participation.all()]
-        lecturer_data = [p for p in self.lecturer_workshops.all()]
-        years = set([profile.year for profile in participant_data] + [workshop.year for workshop in lecturer_data])
+
         data = []
-        for year in sorted(years, key=lambda x: x.year):
-            profile = next(iter([x for x in participant_data if x.year == year]), None)
-            workshops = [x for x in lecturer_data if x.year == year]
-            status = None
-            participation_type = 'participant'
+
+        # Get data from CampParticipiant objects
+        for camp_participant in self.camp_participation.all():
+            data.append({'year': camp_participant.year, 'status': camp_participant.status, 'type': 'participant', 'workshops': [], 'camp_participant': camp_participant})
+
+        # Get data about lectures
+        lecturer_workshops = self.lecturer_workshops.all()
+        for year in set([workshop.year for workshop in lecturer_workshops]):
+            lecturer_workshops_for_year = [x for x in lecturer_workshops if x.year == year]
+
+            data_for_year = next(filter(lambda x: x['year'] == year, data), None)
+            if not data_for_year:
+                data_for_year = {'year': year, 'status': None, 'type': 'lecturer', 'workshops': lecturer_workshops_for_year, 'camp_participant': None}
+                data.append(data_for_year)
+            else:
+                data_for_year['workshops'] = lecturer_workshops_for_year
+
             # If the user was a participant, their participation status takes precedence
-            if profile:
-                status = profile.status
             # Otherwise, use the lecturer status
-            if workshops and status != 'Z':
+            if not data_for_year['status']:
                 # If there was at least one accepted workshop, the lecturer was accepted. Otherwise, if at least one
                 # workshop was cancelled, the participation of the lecturer was cancelled. Otherwise, the lecturer
                 # was rejected.
-                if any([workshop.status == 'Z' for workshop in workshops]):
-                    status = 'Z'
-                elif any([workshop.status == 'X' for workshop in workshops]):
-                    status = 'X'
-                elif all([workshop.status for workshop in workshops]):
-                    status = 'O'
+                if any(workshop.status == 'Z' for workshop in lecturer_workshops_for_year):
+                    data_for_year['status'] = 'Z'
+                elif any(workshop.status == 'X' for workshop in lecturer_workshops_for_year):
+                    data_for_year['status'] = 'X'
+                elif all(workshop.status for workshop in lecturer_workshops_for_year):
+                    data_for_year['status'] = 'O'
                 else:
-                    status = None
-                participation_type = 'lecturer'
-            data.append({'year': year, 'status': status, 'type': participation_type, 'workshops': workshops})
+                    data_for_year['status'] = None
+                data_for_year['type'] = 'lecturer'
+
+        data.sort(key=lambda x: x['year'].year)
         return data
 
     def workshop_results_by_year(self):
         participation_data = self.all_participation_data()
         for p in participation_data:
-            p['qualification_results'] = []
-        qualifications = self.workshop_participation.select_related('workshop', 'workshop__year', 'solution').all()
-        for q in qualifications:
-            participation_for_year = next(filter(lambda x: x['year'] == q.workshop.year, participation_data), None)
-            if participation_for_year is None:
-                participation_for_year = {'year': q.workshop.year, 'type': 'participant', 'status': None, 'qualification_results': []}
-                participation_data.append(participation_for_year)
-            participation_for_year['qualification_results'].append(q)
-        participation_data.sort(key=lambda x: x['year'].year, reverse=True)
+            if p['camp_participant']:
+                p['qualification_results'] = p['camp_participant'].workshop_participation.all()
+            else:
+                p['qualification_results'] = []
         return participation_data
 
     def all_participation_years(self) -> Set[Camp]:
@@ -241,6 +244,8 @@ class CampParticipant(models.Model):
 
     year = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='participants')
     user_profile = models.ForeignKey('UserProfile', null=True, related_name='camp_participation', on_delete=models.CASCADE)
+
+    cover_letter = models.TextField(max_length=100000, blank=True, default="")
 
     status = models.CharField(max_length=10,
                               choices=STATUS_CHOICES,
@@ -458,10 +463,15 @@ class Workshop(models.Model):
 
 class WorkshopParticipant(models.Model):
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='participants')
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='workshop_participation')
+    camp_participation = models.ForeignKey(CampParticipant, on_delete=models.CASCADE, related_name='workshop_participation')
 
     qualification_result = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
+
+    def clean(self):
+        super(WorkshopParticipant, self).clean()
+        if self.workshop.year != self.camp_participation.year:
+            raise ValidationError("You can't participate in a workshop from another year...")
 
     def is_qualified(self):
         if not self.workshop.is_qualifying:
@@ -483,10 +493,10 @@ class WorkshopParticipant(models.Model):
         return max(min(self.qualification_result / max_points * 100, settings.MAX_POINTS_PERCENT), 0)
 
     class Meta:
-        unique_together = [('workshop', 'user_profile')]
+        unique_together = [('workshop', 'camp_participation')]
 
     def __str__(self):
-        return '{}: {}'.format(self.workshop, self.user_profile)
+        return '{}: {}'.format(self.workshop, self.camp_participation.user_profile)
 
 
 class Solution(models.Model):
@@ -497,7 +507,7 @@ class Solution(models.Model):
 
 def solutions_dir(instance, filename):
     workshop_participant = instance.solution.workshop_participant
-    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.user_profile.user.pk}/{filename}'
+    return f'solutions/{workshop_participant.workshop.year.pk}/{workshop_participant.workshop.name}/{workshop_participant.camp_participation.user_profile.user.pk}/{filename}'
 
 
 class SoftDeletionQuerySet(models.QuerySet):

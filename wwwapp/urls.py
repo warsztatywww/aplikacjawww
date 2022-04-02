@@ -64,6 +64,7 @@ urlpatterns = [
     path('program/', views.redirect_to_view_for_latest_year('program'), name='latest_program'),
     path('addWorkshop/', views.redirect_to_view_for_latest_year('workshops_add')),
     path('<int:year>/program/', views.program_view, name='program'),
+    path('<int:year>/register/', views.register_to_camp_view, name='register_to_camp'),
     path('resource_auth/', views.resource_auth_view, name='resource_auth'),
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
     path('', views.index_view, name='index'),

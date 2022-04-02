@@ -19,10 +19,10 @@
                 <th class="w-25">Edycje WWW:</th>
                 <td class="w-75">
                   {% include '_pastParticipation.html' with participation_data=participation_data only %}
-                  {% if perms.wwwapp.change_workshop_user_profile %}
+                  {% if perms.wwwapp.change_workshop_user_profile and camp_participation %}
                     <form method="post" class="d-inline">
                       {% csrf_token %}
-                      {% if camp_participation %}
+                      {% if camp_participation.status %}
                         {% if camp_participation.status == 'Z' %}
                           <button type="submit" class="btn btn-outline-primary btn-sm"
                                   name="qualify" value="cancel"
@@ -83,7 +83,6 @@
 
         {% if results_data %}
           {% for status in results_data %}
-            {% if status.qualification_results %}
               <div class="card mb-3 w-100">
                 <h4 class="card-header p-2">
                   {{ status.year }}
@@ -92,9 +91,14 @@
                   {% if status.qualification_results %}
                     {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results is_my_profile=False %}
                   {% endif %}
+                  {% if status.camp_participant and status.camp_participant.cover_letter %}
+                    <div class="p-3">
+                      <h3>List motywacyjny</h3>
+                      {{ status.camp_participant.cover_letter | bleach }}
+                    </div>
+                  {% endif %}
                 </div>
               </div>
-            {% endif %}
           {% endfor %}
         {% endif %}
 
@@ -134,10 +138,10 @@
         {% endif %}
 
         {% if profile %}
-          {% if profile.cover_letter %}
+          {% if is_my_profile and camp_participation and camp_participation.cover_letter %}
             <hr/>
             <h3>List motywacyjny</h3>
-            {{ profile.cover_letter | bleach }}
+            {{ camp_participation.cover_letter | bleach }}
           {% endif %}
 
           {% if profile_page %}

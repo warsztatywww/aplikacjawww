@@ -3,6 +3,7 @@
 {% load crispy_forms_tags %}
 
 {% block mydata_page_content %}
+{% if user_cover_letter_form %}
 <p>Napisz (w 50 - 1000 słowach) odnosząc się do każdego punktu w oddzielnym paragrafie:</p>
 <ol>
   <li>Opisz swoje główne zainteresowania naukowe.
@@ -30,6 +31,12 @@
   punktach 1-6.</li>
 </ol>
   {% crispy user_cover_letter_form %}
+{% else %}
+  <p>
+    Nie jesteś jeszcze zapisany na warsztaty. Przejdź na stronę <a href="{% url 'program' current_year.pk %}">Program</a>,
+    i wybierz interesujące Cię zajęcia!
+  </p>
+{% endif %}
 {% endblock %}
 
 {% block script %}

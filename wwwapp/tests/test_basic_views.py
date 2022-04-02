@@ -46,11 +46,9 @@ class TestBasicViews(TestCase):
         self.workshop.lecturer.add(self.lecturer_user.user_profile)
         self.workshop.save()
 
-        WorkshopParticipant.objects.create(workshop=self.workshop, user_profile=self.participant_user.user_profile,
-                                           qualification_result=7.5, comment='Dobrze')
-
-        CampParticipant.objects.create(user_profile=self.participant_user.user_profile, year=self.year_2020,
-                                       status=CampParticipant.STATUS_ACCEPTED)
+        cp = CampParticipant.objects.create(user_profile=self.participant_user.user_profile, year=self.year_2020,
+                                            status=CampParticipant.STATUS_ACCEPTED)
+        cp.workshop_participation.create(workshop=self.workshop, qualification_result=7.5, comment='Dobrze')
 
         self.article = Article.objects.create(name='test_article', title='Testowy', content='<b>Test</b>',
                                               modified_by=self.admin_user, on_menubar=True)

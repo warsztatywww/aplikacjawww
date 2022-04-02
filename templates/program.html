@@ -22,15 +22,29 @@
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
-      {% if not selected_year.is_program_finalized %}
-        <p class="alert alert-info">Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
-      {% endif %}
 
-      {% for workshop, registered in workshops %}
-        {% include "_programworkshop.html" %}
-      {% empty %}
-        Jeszcze nie ma tu żadnych warsztatów. Zajrzyj ponownie później.
-      {% endfor %}
+      {% if workshops %}
+        {% if not selected_year.is_program_finalized %}
+          <p class="alert alert-info">Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
+        {% endif %}
+
+        {% for workshop, registered in workshops %}
+          {% include "_programworkshop.html" %}
+        {% endfor %}
+      {% else %}
+        <div class="w-100 text-center">
+          <p class="pt-4">Program nie jest jeszcze dostępny.</p>
+          {% if selected_year.is_qualification_editable %}
+            <form action="{% url 'register_to_camp' selected_year.pk %}">
+              {% if not is_registered %}
+                <button type="submit" class="btn btn-primary">Powiadom mnie, gdy rozpocznie się rejestracja</button>
+              {% else %}
+                <button type="submit" class="btn btn-primary" disabled="disabled">Powiadomy cię, gdy rozpocznie się rejestracja</button>
+              {% endif %}
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
 
       {% if selected_year == current_year %}
       <div class="d-block d-md-none w-100"
