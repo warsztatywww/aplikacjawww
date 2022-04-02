@@ -40,8 +40,4 @@ class Migration(migrations.Migration):
             field=models.TextField(blank=True, default='', max_length=100000),
         ),
         migrations.RunPython(forwards_func, reverse_func),
-        migrations.RemoveField(
-            model_name='userprofile',
-            name='cover_letter',
-        ),
     ]
