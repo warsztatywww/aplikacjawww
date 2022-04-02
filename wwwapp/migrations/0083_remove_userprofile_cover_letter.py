@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('wwwapp', '0081_campparticipant_cover_letter'),
+        ('wwwapp', '0082_campparticipant_cover_letter'),
     ]
 
     operations = [

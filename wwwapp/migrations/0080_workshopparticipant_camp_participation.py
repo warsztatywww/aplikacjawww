@@ -33,17 +33,4 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='workshop_participation', to='wwwapp.campparticipant'),
         ),
         migrations.RunPython(forwards_func, reverse_func),
-        migrations.AlterField(
-            model_name='workshopparticipant',
-            name='camp_participation',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='workshop_participation', to='wwwapp.campparticipant'),
-        ),
-        migrations.AlterUniqueTogether(
-            name='workshopparticipant',
-            unique_together={('workshop', 'camp_participation')},
-        ),
-        migrations.RemoveField(
-            model_name='workshopparticipant',
-            name='user_profile',
-        ),
     ]
