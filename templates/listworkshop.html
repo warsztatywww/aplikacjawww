@@ -56,7 +56,7 @@
                   </td>
                   <td>
                     {% if workshop.is_qualifying and workshop.solution_uploads_enabled and workshop.is_publicly_visible and workshop.qualification_problems %}
-                      <p>{{ workshop.solutions_count }}</p>
+                      <p>{{ workshop.solution_count }}</p>
                     {% else %}
                       <p>-</p>
                     {% endif %}
