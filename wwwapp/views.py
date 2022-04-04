@@ -108,7 +108,7 @@ def register_to_camp_view(request, year):
 
     camp_participation, created = year.participants.get_or_create(user_profile=request.user.user_profile)
     if created:
-        messages.info(request, 'Powiadomimy się, gdy rozpocznie się rejestracja', extra_tags='auto-dismiss')
+        messages.info(request, 'Powiadomimy Cię, gdy rozpocznie się rejestracja', extra_tags='auto-dismiss')
     return redirect('program', year.pk)
 
 
