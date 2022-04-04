@@ -8,6 +8,7 @@ from django.db.models.base import Model
 from django.forms.models import BaseInlineFormSet
 from django.http.request import HttpRequest
 
+import wwwforms.models
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
     CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile
@@ -90,6 +91,23 @@ class WorkshopTypeAdminInline(admin.TabularInline):
 class CampAdmin(admin.ModelAdmin):
     model = Camp
     inlines = [WorkshopTypeAdminInline, WorkshopCategoryAdminInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('year', 'proposal_end_date', 'program_finalized', 'start_date', 'end_date')
+        }),
+        ('Formularze', {
+            'description': 'Ustawienie tych parametrów spowoduje włączenie specjalnej obsługi pól w formularzach',
+            'fields': ('forms', 'form_question_arrival_date', 'form_question_departure_date')
+        }),
+    )
+
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change, **kwargs)
+        if obj:
+            form.base_fields['form_question_arrival_date'].queryset = form.base_fields['form_question_arrival_date'].queryset.filter(form__in=obj.forms.all(), data_type=wwwforms.models.FormQuestion.TYPE_DATE)
+            form.base_fields['form_question_departure_date'].queryset = form.base_fields['form_question_departure_date'].queryset.filter(form__in=obj.forms.all(), data_type=wwwforms.models.FormQuestion.TYPE_DATE)
+        return form
 
 
 admin.site.register(Camp, CampAdmin)

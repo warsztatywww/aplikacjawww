@@ -52,8 +52,10 @@ class FormForm(forms.Form):
     def __init__(self, form: Form, user: User, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # TODO: This is ugly - makes wwwforms have a circular reference to wwwapp, and should it even be hardcoded to 'latest'?
-        current_year = Camp.objects.latest()
+        try:
+            year = form.years.latest()
+        except Camp.DoesNotExist:
+            year = None
 
         self.form = form
         self.user = user
@@ -94,17 +96,17 @@ class FormForm(forms.Form):
                         example_number=example_number
                     )
 
-            if question.data_type == FormQuestion.TYPE_DATE:
-                if question == form.arrival_date:
+            if year:
+                if question == year.form_question_arrival_date and question.data_type == FormQuestion.TYPE_DATE:
                     self.fields[field_name].widget = forms.widgets.DateInput(
-                        attrs={'data-default-date': current_year.start_date or '',
-                               'data-start-date': current_year.start_date or '',
-                               'data-end-date': current_year.end_date or ''})
-                if question == form.departure_date:
+                        attrs={'data-default-date': year.start_date or '',
+                               'data-start-date': year.start_date or '',
+                               'data-end-date': year.end_date or ''})
+                if question == year.form_question_departure_date and question.data_type == FormQuestion.TYPE_DATE:
                     self.fields[field_name].widget = forms.widgets.DateInput(
-                        attrs={'data-default-date': current_year.end_date or '',
-                               'data-start-date': current_year.start_date or '',
-                               'data-end-date': current_year.end_date or ''})
+                        attrs={'data-default-date': year.end_date or '',
+                               'data-start-date': year.start_date or '',
+                               'data-end-date': year.end_date or ''})
 
         self.helper = FormHelper(self)
         self.helper.include_media = False
@@ -119,25 +121,28 @@ class FormForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        if self.form.arrival_date and self.form.departure_date:
-            arrival_date_field = self.field_name_for_question(self.form.arrival_date)
-            departure_date_field = self.field_name_for_question(self.form.departure_date)
-            current_year = Camp.objects.latest()
+        try:
+            year = self.form.years.latest()
+        except Camp.DoesNotExist:
+            year = None
+        if year and year.form_question_arrival_date and year.form_question_departure_date:
+            arrival_date_field = self.field_name_for_question(year.form_question_arrival_date)
+            departure_date_field = self.field_name_for_question(year.form_question_departure_date)
             errors = {}
             arrival_date_set = arrival_date_field in self.cleaned_data and self.cleaned_data[arrival_date_field]
             departure_date_set = departure_date_field in self.cleaned_data and self.cleaned_data[departure_date_field]
-            if current_year.start_date and current_year.end_date:
+            if year.start_date and year.end_date:
                 if arrival_date_set:
-                    if self.cleaned_data[arrival_date_field] < current_year.start_date:
-                        errors[arrival_date_field] = 'Warsztaty rozpoczynają się ' + str(current_year.start_date)
-                    if self.cleaned_data[arrival_date_field] > current_year.end_date:
-                        errors[arrival_date_field] = 'Warsztaty kończą się ' + str(current_year.end_date)
+                    if self.cleaned_data[arrival_date_field] < year.start_date:
+                        errors[arrival_date_field] = 'Warsztaty rozpoczynają się ' + str(year.start_date)
+                    if self.cleaned_data[arrival_date_field] > year.end_date:
+                        errors[arrival_date_field] = 'Warsztaty kończą się ' + str(year.end_date)
 
                 if departure_date_set:
-                    if self.cleaned_data[departure_date_field] < current_year.start_date:
-                        errors[departure_date_field] = 'Warsztaty rozpoczynają się ' + str(current_year.start_date)
-                    if self.cleaned_data[departure_date_field] > current_year.end_date:
-                        errors[departure_date_field] = 'Warsztaty kończą się ' + str(current_year.end_date)
+                    if self.cleaned_data[departure_date_field] < year.start_date:
+                        errors[departure_date_field] = 'Warsztaty rozpoczynają się ' + str(year.start_date)
+                    if self.cleaned_data[departure_date_field] > year.end_date:
+                        errors[departure_date_field] = 'Warsztaty kończą się ' + str(year.end_date)
             if not errors and departure_date_set and arrival_date_set:
                 if self.cleaned_data[arrival_date_field] > self.cleaned_data[departure_date_field]:
                     errors[arrival_date_field] = 'Nie możesz wyjechać wcześniej niż przyjechać! :D'

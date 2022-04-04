@@ -171,8 +171,6 @@ class Command(BaseCommand):
         for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL']:
             self.tshirt_sizes[size] = self.question_tshirt_size.options.create(title=size)
         self.question_comments = self.form_userinfo.questions.create(title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)', data_type=FormQuestion.TYPE_TEXTBOX, is_required=False, order=6)
-        self.form_userinfo.arrival_date = self.question_start_date
-        self.form_userinfo.departure_date = self.question_end_date
         self.form_userinfo.save()
 
         User.objects.create_superuser("admin", "admin@admin.admin", "admin")
@@ -199,6 +197,10 @@ class Command(BaseCommand):
         year, created = Camp.objects.get_or_create(year=target_year)
         year.start_date = datetime.datetime(year.year, 7, 1)
         year.end_date = datetime.datetime(year.year, 8, 1)
+        year.save()
+        year.forms.add(self.form_userinfo)
+        year.form_question_arrival_date = self.question_start_date
+        year.form_question_departure_date = self.question_end_date
         year.save()
 
         types = []

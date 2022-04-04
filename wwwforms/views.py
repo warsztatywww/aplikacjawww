@@ -9,7 +9,7 @@ from wwwforms.models import Form
 
 @login_required()
 def form_view(request, name):
-    form = get_object_or_404(Form.visible_objects.prefetch_related('questions', 'arrival_date', 'departure_date'), name=name)
+    form = get_object_or_404(Form.visible_objects.prefetch_related('questions', 'years', 'years__form_question_arrival_date', 'years__form_question_departure_date'), name=name)
 
     if request.method == 'POST':
         formform = FormForm(form, request.user, request.POST)

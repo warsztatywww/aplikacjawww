@@ -908,10 +908,9 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
             users.append(user)
             user_ids.add(up.id)
 
-    if year == current_year:
-        # TODO: Form data is valid for the current year only
-        start_dates = {answer.user.user_profile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__user_profile').filter(question=F('question__form__arrival_date'), question__form__is_visible=True, user__user_profile__in=user_ids, value_date__isnull=False)}
-        end_dates = {answer.user.user_profile.id: answer.value_date for answer in FormQuestionAnswer.objects.prefetch_related('user', 'user__user_profile').filter(question=F('question__form__departure_date'), question__form__is_visible=True, user__user_profile__in=user_ids, value_date__isnull=False)}
+    if year.form_question_arrival_date and year.form_question_departure_date:
+        start_dates = {answer.user.user_profile.id: answer.value_date for answer in year.form_question_arrival_date.answers.prefetch_related('user', 'user__user_profile').filter(question__form__is_visible=True, user__user_profile__in=user_ids, value_date__isnull=False)}
+        end_dates = {answer.user.user_profile.id: answer.value_date for answer in year.form_question_departure_date.answers.prefetch_related('user', 'user__user_profile').filter(question__form__is_visible=True, user__user_profile__in=user_ids, value_date__isnull=False)}
 
         for user in users:
             start_date = start_dates[user['uid']] if user['uid'] in start_dates else None

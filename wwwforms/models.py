@@ -58,9 +58,6 @@ class Form(models.Model):
     description = models.TextField(max_length=100000, blank=True, verbose_name='Opis', help_text='Krótki opis wyświetlany na górze formulaza')
     is_visible = models.BooleanField(default=True, verbose_name='Widoczny?')
 
-    arrival_date = models.ForeignKey('FormQuestion', blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data przyjazdu')
-    departure_date = models.ForeignKey('FormQuestion', blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data wyjazdu')
-
     objects = models.Manager()
     visible_objects = VisibleManager()
 
@@ -72,24 +69,6 @@ class Form(models.Model):
     @property
     def has_any_answers(self):
         return FormQuestionAnswer.objects.filter(question__form=self).count()
-
-    def clean(self):
-        if self.arrival_date and self.arrival_date.form != self:
-            raise ValidationError({'arrival_date': 'Musi być z tego formularza'})
-        if self.departure_date and self.departure_date.form != self:
-            raise ValidationError({'departure_date': 'Musi być z tego formularza'})
-        if self.arrival_date and self.arrival_date.data_type != FormQuestion.TYPE_DATE:
-            raise ValidationError({'arrival_date': 'Musi być datą'})
-        if self.departure_date and self.departure_date.data_type != FormQuestion.TYPE_DATE:
-            raise ValidationError({'departure_date': 'Musi być datą'})
-        if self.arrival_date and self.departure_date and self.arrival_date == self.departure_date:
-            raise ValidationError({'arrival_date': 'Muszą być różnymi polami', 'departure_date': 'Muszą być różnymi polami'})
-        if bool(self.arrival_date) != bool(self.departure_date):
-            raise ValidationError({'arrival_date': 'Muszą być oba ustawione lub oba nieustawione', 'departure_date': 'Muszą być oba ustawione lub oba nieustawione'})
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.title + (' (ukryty)' if not self.is_visible else '')

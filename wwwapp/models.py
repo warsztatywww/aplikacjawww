@@ -1,8 +1,8 @@
+import datetime
 import os
 import threading
 import urllib.parse
-import datetime
-from typing import Dict, Set, Optional, Collection
+from typing import Set, Optional
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -11,11 +11,13 @@ from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.query_utils import Q
-from django.db.models.signals import post_save, pre_save, pre_delete
+from django.db.models.signals import post_save, pre_delete
 from django.dispatch.dispatcher import receiver
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
 from django.utils.functional import cached_property
+
+import wwwforms.models
 
 
 # This is a separate directory for Django-controlled uploaded files.
@@ -39,12 +41,36 @@ class Camp(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
+    forms = models.ManyToManyField(wwwforms.models.Form, related_name='years', verbose_name='Formularze')
+    form_question_arrival_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data przyjazdu', help_text='Pole typu Data')
+    form_question_departure_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data wyjazdu', help_text='Pole typu Data')
+
     def clean(self):
         if (self.start_date is not None) != (self.end_date is not None):
             raise ValidationError('Daty rozpoczęcia i zakończenia muszą być albo ustawione, albo nieustawione')
         if (self.proposal_end_date is not None) and (self.start_date is not None) and self.proposal_end_date > self.start_date:
             raise ValidationError('Data zakończenia przyjmowania propozycji warsztatów nie może być późniejsza niż data ich rozpoczęcia')
+
+        if self.form_question_arrival_date and not self.forms.filter(pk=self.form_question_arrival_date.form.pk).exists():
+            raise ValidationError({'form_question_arrival_date': 'Musi być z tegorocznego formularza'})
+        if self.form_question_departure_date and not self.forms.filter(pk=self.form_question_departure_date.form.pk).exists():
+            raise ValidationError({'form_question_departure_date': 'Musi być z tegorocznego formularza'})
+        if self.form_question_arrival_date and self.form_question_departure_date and self.form_question_arrival_date.form != self.form_question_departure_date.form:
+            raise ValidationError({'form_question_arrival_date': 'Muszą być z tego samego formularza', 'form_question_departure_date': 'Muszą być z tego samego formularza'})
+        if self.form_question_arrival_date and self.form_question_arrival_date.data_type != wwwforms.models.FormQuestion.TYPE_DATE:
+            raise ValidationError({'form_question_arrival_date': 'Musi być datą'})
+        if self.form_question_departure_date and self.form_question_departure_date.data_type != wwwforms.models.FormQuestion.TYPE_DATE:
+            raise ValidationError({'form_question_departure_date': 'Musi być datą'})
+        if self.form_question_arrival_date and self.form_question_departure_date and self.form_question_arrival_date == self.form_question_departure_date:
+            raise ValidationError({'form_question_arrival_date': 'Muszą być różnymi polami', 'form_question_departure_date': 'Muszą być różnymi polami'})
+        if bool(self.form_question_arrival_date) != bool(self.form_question_departure_date):
+            raise ValidationError({'form_question_arrival_date': 'Muszą być oba ustawione lub oba nieustawione', 'form_question_departure_date': 'Muszą być oba ustawione lub oba nieustawione'})
+
         super().clean()
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         get_latest_by = 'year'
