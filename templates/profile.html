@@ -83,6 +83,7 @@
 
         {% if results_data %}
           {% for status in results_data %}
+            {% if status.camp_participant %}
               <div class="card mb-3 w-100">
                 <h4 class="card-header p-2">
                   {{ status.year }}
@@ -90,8 +91,12 @@
                 <div class="card-body p-0">
                   {% if status.qualification_results %}
                     {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results is_my_profile=False %}
+                  {% else %}
+                    <div class="p-3">
+                      <p class="text-center">Był zainteresowany, ale nie zapisał się na żadne warsztaty</p>
+                    </div>
                   {% endif %}
-                  {% if status.camp_participant and status.camp_participant.cover_letter %}
+                  {% if status.camp_participant.cover_letter %}
                     <div class="p-3">
                       <h3>List motywacyjny</h3>
                       {{ status.camp_participant.cover_letter | bleach }}
@@ -99,6 +104,7 @@
                   {% endif %}
                 </div>
               </div>
+            {% endif %}
           {% endfor %}
         {% endif %}
 
