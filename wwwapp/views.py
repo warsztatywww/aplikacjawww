@@ -548,7 +548,13 @@ def participants_view(request, year=None):
 
     participants = participants.all()
 
-    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__user_profile__in=participants).distinct()
+    if year is not None:
+        # Participants view only displays forms for the selected year
+        all_forms = year.forms
+    else:
+        # All people view only displays forms not bound to any year
+        all_forms = Form.objects.filter(years=None)
+    all_forms = all_forms.prefetch_related('questions')
     all_questions = [question for form in all_forms for question in form.questions.all()]
     all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__user_profile__in=participants, question__in=all_questions).all()
 
