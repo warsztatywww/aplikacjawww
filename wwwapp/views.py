@@ -928,7 +928,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     for wp in WorkshopParticipant.objects.filter(workshop__id__in=workshop_ids, camp_participation__user_profile__id__in=user_ids):
         participation.append({
             'wid': wp.workshop.id,
-            'uid': wp.user_profile.id,
+            'uid': wp.camp_participation.user_profile.id,
         })
     data['participation'] = participation
 
