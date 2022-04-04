@@ -1,3 +1,5 @@
+import datetime
+
 from crispy_forms.bootstrap import FormActions, StrictButton
 from crispy_forms.helper import FormHelper
 from django import forms
@@ -107,6 +109,10 @@ class FormForm(forms.Form):
                         attrs={'data-default-date': year.end_date or '',
                                'data-start-date': year.start_date or '',
                                'data-end-date': year.end_date or ''})
+                if question == year.form_question_birth_date and question.data_type == FormQuestion.TYPE_DATE:
+                    self.fields[field_name].widget = forms.widgets.DateInput(
+                        attrs={'data-start-date': '1900-01-01',
+                               'data-end-date': str(datetime.date.today()) or ''})
 
         self.helper = FormHelper(self)
         self.helper.include_media = False

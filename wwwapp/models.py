@@ -42,6 +42,7 @@ class Camp(models.Model):
     end_date = models.DateField(null=True, blank=True)
 
     forms = models.ManyToManyField(wwwforms.models.Form, related_name='years', verbose_name='Formularze')
+    form_question_birth_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data urodzenia', help_text='Pole typu Data lub PESEL')
     form_question_arrival_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data przyjazdu', help_text='Pole typu Data')
     form_question_departure_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data wyjazdu', help_text='Pole typu Data')
 
@@ -50,6 +51,11 @@ class Camp(models.Model):
             raise ValidationError('Daty rozpoczęcia i zakończenia muszą być albo ustawione, albo nieustawione')
         if (self.proposal_end_date is not None) and (self.start_date is not None) and self.proposal_end_date > self.start_date:
             raise ValidationError('Data zakończenia przyjmowania propozycji warsztatów nie może być późniejsza niż data ich rozpoczęcia')
+
+        if self.form_question_birth_date and not self.forms.filter(pk=self.form_question_birth_date.form.pk).exists():
+            raise ValidationError({'form_question_birth_date': 'Musi być z tegorocznego formularza'})
+        if self.form_question_birth_date and self.form_question_birth_date.data_type not in (wwwforms.models.FormQuestion.TYPE_DATE, wwwforms.models.FormQuestion.TYPE_PESEL):
+            raise ValidationError({'form_question_birth_date': 'Musi być datą lub PESELem'})
 
         if self.form_question_arrival_date and not self.forms.filter(pk=self.form_question_arrival_date.form.pk).exists():
             raise ValidationError({'form_question_arrival_date': 'Musi być z tegorocznego formularza'})

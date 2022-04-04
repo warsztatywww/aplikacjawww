@@ -233,6 +233,11 @@ class FormQuestionAnswer(models.Model):
         else:
             setattr(self, field_name, value)
 
+    def pesel_extract_date(self):
+        if self.question.data_type != FormQuestion.TYPE_PESEL:
+            raise TypeError('Only possible for PESEL fields')
+        return pesel_extract_date(self.value)
+
     def clean(self):
         must_be_empty = self.ALL_VALUE_FIELDS.copy()
         must_be_empty.remove(self.question.value_field_name())

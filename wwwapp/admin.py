@@ -98,13 +98,14 @@ class CampAdmin(admin.ModelAdmin):
         }),
         ('Formularze', {
             'description': 'Ustawienie tych parametrów spowoduje włączenie specjalnej obsługi pól w formularzach',
-            'fields': ('forms', 'form_question_arrival_date', 'form_question_departure_date')
+            'fields': ('forms', 'form_question_birth_date', 'form_question_arrival_date', 'form_question_departure_date')
         }),
     )
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
         if obj:
+            form.base_fields['form_question_birth_date'].queryset = form.base_fields['form_question_birth_date'].queryset.filter(form__in=obj.forms.all(), data_type__in=(wwwforms.models.FormQuestion.TYPE_DATE, wwwforms.models.FormQuestion.TYPE_PESEL))
             form.base_fields['form_question_arrival_date'].queryset = form.base_fields['form_question_arrival_date'].queryset.filter(form__in=obj.forms.all(), data_type=wwwforms.models.FormQuestion.TYPE_DATE)
             form.base_fields['form_question_departure_date'].queryset = form.base_fields['form_question_departure_date'].queryset.filter(form__in=obj.forms.all(), data_type=wwwforms.models.FormQuestion.TYPE_DATE)
         return form

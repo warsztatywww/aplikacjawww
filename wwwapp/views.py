@@ -563,11 +563,15 @@ def participants_view(request, year=None):
     for participant in participants:
         answers = [next(filter(lambda a: a.question == question and a.user == participant.user, all_answers), None) for question in all_questions]
 
-        # TODO: this is a kinda ugly way of doing it - is_adult is calculate from the first filled in field of type PESEL
-        pesel_answer = next(filter(lambda x: x[0].data_type == FormQuestion.TYPE_PESEL and x[1] and x[1].value_string, zip(all_questions, answers)), None)
-        pesel = pesel_answer[1].value_string if pesel_answer else None
+        birth_field = year.form_question_birth_date if year else None
+        birth_answer = next(filter(lambda x: x[0] == birth_field and x[1] and x[1].value_string, zip(all_questions, answers)), None) if birth_field else None
+        if birth_answer and birth_answer[0].data_type == FormQuestion.TYPE_PESEL:
+            birth = birth_answer[1].pesel_extract_date()
+        elif birth_answer and birth_answer[0].data_type == FormQuestion.TYPE_DATE:
+            birth = birth_answer[1].value_date
+        else:
+            birth = None
 
-        birth = pesel_extract_date(pesel)
         is_adult = None
         if birth is not None:
             if year is not None and year.start_date:
@@ -589,7 +593,6 @@ def participants_view(request, year=None):
 
         people[participant.id] = {
             'user': participant.user,
-            'birth': birth,
             'is_adult': is_adult,
             'matura_exam_year': participant.matura_exam_year,
             'workshop_count': 0,
@@ -606,7 +609,7 @@ def participants_view(request, year=None):
             'points': 0.0,
             'infos': [],
             'how_do_you_know_about': participant.how_do_you_know_about,
-            'form_answers': answers,
+            'form_answers': zip(all_questions, answers),
         }
 
         if year:
