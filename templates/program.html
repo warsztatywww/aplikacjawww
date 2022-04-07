@@ -32,7 +32,7 @@
           {% include "_programworkshop.html" %}
         {% endfor %}
       {% else %}
-        <div class="w-100 text-center">
+        <div class="w-100 text-center mb-5">
           <p class="pt-4">Program nie jest jeszcze dostępny.</p>
           {% if selected_year.is_qualification_editable %}
             <form action="{% url 'register_to_camp' selected_year.pk %}">
