@@ -1,4 +1,4 @@
-Django==3.2.14
+Django==3.2.15
 django-crispy-forms==1.13.0
 django-tinymce==3.4.0
 django-bleach==1.0.0
