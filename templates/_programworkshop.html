@@ -89,7 +89,7 @@
           {% endfor %}
         </div>
       </div>
-      <div class="col-12 col-sm-4 col-md-2 text-center button-div {% if not no_workshop_card_header %}d-none d-md-block{% endif %}">
+      <div class="col-12 col-sm-4 col-md-2 text-center button-div {% if not no_workshop_card_header %}d-none d-sm-block{% endif %}">
         {% if workshop.is_qualification_editable %}
           {% if registered %}
             <div onclick="handle_registration_change('{{ workshop.name }}', false);"
