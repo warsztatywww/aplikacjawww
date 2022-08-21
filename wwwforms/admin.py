@@ -47,30 +47,8 @@ class FormQuestionInline(SortableInlineAdminMixin, admin.TabularInline):
 class FormAdmin(admin.ModelAdmin):
     model = Form
     inlines = [FormQuestionInline]
-    fieldsets = (
-        (None, {
-            'fields': ('name', 'title', 'description', 'is_visible', 'reset_answers_action')
-        }),
-        ('Pola specjalne', {
-            'description': 'Ustawienie tych parametrów spowoduje włączenie specjalnej obsługi tych pól',
-            'fields': ('arrival_date', 'departure_date')
-        }),
-    )
+    fields = ('name', 'title', 'description', 'is_visible', 'reset_answers_action')
     readonly_fields = ('reset_answers_action',)
-
-    def get_form(self, request, obj=None, change=False, **kwargs):
-        form = super().get_form(request, obj, change, **kwargs)
-        if obj:
-            form.base_fields['arrival_date'].queryset = form.base_fields['arrival_date'].queryset.filter(form=obj)
-            form.base_fields['departure_date'].queryset = form.base_fields['departure_date'].queryset.filter(form=obj)
-        return form
-
-    def get_fieldsets(self, request, obj=None):
-        fieldsets = super().get_fieldsets(request, obj)
-        if not obj:
-            # Hide the special field settings (this is a new form, so no fields exist yet)
-            fieldsets = [fieldsets[0]]
-        return fieldsets
 
     def reset_answers_action(self, obj):
         return Template(
