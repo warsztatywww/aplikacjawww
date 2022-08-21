@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: ["3.8", "3.9", "3.10"]
 
     steps:
     - uses: actions/checkout@v2
@@ -50,7 +50,7 @@ jobs:
         file: ./coverage.xml
         fail_ci_if_error: true
         verbose: true
-      if: matrix.python-version == 3.9
+      if: matrix.python-version == 3.10
       
   deploy:
     if: github.ref == 'refs/heads/master'
