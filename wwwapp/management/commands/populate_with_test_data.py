@@ -2,12 +2,14 @@ import django.db.utils
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
-from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, WorkshopCategory, \
+from django.utils.text import slugify
+
+from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, \
+    WorkshopCategory, \
     WorkshopType, WorkshopParticipant, Camp, CampParticipant
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Callable
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
-import random
 import datetime
 
 from wwwforms.models import Form, FormQuestion
@@ -22,8 +24,8 @@ class Command(BaseCommand):
     args = ''
     help = 'Populate the database with data for development'
     LOCALE = 'pl_PL'
-    NUM_OF_USERS = 50
-    NUM_OF_WORKSHOPS = 5
+    NUM_OF_USERS = 200
+    NUM_OF_WORKSHOPS = 40
     NUM_OF_ARTICLES = 2
     NUM_OF_CATEGORIES = 2
     NUM_OF_TYPES = 2
@@ -31,6 +33,7 @@ class Command(BaseCommand):
     """
     Constructor of the command
     """
+
     def __init__(self) -> None:
         fake = Faker(self.LOCALE)
         fake.add_provider(profile)
@@ -44,13 +47,16 @@ class Command(BaseCommand):
     """
     Create and returns a fake random user.
     """
+
     def fake_user(self) -> Tuple[User, UserProfile]:
         ok = False
         while not ok:
             ok = True
             try:
                 profile_data = self.fake.profile()
-                user = User.objects.create_user(profile_data['username'], profile_data['mail'], 'password')
+                user = User.objects.create_user(profile_data['username'],
+                                                profile_data['mail'],
+                                                'password')
                 user.first_name = self.fake.first_name()
                 user.last_name = self.fake.last_name()
                 user.save()
@@ -62,9 +68,15 @@ class Command(BaseCommand):
                 user.user_profile.profile_page = self.fake.text()
                 user.user_profile.save()
 
-                self.question_pesel.answers.create(user=user, value_string=profile_data['ssn'])
-                self.question_address.answers.create(user=user, value_string=profile_data['address'])
-                self.question_comments.answers.create(user=user, value_string=self.fake.text(100))
+                self.question_pesel.answers.create(user=user,
+                                                   value_string=profile_data[
+                                                       'ssn'])
+                self.question_address.answers.create(user=user,
+                                                     value_string=profile_data[
+                                                         'address'])
+                self.question_comments.answers.create(user=user,
+                                                      value_string=self.fake.text(
+                                                          100))
             except django.db.utils.IntegrityError:
                 ok = False
 
@@ -74,6 +86,7 @@ class Command(BaseCommand):
     Returns a zero padded string representation of the given number
     or an empty string if the argument is not present
     """
+
     @staticmethod
     def tail_for_sequence(sequence: Union[int, None]) -> str:
         if sequence is not None:
@@ -84,12 +97,15 @@ class Command(BaseCommand):
     """
     Creates and returns a fake random article with a random edit history
     """
-    def fake_article(self, users: List[User], sequence: Union[str, None] = None) -> Article:
-        article = Article(name=self.fake.uri_page() + self.tail_for_sequence(sequence),
-                          title=self.fake.text(),
-                          content=self.fake.paragraph(),
-                          modified_by=random.choice(users),
-                          on_menubar=random.choice([False, True]))
+
+    def fake_article(self, users: List[User],
+                     sequence: Union[str, None] = None) -> Article:
+        article = Article(
+            name=self.fake.uri_page() + self.tail_for_sequence(sequence),
+            title=self.fake.text(50),
+            content=self.fake.paragraph(),
+            modified_by=self.fake.random_choices(users, length=1)[0],
+            on_menubar=self.fake.pybool())
 
         article.save()
 
@@ -97,7 +113,8 @@ class Command(BaseCommand):
             ArticleContentHistory(version=i,
                                   article=article,
                                   content=self.fake.paragraph(),
-                                  modified_by=random.choice(users),
+                                  modified_by=
+                                  self.fake.random_choices(users, length=1)[0],
                                   time=self.fake.date_time_this_year()).save()
 
         return article
@@ -105,75 +122,118 @@ class Command(BaseCommand):
     """
     Creates and returns a random category
     """
+
     def fake_category(self, year: Camp) -> WorkshopCategory:
-        c = WorkshopCategory(year=year, name=self.fake.text(10))
+        c = WorkshopCategory(year=year, name=self.fake.word())
         c.save()
         return c
 
     """
     Creates and returns a random type
     """
+
     def fake_type(self, year: Camp) -> WorkshopType:
-        c = WorkshopType(year=year, name=self.fake.text(10))
+        c = WorkshopType(year=year, name=self.fake.word())
         c.save()
         return c
 
     """
     Creates a fake random workshops with 5 random participants
     """
+
     def fake_workshop(self,
                       lecturer: UserProfile,
                       participants: List[UserProfile],
                       types: List[WorkshopType],
                       categories: List[WorkshopCategory],
                       sequence: Union[str, None] = None) -> Workshop:
-        workshop_type = random.choice(types)
-        workshop = Workshop(name=self.fake.uri_page() + self.tail_for_sequence(sequence),
-                            title=self.fake.text(10),
-                            proposition_description=self.fake.paragraph(),
-                            type=workshop_type,
-                            year=workshop_type.year,
-                            status='Z',
-                            page_content=self.fake.paragraph(),
-                            page_content_is_public=True,
-                            is_qualifying=True)
+        workshop_type = self.fake.random_choices(types, length=1)[0]
+        title = self.fake.unique.text(50).replace(".", "")
+        workshop = Workshop(
+            name=slugify(title),
+            title=title,
+            proposition_description=self.fake.paragraph(),
+            type=workshop_type,
+            year=workshop_type.year,
+            status=self.fake.random_choices(['Z', 'O', 'X', None], length=1)[0],
+            page_content=self.fake.paragraph(),
+            page_content_is_public=self.fake.boolean(chance_of_getting_true=80),
+            is_qualifying=self.fake.boolean(chance_of_getting_true=70),
+            short_description=self.fake.text(150) if self.fake.boolean(
+                chance_of_getting_true=80) else ""
+        )
         workshop.save()
 
         for participant in participants:
-            camp_participant, _ = CampParticipant.objects.get_or_create(year=workshop.year, user_profile=participant)
+            camp_participant, _ = CampParticipant.objects.get_or_create(
+                year=workshop.year, user_profile=participant)
             info = WorkshopParticipant(workshop=workshop,
                                        camp_participation=camp_participant,
                                        comment=self.fake.paragraph())
             info.save()
 
-        workshop.category.add(random.choice(categories))
+        for el in self.fake.random_choices(categories,
+                                           length=self.fake.random_int(1, 4)):
+            workshop.category.add(el)
         workshop.lecturer.add(lecturer)
         workshop.save()
 
         return workshop
 
+    def make_userinfo_form(self) -> None:
+        self.form_userinfo, _ = Form.objects.get_or_create(name='user_info',
+                                                           title='Informacje wyjazdowe',
+                                                           description='Te informacje będą nam potrzebne dopiero, gdy zostaniesz zakwalifikowany na warsztaty.')
+        self.question_pesel, _ = self.form_userinfo.questions.get_or_create(
+            title='PESEL',
+            data_type=FormQuestion.TYPE_PESEL,
+            is_required=True,
+            order=0)
+        self.question_address, _ = self.form_userinfo.questions.get_or_create(
+            title='Adres zameldowania', data_type=FormQuestion.TYPE_TEXTBOX,
+            is_required=True, order=1)
+        self.question_phone, _ = self.form_userinfo.questions.get_or_create(
+            title='Numer telefonu', data_type=FormQuestion.TYPE_STRING,
+            is_required=True, order=2)
+        self.question_start_date, _ = self.form_userinfo.questions.get_or_create(
+            title='Data przyjazdu :-)', data_type=FormQuestion.TYPE_DATE,
+            is_required=True, order=3)
+        self.question_end_date, _ = self.form_userinfo.questions.get_or_create(
+            title='Data wyjazdu :-(', data_type=FormQuestion.TYPE_DATE,
+            is_required=True, order=4)
+        self.question_tshirt_size, _ = self.form_userinfo.questions.get_or_create(
+            title='Rozmiar koszulki', data_type=FormQuestion.TYPE_SELECT,
+            is_required=False, order=5)
+        self.tshirt_sizes = {}
+        for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL']:
+            self.tshirt_sizes[
+                size], _ = self.question_tshirt_size.options.get_or_create(
+                title=size)
+        self.question_comments, _ = self.form_userinfo.questions.get_or_create(
+            title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)',
+            data_type=FormQuestion.TYPE_TEXTBOX, is_required=False, order=6)
+        self.form_userinfo.save()
+
+    def do_ignore_integrity_error(self, task: Callable[[], None]) -> None:
+        try:
+            task()
+        except django.db.utils.IntegrityError:
+            pass
+
     """
     Handles the command
     """
+
     def handle(self, *args, **options) -> None:
         if not settings.DEBUG:
             print("Command not allowed in production")
             return
 
-        self.form_userinfo = Form.objects.create(name='user_info', title='Informacje wyjazdowe', description='Te informacje będą nam potrzebne dopiero, gdy zostaniesz zakwalifikowany na warsztaty.')
-        self.question_pesel = self.form_userinfo.questions.create(title='PESEL', data_type=FormQuestion.TYPE_PESEL, is_required=True, order=0)
-        self.question_address = self.form_userinfo.questions.create(title='Adres zameldowania', data_type=FormQuestion.TYPE_TEXTBOX, is_required=True, order=1)
-        self.question_phone = self.form_userinfo.questions.create(title='Numer telefonu', data_type=FormQuestion.TYPE_STRING, is_required=True, order=2)
-        self.question_start_date = self.form_userinfo.questions.create(title='Data przyjazdu :-)', data_type=FormQuestion.TYPE_DATE, is_required=True, order=3)
-        self.question_end_date = self.form_userinfo.questions.create(title='Data wyjazdu :-(', data_type=FormQuestion.TYPE_DATE, is_required=True, order=4)
-        self.question_tshirt_size = self.form_userinfo.questions.create(title='Rozmiar koszulki', data_type=FormQuestion.TYPE_SELECT, is_required=False, order=5)
-        self.tshirt_sizes = {}
-        for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL']:
-            self.tshirt_sizes[size] = self.question_tshirt_size.options.create(title=size)
-        self.question_comments = self.form_userinfo.questions.create(title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)', data_type=FormQuestion.TYPE_TEXTBOX, is_required=False, order=6)
-        self.form_userinfo.save()
+        self.make_userinfo_form()
 
-        User.objects.create_superuser("admin", "admin@admin.admin", "admin")
+        self.do_ignore_integrity_error(
+            lambda: User.objects.create_superuser("admin", "admin@admin.admin",
+                                                  "admin"))
 
         users = []
         user_profiles = []
@@ -213,9 +273,15 @@ class Command(BaseCommand):
 
         lecturers = user_profiles[:self.NUM_OF_WORKSHOPS]
         participants = user_profiles[self.NUM_OF_WORKSHOPS:]
-        participants = [participants[self.NUM_OF_WORKSHOPS * i:self.NUM_OF_WORKSHOPS * (i + 1)] for i in
-                        range(len(participants) // self.NUM_OF_WORKSHOPS)]
+        participants_per_workshop = len(participants) // self.NUM_OF_WORKSHOPS
+        participants = [participants[
+                        participants_per_workshop * i:participants_per_workshop * (
+                                i + 1)]
+                        for i in range(self.NUM_OF_WORKSHOPS)]
 
         workshops = []
-        for i, (lecturer, participants) in enumerate(zip(lecturers, participants)):
-            workshops.append(self.fake_workshop(lecturer, participants, types, categories, i))
+        for i, (lecturer, participants) in enumerate(
+                zip(lecturers, participants)):
+            workshops.append(
+                self.fake_workshop(lecturer, participants, types, categories,
+                                   i))
