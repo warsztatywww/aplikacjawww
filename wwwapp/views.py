@@ -564,7 +564,7 @@ def participants_view(request, year=None):
         answers = [next(filter(lambda a: a.question == question and a.user == participant.user, all_answers), None) for question in all_questions]
 
         birth_field = year.form_question_birth_date if year else None
-        birth_answer = next(filter(lambda x: x[0] == birth_field and x[1] and x[1].value_string, zip(all_questions, answers)), None) if birth_field else None
+        birth_answer = next(filter(lambda x: x[0] == birth_field and x[1] and x[1].value, zip(all_questions, answers)), None) if birth_field else None
         if birth_answer and birth_answer[0].data_type == FormQuestion.TYPE_PESEL:
             birth = birth_answer[1].pesel_extract_date()
         elif birth_answer and birth_answer[0].data_type == FormQuestion.TYPE_DATE:
