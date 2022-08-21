@@ -19,8 +19,8 @@ with open(sys.argv[1]) as f:
 workshops = {ws['wid']:ws for ws in data['workshops']}
 workshops_per_block = len(workshops) / 6.0
 
-points_not_allowed = 10**3
-points_wrong_workshops_per_block = 10**4
+points_not_allowed = 10**4
+points_wrong_workshops_per_block = 10**3
 
 verbose = False
 
@@ -32,13 +32,13 @@ for uid in users.keys():
     depart = datetime.strptime(users[uid]['end'], "%Y-%m-%d")
     del users[uid]['start']
     del users[uid]['end']
-    if arrive <= datetime(2021, 8, 17) and depart >= datetime(2021, 8, 19):
+    if arrive <= datetime(2022, 8, 10) and depart >= datetime(2022, 8, 12):
         users[uid]['blocks'].add(0)
         users[uid]['blocks'].add(1)
-    if arrive <= datetime(2021, 8, 21) and depart >= datetime(2021, 8, 23):
+    if arrive <= datetime(2022, 8, 14) and depart >= datetime(2022, 8, 16):
         users[uid]['blocks'].add(2)
         users[uid]['blocks'].add(3)
-    if arrive <= datetime(2021, 8, 26) and depart >= datetime(2021, 8, 28):
+    if arrive <= datetime(2022, 8, 18) and depart >= datetime(2022, 8, 20):
         users[uid]['blocks'].add(4)
         users[uid]['blocks'].add(5)
 
@@ -223,29 +223,12 @@ class Plan(object):
             points_col -= col_counter[wid]**2
         
         return points * 5 + points_col
-        
-
-# print workshops
-# print
-# print users
-
-it_wid = 0
-block = 0
-
 
 def improve(plan, points):
-    global it_wid
-    global block
     plan2 = plan.copy()
-    for i in xrange(random.randint(1, 2)):
+    for _ in xrange(random.randint(1, 5)):
         if random.randint(0, 1) == 0:
-            plan2.mutate(wid_list[it_wid], block)
-            it_wid += 1
-            if it_wid >= len(wid_list):
-                it_wid = 0
-            block += 1
-            if block >= 6:
-                block = 0
+            plan2.mutate()
         else:
             plan2.mutate_by_exchange()
     points2 = plan2.evaluate()
@@ -257,7 +240,7 @@ def improve(plan, points):
 
 def generate_plan():
 
-    pnp = [Plan.make_random_plan() for i in xrange(1000)]
+    pnp = [Plan.make_random_plan() for _ in xrange(1000)]
     pnp = [(plan, plan.evaluate()) for plan in pnp]
 
     BEST = pnp[0][1]
