@@ -8,7 +8,7 @@
     <article>
       <h1>{{ title }}</h1>
       <div class="table-responsive">
-        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people or is_lecturers %}[[ 1, "asc" ]]{% else %}[[ 12, "desc" ], [ 1, "asc" ]]{% endif %}'>
+        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people or is_lecturers %}[[ 1, "asc" ]]{% else %}[[ 13, "desc" ], [ 1, "asc" ]]{% endif %}'>
           <thead>
             <tr>
               <th data-visible="true"  data-searchable="false" data-orderable="false" data-search-panes='{"show": false}'></th>
@@ -16,6 +16,7 @@
               {% if not is_all_people %}
               <th data-visible="{% if not is_lecturers %}true{% else %}false{% endif %}" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Pełnoletni</th>
               {% endif %}
+              <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Płeć</th>
               <th data-visible="{% if is_all_people or is_lecturers %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Email</th>
               <th data-visible="false" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Szkoła</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Rok Matury</th>
@@ -60,6 +61,9 @@
                   {{ person.is_adult | qualified_mark }}
                 </td>
                 {% endif %}
+                <td>
+                  {{ person.gender }}
+                </td>
                 <td>
                   {{ person.user.email | question_mark_on_empty_string }}
                 </td>
