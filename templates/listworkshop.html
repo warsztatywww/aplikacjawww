@@ -62,12 +62,16 @@
                     {% endif %}
                   </td>
                   <td data-order="{{ workshop.checked_solution_percentage | unlocalize }}">
-                    {% if workshop.to_be_checked_solution_count == 0 %}
-                      {{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}
-                    {% elif workshop.checked_solution_count == workshop.to_be_checked_solution_count %}
-                      <span class="text-success">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
+                    {% if workshop.is_qualifying %}
+                      {% if workshop.to_be_checked_solution_count == 0 %}
+                        {{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}
+                      {% elif workshop.checked_solution_count == workshop.to_be_checked_solution_count %}
+                        <span class="text-success">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
+                      {% else %}
+                        <span class="text-danger">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
+                      {% endif %}
                     {% else %}
-                      <span class="text-danger">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
+                      <p>-</p>
                     {% endif %}
                   </td>
                   <td>
