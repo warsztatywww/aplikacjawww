@@ -297,7 +297,7 @@ class WorkshopQualificationViews(TestCase):
                 self.assertIn('qualification_result', data)
                 self.assertIn('comment', data)
                 self.assertIn('mark', data)
-                self.assertEqual(data['qualification_result'], '2.5')
+                self.assertEqual(data['qualification_result'], '2.50')
                 self.assertEqual(data['comment'], 'Dobrze!')
 
                 participant = WorkshopParticipant.objects.get(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile)

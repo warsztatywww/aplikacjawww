@@ -515,10 +515,11 @@ def save_points_view(request):
     if not form.is_valid():
         return JsonResponse({'error': form.errors.as_text()})
     workshop_participant = form.save()
+    workshop_participant = WorkshopParticipant.objects.get(pk=workshop_participant.pk)  # refresh the is_qualified field
 
     return JsonResponse({'qualification_result': workshop_participant.qualification_result,
                          'comment': workshop_participant.comment,
-                         'mark': qualified_mark(workshop_participant.is_qualified())})
+                         'mark': qualified_mark(workshop_participant.is_qualified)})
 
 
 @login_required()
@@ -620,7 +621,7 @@ def participants_view(request, year=None):
                         people[participant.id]['to_be_checked_solution_count'] += 1
 
                     if wp.qualification_result:
-                        people[participant.id]['points'] += float(wp.result_in_percent())
+                        people[participant.id]['points'] += float(wp.result_in_percent)
                         people[participant.id]['checked_solution_count'] += 1
 
                     if wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution'):
@@ -635,16 +636,16 @@ def participants_view(request, year=None):
                             title=wp.workshop.title
                         )))
                     else:
-                        people[participant.id]['infos'].append((wp.result_in_percent(), "{title} : {result:.1f}%".format(
+                        people[participant.id]['infos'].append((wp.result_in_percent, "{title} : {result:.1f}%".format(
                             title=wp.workshop.title,
-                            result=wp.result_in_percent()
+                            result=wp.result_in_percent
                         )))
                 else:
                     people[participant.id]['infos'].append((-3, "{title} : Warsztaty bez kwalifikacji".format(
                         title=wp.workshop.title
                     )))
                 people[participant.id]['workshop_count'] += 1
-                if wp.is_qualified():
+                if wp.is_qualified:
                     people[participant.id]['accepted_workshop_count'] += 1
 
     for person in people.values():
@@ -769,7 +770,7 @@ def workshop_solution(request, year, name, solution_id=None):
         # My solution
         try:
             workshop_participant = workshop.participants \
-                .select_related('solution', 'camp_participation__user_profile__user') \
+                .prefetch_related('solution', 'camp_participation__user_profile__user') \
                 .get(camp_participation__user_profile__user=request.user)
         except WorkshopParticipant.DoesNotExist:
             return HttpResponseForbidden('Nie jesteś zapisany na te warsztaty')
@@ -785,7 +786,7 @@ def workshop_solution(request, year, name, solution_id=None):
             return HttpResponseForbidden()
         solution = get_object_or_404(
             Solution.objects
-                .select_related('workshop_participant', 'workshop_participant__camp_participation__user_profile__user')
+                .prefetch_related('workshop_participant', 'workshop_participant__camp_participation__user_profile__user')
                 .filter(workshop_participant__workshop=workshop),
             pk=solution_id)
 
@@ -1034,19 +1035,18 @@ def article_name_list_view(request):
 @login_required()
 @permission_required('wwwapp.see_all_workshops', raise_exception=True)
 def workshops_view(request, year):
-    year = get_object_or_404(Camp.objects.prefetch_related(
-        'workshops',
-        'workshops__year',
-        'workshops__lecturer',
-        'workshops__lecturer__user',
-        'workshops__type',
-        'workshops__type__year',
-        'workshops__category',
-        'workshops__category__year',
-    ), pk=year)
+    year = get_object_or_404(Camp, pk=year)
 
     context = {}
-    context['workshops'] = year.workshops.all()
+    context['workshops'] = year.workshops.with_counts().prefetch_related(
+        'year',
+        'lecturer',
+        'lecturer__user',
+        'type',
+        'type__year',
+        'category',
+        'category__year',
+    ).all()
     context['title'] = 'Warsztaty: %s' % year
 
     context['selected_year'] = year
