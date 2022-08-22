@@ -543,6 +543,7 @@ def participants_view(request, year=None):
 
         participants = participants.prefetch_related(
             Prefetch('camp_participation__workshop_participation', queryset=WorkshopParticipant.objects.filter(camp_participation__year=year)),
+            'camp_participation__workshop_participation__solution',
             'camp_participation__workshop_participation__workshop',
             'camp_participation__workshop_participation__workshop__year',
         )
@@ -673,7 +674,7 @@ def participants_view(request, year=None):
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = get_object_or_404(Camp, pk=year)
 
-    workshops = Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('lecturer', 'lecturer__user')
+    workshops = Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('year', 'lecturer', 'lecturer__user')
 
     people: Dict[int, Dict[str, any]] = {}
     for workshop in workshops:
