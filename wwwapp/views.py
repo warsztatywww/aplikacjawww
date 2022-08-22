@@ -4,15 +4,11 @@ import json
 import mimetypes
 import os
 import sys
+from typing import Dict, Any, Optional
 from urllib.parse import urljoin
 
 import bleach
 from dateutil.relativedelta import relativedelta
-from typing import Dict
-
-from django.db.models.expressions import F
-from django.db.models.query import Prefetch
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -20,9 +16,10 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import SuspiciousOperation
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Q
+from django.db.models import Q, QuerySet
+from django.db.models.query import Prefetch
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
-from django.http.response import HttpResponseBadRequest, HttpResponseNotFound, Http404
+from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
@@ -33,7 +30,7 @@ from django.views.decorators.http import require_POST
 from django_bleach.utils import get_bleach_default_options
 from django_sendfile import sendfile
 
-from wwwforms.models import Form, FormQuestionAnswer, FormQuestion, pesel_extract_date
+from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload, SolutionFileFormSet, SolutionForm
@@ -522,10 +519,8 @@ def save_points_view(request):
                          'mark': qualified_mark(workshop_participant.is_qualified)})
 
 
-@login_required()
-@permission_required('wwwapp.see_all_users', raise_exception=True)
-def participants_view(request, year=None):
-    participants = UserProfile.objects \
+def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: QuerySet[UserProfile], all_forms: QuerySet[Form], context: Dict[str, Any]) -> HttpResponse:
+    participants = participants \
         .select_related('user') \
         .prefetch_related(
         'camp_participation',
@@ -535,12 +530,6 @@ def participants_view(request, year=None):
     )
 
     if year is not None:
-        year = get_object_or_404(Camp, pk=year)
-        participants = participants.filter(camp_participation__year=year)
-
-        lecturers = Workshop.objects.filter(year=year).values_list('lecturer__user__id').distinct()
-        participants = participants.exclude(user__id__in=lecturers)
-
         participants = participants.prefetch_related(
             Prefetch('camp_participation__workshop_participation', queryset=WorkshopParticipant.objects.filter(camp_participation__year=year)),
             'camp_participation__workshop_participation__solution',
@@ -548,25 +537,20 @@ def participants_view(request, year=None):
             'camp_participation__workshop_participation__workshop__year',
         )
 
-    participants = participants.all()
-
-    if year is not None:
-        # Participants view only displays forms for the selected year
-        all_forms = year.forms
-    else:
-        # All people view only displays forms not bound to any year
-        all_forms = Form.objects.filter(years=None)
     all_forms = all_forms.prefetch_related('questions')
     all_questions = [question for form in all_forms for question in form.questions.all()]
-    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__user_profile__in=participants, question__in=all_questions).all()
+    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(
+        user__user_profile__in=participants, question__in=all_questions).all()
 
     people = {}
 
     for participant in participants:
-        answers = [next(filter(lambda a: a.question == question and a.user == participant.user, all_answers), None) for question in all_questions]
+        answers = [next(filter(lambda a: a.question == question and a.user == participant.user, all_answers), None) for
+                   question in all_questions]
 
         birth_field = year.form_question_birth_date if year else None
-        birth_answer = next(filter(lambda x: x[0] == birth_field and x[1] and x[1].value, zip(all_questions, answers)), None) if birth_field else None
+        birth_answer = next(filter(lambda x: x[0] == birth_field and x[1] and x[1].value, zip(all_questions, answers)),
+                            None) if birth_field else None
         if birth_answer and birth_answer[0].data_type == FormQuestion.TYPE_PESEL:
             birth = birth_answer[1].pesel_extract_date()
         elif birth_answer and birth_answer[0].data_type == FormQuestion.TYPE_DATE:
@@ -595,6 +579,7 @@ def participants_view(request, year=None):
 
         people[participant.id] = {
             'user': participant.user,
+            'workshops': filter(lambda x: year is not None and x.year == year, participant.lecturer_workshops.all()),
             'is_adult': is_adult,
             'matura_exam_year': participant.matura_exam_year,
             'workshop_count': 0,
@@ -614,8 +599,7 @@ def participants_view(request, year=None):
             'form_answers': zip(all_questions, answers),
         }
 
-        if year:
-            assert camp_participation is not None
+        if year and camp_participation is not None:
             for wp in camp_participation.workshop_participation.all():
                 if wp.workshop.is_qualifying:
                     if not wp.workshop.solution_uploads_enabled or hasattr(wp, 'solution'):
@@ -626,7 +610,7 @@ def participants_view(request, year=None):
                         people[participant.id]['checked_solution_count'] += 1
 
                     if wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution'):
-                            people[participant.id]['solution_count'] += 1
+                        people[participant.id]['solution_count'] += 1
 
                     if wp.workshop.solution_uploads_enabled and not hasattr(wp, 'solution'):
                         people[participant.id]['infos'].append((-2, "{title} : Nie przesłano rozwiązań".format(
@@ -655,18 +639,39 @@ def participants_view(request, year=None):
         if person['to_be_checked_solution_count'] == 0:
             person['checked_solution_percentage'] = -1
         else:
-            person['checked_solution_percentage'] = person['checked_solution_count'] / person['to_be_checked_solution_count'] * 100.0
+            person['checked_solution_percentage'] = person['checked_solution_count'] / person[
+                'to_be_checked_solution_count'] * 100.0
 
     people = list(people.values())
 
-    context = {}
-    context['title'] = ('Uczestnicy: %s' % year) if year is not None else 'Wszyscy ludzie'
+    context = context.copy()
     context['people'] = people
     context['form_questions'] = all_questions
-    context['is_all_people'] = year is None
+    return render(request, 'listpeople.html', context)
 
-    context['selected_year'] = year
-    return render(request, 'participants.html', context)
+@login_required()
+@permission_required('wwwapp.see_all_users', raise_exception=True)
+def participants_view(request: HttpRequest, year: Optional[int] = None) -> HttpResponse:
+    if year is not None:
+        year = get_object_or_404(Camp, pk=year)
+        participants = UserProfile.objects.filter(camp_participation__year=year)
+        participants = participants.exclude(lecturer_workshops__in=Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED))
+    else:
+        participants = UserProfile.objects.all()
+
+    if year is not None:
+        # Participants view only displays forms for the selected year
+        all_forms = year.forms.all()
+    else:
+        # All people view only displays forms not bound to any year
+        all_forms = Form.objects.filter(years=None)
+
+    return _people_datatable(request, year, participants, all_forms, {
+        'selected_year': year,
+        'title': ('Uczestnicy: %s' % year) if year is not None else 'Wszyscy ludzie',
+        'is_all_people': year is None,
+        'is_lecturers': False
+    })
 
 
 @login_required()
@@ -674,35 +679,14 @@ def participants_view(request, year=None):
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = get_object_or_404(Camp, pk=year)
 
-    workshops = Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED).prefetch_related('year', 'lecturer', 'lecturer__user')
+    lecturers = UserProfile.objects.filter(lecturer_workshops__in=Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED))
 
-    people: Dict[int, Dict[str, any]] = {}
-    for workshop in workshops:
-        for lecturer in workshop.lecturer.all():
-            if lecturer.id in people:
-                people[lecturer.id]['workshops'].append(workshop)
-                continue
-
-            people[lecturer.id] = {
-                'user': lecturer.user,
-                'workshops': [workshop],
-            }
-
-    people_list = list(people.values())
-
-    all_forms = Form.visible_objects.prefetch_related('questions').filter(questions__answers__user__in=[p['user'] for p in people_list]).distinct()
-    all_questions = [question for form in all_forms for question in form.questions.all()]
-    all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__in=[p['user'] for p in people_list], question__in=all_questions).all()
-    for lecturer in people_list:
-        lecturer['form_answers'] = [next(filter(lambda a: a.question == question and a.user == lecturer['user'], all_answers), None) for question in all_questions]
-
-    context = {}
-    context['title'] = 'Prowadzący: %s' % year
-    context['form_questions'] = all_questions
-    context['people'] = people_list
-
-    context['selected_year'] = year
-    return render(request, 'lecturers.html', context)
+    return _people_datatable(request, year, lecturers, year.forms.all(), {
+        'selected_year': year,
+        'title': 'Prowadzący: %s' % year,
+        'is_all_people': False,
+        'is_lecturers': True
+    })
 
 
 @require_POST
