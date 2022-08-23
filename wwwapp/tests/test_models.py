@@ -72,23 +72,29 @@ class WorkshopCountTests(TestCase):
         Solution.objects.create(workshop_participant=wp6)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 4)
-        self.assertEqual(workshop.solution_count, 3)
-        self.assertEqual(workshop.checked_solution_count, 2)
-        self.assertEqual(workshop.to_be_checked_solution_count, workshop.solution_count)
-        self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
-        self.assertEqual(workshop.qualified_count, 1)
-        self.assertEqual(workshop.max_entered_points, 7.5)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 4)
+            self.assertEqual(workshop.solution_count, 3)
+            self.assertEqual(workshop.checked_solution_count, 2)
+            self.assertEqual(workshop.to_be_checked_solution_count, workshop.solution_count)
+            self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
+            self.assertEqual(workshop.qualified_count, 1)
+            self.assertEqual(workshop.max_entered_points, 7.5)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user3).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, 75.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent, 25.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user3).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, True)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, False)
+        with self.assertNumQueries(4):
+            wp3 = workshop.participants.get(camp_participation__user_profile__user=self.user3)
+            wp4 = workshop.participants.get(camp_participation__user_profile__user=self.user4)
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp3.result_in_percent, None)
+            self.assertEqual(wp4.result_in_percent, None)
+            self.assertEqual(wp5.result_in_percent, 75.0)
+            self.assertEqual(wp6.result_in_percent, 25.0)
+            self.assertEqual(wp3.is_qualified, None)
+            self.assertEqual(wp4.is_qualified, None)
+            self.assertEqual(wp5.is_qualified, True)
+            self.assertEqual(wp6.is_qualified, False)
 
     def test_counts_with_no_solutions(self):
         # Add a test workshop from before we had solution uploads
@@ -121,21 +127,26 @@ class WorkshopCountTests(TestCase):
         wp6 = workshop.participants.create(camp_participation=cp6, qualification_result=2.5)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 3)
-        self.assertEqual(workshop.solution_count, None)
-        self.assertEqual(workshop.checked_solution_count, 2)
-        self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
-        self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
-        self.assertEqual(workshop.qualified_count, 1)
-        self.assertEqual(workshop.max_entered_points, 7.5)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 3)
+            self.assertEqual(workshop.solution_count, None)
+            self.assertEqual(workshop.checked_solution_count, 2)
+            self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
+            self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
+            self.assertEqual(workshop.qualified_count, 1)
+            self.assertEqual(workshop.max_entered_points, 7.5)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, 75.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent, 25.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, True)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, False)
+        with self.assertNumQueries(3):
+            wp4 = workshop.participants.get(camp_participation__user_profile__user=self.user4)
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp4.result_in_percent, None)
+            self.assertEqual(wp5.result_in_percent, 75.0)
+            self.assertEqual(wp6.result_in_percent, 25.0)
+            self.assertEqual(wp4.is_qualified, None)
+            self.assertEqual(wp5.is_qualified, True)
+            self.assertEqual(wp6.is_qualified, False)
 
     def test_counts_with_no_max_points(self):
         # Add a test workshop from before we had max_points
@@ -168,21 +179,26 @@ class WorkshopCountTests(TestCase):
         wp6 = workshop.participants.create(camp_participation=cp6, qualification_result=2.5)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 3)
-        self.assertEqual(workshop.solution_count, None)
-        self.assertEqual(workshop.checked_solution_count, 2)
-        self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
-        self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
-        self.assertEqual(workshop.qualified_count, 1)
-        self.assertEqual(workshop.max_entered_points, 7.5)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 3)
+            self.assertEqual(workshop.solution_count, None)
+            self.assertEqual(workshop.checked_solution_count, 2)
+            self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
+            self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
+            self.assertEqual(workshop.qualified_count, 1)
+            self.assertEqual(workshop.max_entered_points, 7.5)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, 100.0)
-        self.assertAlmostEqual(float(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent), 1/3*100)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, True)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, False)
+        with self.assertNumQueries(3):
+            wp4 = workshop.participants.get(camp_participation__user_profile__user=self.user4)
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp4.result_in_percent, None)
+            self.assertEqual(wp5.result_in_percent, 100.0)
+            self.assertAlmostEqual(float(wp6.result_in_percent), 1/3*100)
+            self.assertEqual(wp4.is_qualified, None)
+            self.assertEqual(wp5.is_qualified, True)
+            self.assertEqual(wp6.is_qualified, False)
 
     def test_counts_with_no_threshold(self):
         # Add a test workshop that does not have a qualification threshold set yet
@@ -215,21 +231,26 @@ class WorkshopCountTests(TestCase):
         wp6 = workshop.participants.create(camp_participation=cp6, qualification_result=2.5)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 3)
-        self.assertEqual(workshop.solution_count, None)
-        self.assertEqual(workshop.checked_solution_count, 2)
-        self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
-        self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
-        self.assertEqual(workshop.qualified_count, None)
-        self.assertEqual(workshop.max_entered_points, 7.5)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 3)
+            self.assertEqual(workshop.solution_count, None)
+            self.assertEqual(workshop.checked_solution_count, 2)
+            self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
+            self.assertEqual(workshop.checked_solution_percentage, 2/3 * 100)
+            self.assertEqual(workshop.qualified_count, None)
+            self.assertEqual(workshop.max_entered_points, 7.5)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, 100.0)
-        self.assertAlmostEqual(float(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent), 1/3*100)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, None)
+        with self.assertNumQueries(3):
+            wp4 = workshop.participants.get(camp_participation__user_profile__user=self.user4)
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp4.result_in_percent, None)
+            self.assertEqual(wp5.result_in_percent, 100.0)
+            self.assertAlmostEqual(float(wp6.result_in_percent), 1/3*100)
+            self.assertEqual(wp4.is_qualified, None)
+            self.assertEqual(wp5.is_qualified, None)
+            self.assertEqual(wp6.is_qualified, None)
 
     def test_checked_percentage_with_nothing_to_check(self):
         # Add a test workshop
@@ -256,17 +277,20 @@ class WorkshopCountTests(TestCase):
         wp3 = workshop.participants.create(camp_participation=cp3)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 1)
-        self.assertEqual(workshop.solution_count, 0)
-        self.assertEqual(workshop.checked_solution_count, 0)
-        self.assertEqual(workshop.to_be_checked_solution_count, workshop.solution_count)
-        self.assertEqual(workshop.checked_solution_percentage, -1)
-        self.assertEqual(workshop.qualified_count, 0)
-        self.assertEqual(workshop.max_entered_points, None)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 1)
+            self.assertEqual(workshop.solution_count, 0)
+            self.assertEqual(workshop.checked_solution_count, 0)
+            self.assertEqual(workshop.to_be_checked_solution_count, workshop.solution_count)
+            self.assertEqual(workshop.checked_solution_percentage, -1)
+            self.assertEqual(workshop.qualified_count, 0)
+            self.assertEqual(workshop.max_entered_points, None)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user3).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user3).is_qualified, None)
+        with self.assertNumQueries(1):
+            wp3 = workshop.participants.get(camp_participation__user_profile__user=self.user3)
+            self.assertEqual(wp3.result_in_percent, None)
+            self.assertEqual(wp3.is_qualified, None)
 
     def test_counts_with_solutions_disabled_later(self):
         # Test an edge case where solutions were disabled after some solutions were already uploaded
@@ -305,21 +329,26 @@ class WorkshopCountTests(TestCase):
         Solution.objects.create(workshop_participant=wp6)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 4)
-        self.assertEqual(workshop.solution_count, None)
-        self.assertEqual(workshop.checked_solution_count, 2)
-        self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
-        self.assertEqual(workshop.checked_solution_percentage, 50.0)
-        self.assertEqual(workshop.qualified_count, 1)
-        self.assertEqual(workshop.max_entered_points, 7.5)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 4)
+            self.assertEqual(workshop.solution_count, None)
+            self.assertEqual(workshop.checked_solution_count, 2)
+            self.assertEqual(workshop.to_be_checked_solution_count, workshop.registered_count)
+            self.assertEqual(workshop.checked_solution_percentage, 50.0)
+            self.assertEqual(workshop.qualified_count, 1)
+            self.assertEqual(workshop.max_entered_points, 7.5)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, 75.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent, 25.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, True)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, False)
+        with self.assertNumQueries(3):
+            wp4 = workshop.participants.get(camp_participation__user_profile__user=self.user4)
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp4.result_in_percent, None)
+            self.assertEqual(wp5.result_in_percent, 75.0)
+            self.assertEqual(wp6.result_in_percent, 25.0)
+            self.assertEqual(wp4.is_qualified, None)
+            self.assertEqual(wp5.is_qualified, True)
+            self.assertEqual(wp6.is_qualified, False)
 
     def test_counts_with_no_qualification(self):
         # Test an edge case where qualification was disabled after some results were already added
@@ -359,20 +388,25 @@ class WorkshopCountTests(TestCase):
         Solution.objects.create(workshop_participant=wp6)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 4)
-        self.assertEqual(workshop.solution_count, None)
-        self.assertEqual(workshop.checked_solution_count, None)
-        self.assertEqual(workshop.to_be_checked_solution_count, None)
-        self.assertEqual(workshop.checked_solution_percentage, -1)
-        self.assertEqual(workshop.qualified_count, None)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 4)
+            self.assertEqual(workshop.solution_count, None)
+            self.assertEqual(workshop.checked_solution_count, None)
+            self.assertEqual(workshop.to_be_checked_solution_count, None)
+            self.assertEqual(workshop.checked_solution_percentage, -1)
+            self.assertEqual(workshop.qualified_count, None)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user4).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, None)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, None)
+        with self.assertNumQueries(3):
+            wp4 = workshop.participants.get(camp_participation__user_profile__user=self.user4)
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp4.result_in_percent, None)
+            self.assertEqual(wp5.result_in_percent, None)
+            self.assertEqual(wp6.result_in_percent, None)
+            self.assertEqual(wp4.is_qualified, None)
+            self.assertEqual(wp5.is_qualified, None)
+            self.assertEqual(wp6.is_qualified, None)
 
     @override_settings(MAX_POINTS_PERCENT=200)
     def test_result_in_percent_range(self):
@@ -401,17 +435,21 @@ class WorkshopCountTests(TestCase):
         wp6 = workshop.participants.create(camp_participation=cp6, qualification_result=-2137)
 
         # Test the count methods
-        workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
-        self.assertEqual(workshop.registered_count, 2)
-        self.assertEqual(workshop.checked_solution_count, 2)
-        self.assertEqual(workshop.checked_solution_percentage, 100)
-        self.assertEqual(workshop.qualified_count, 1)
-        self.assertEqual(workshop.max_entered_points, 2137)
+        with self.assertNumQueries(1):
+            workshop = Workshop.objects.with_counts().annotate(max_entered_points=Max('participants__qualification_result')).get(pk=workshop.pk)
+            self.assertEqual(workshop.registered_count, 2)
+            self.assertEqual(workshop.checked_solution_count, 2)
+            self.assertEqual(workshop.checked_solution_percentage, 100)
+            self.assertEqual(workshop.qualified_count, 1)
+            self.assertEqual(workshop.max_entered_points, 2137)
         # Test the participant qualification methods
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).result_in_percent, 200.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent, 0.0)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, True)
-        self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, False)
+        with self.assertNumQueries(2):
+            wp5 = workshop.participants.get(camp_participation__user_profile__user=self.user5)
+            wp6 = workshop.participants.get(camp_participation__user_profile__user=self.user6)
+            self.assertEqual(wp5.result_in_percent, 200.0)
+            self.assertEqual(wp6.result_in_percent, 0.0)
+            self.assertEqual(wp5.is_qualified, True)
+            self.assertEqual(wp6.is_qualified, False)
 
 
 class ParticipantCountTests(TestCase):
@@ -467,14 +505,15 @@ class ParticipantCountTests(TestCase):
         Solution.objects.create(workshop_participant=wp4)
 
         # Test the count methods
-        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
-        self.assertEqual(cp.workshop_count, 4)
-        self.assertEqual(cp.accepted_workshop_count, 1)
-        self.assertEqual(cp.to_be_checked_solution_count, 3)
-        self.assertEqual(cp.checked_solution_count, 2)
-        self.assertEqual(cp.solution_count, 3)
-        self.assertEqual(cp.checked_solution_percentage, 2/3*100)
-        self.assertEqual(cp.result_in_percent, 100)
+        with self.assertNumQueries(4):  # SELECT FROM CampParticipant, WorkshopParticipant, Workshop, Solution
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop', 'workshop_participation__solution').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 4)
+            self.assertEqual(cp.accepted_workshop_count, 1)
+            self.assertEqual(cp.to_be_checked_solution_count, 3)
+            self.assertEqual(cp.checked_solution_count, 2)
+            self.assertEqual(cp.solution_count, 3)
+            self.assertEqual(cp.checked_solution_percentage, 2/3*100)
+            self.assertEqual(cp.result_in_percent, 100)
 
     def test_counts_nothing_to_check(self):
         workshops = []
@@ -499,14 +538,15 @@ class ParticipantCountTests(TestCase):
         cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
 
         # Test the count methods
-        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
-        self.assertEqual(cp.workshop_count, 0)
-        self.assertEqual(cp.accepted_workshop_count, 0)
-        self.assertEqual(cp.to_be_checked_solution_count, 0)
-        self.assertEqual(cp.checked_solution_count, 0)
-        self.assertEqual(cp.solution_count, 0)
-        self.assertEqual(cp.checked_solution_percentage, -1)
-        self.assertEqual(cp.result_in_percent, 0)
+        with self.assertNumQueries(2):  # SELECT FROM CampParticipant, WorkshopParticipant, realize that there are 0 entries and nothing else needs to be fetched
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop', 'workshop_participation__solution').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 0)
+            self.assertEqual(cp.accepted_workshop_count, 0)
+            self.assertEqual(cp.to_be_checked_solution_count, 0)
+            self.assertEqual(cp.checked_solution_count, 0)
+            self.assertEqual(cp.solution_count, 0)
+            self.assertEqual(cp.checked_solution_percentage, -1)
+            self.assertEqual(cp.result_in_percent, 0)
 
     def test_counts_no_upload(self):
         workshops = []
@@ -539,14 +579,15 @@ class ParticipantCountTests(TestCase):
         wp3 = workshops[3].participants.create(camp_participation=cp, qualification_result=2.5)
 
         # Test the count methods
-        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
-        self.assertEqual(cp.workshop_count, 3)
-        self.assertEqual(cp.accepted_workshop_count, 1)
-        self.assertEqual(cp.to_be_checked_solution_count, 3)
-        self.assertEqual(cp.checked_solution_count, 2)
-        self.assertEqual(cp.solution_count, 0)
-        self.assertEqual(cp.checked_solution_percentage, 2/3*100)
-        self.assertEqual(cp.result_in_percent, 100)
+        with self.assertNumQueries(4):  # SELECT FROM CampParticipant, WorkshopParticipant, Workshop, Solution
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop', 'workshop_participation__solution').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 3)
+            self.assertEqual(cp.accepted_workshop_count, 1)
+            self.assertEqual(cp.to_be_checked_solution_count, 3)
+            self.assertEqual(cp.checked_solution_count, 2)
+            self.assertEqual(cp.solution_count, 0)
+            self.assertEqual(cp.checked_solution_percentage, 2/3*100)
+            self.assertEqual(cp.result_in_percent, 100)
 
     def test_counts_upload_disabled_later(self):
         # Test an edge case where uploads were disabled after some solutions were already uploaded
@@ -585,14 +626,15 @@ class ParticipantCountTests(TestCase):
         Solution.objects.create(workshop_participant=wp4)
 
         # Test the count methods
-        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
-        self.assertEqual(cp.workshop_count, 4)
-        self.assertEqual(cp.accepted_workshop_count, 1)
-        self.assertEqual(cp.to_be_checked_solution_count, 4)
-        self.assertEqual(cp.checked_solution_count, 2)
-        self.assertEqual(cp.solution_count, 0)
-        self.assertEqual(cp.checked_solution_percentage, 50)
-        self.assertEqual(cp.result_in_percent, 100)
+        with self.assertNumQueries(4):  # SELECT FROM CampParticipant, WorkshopParticipant, Workshop, Solution
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop', 'workshop_participation__solution').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 4)
+            self.assertEqual(cp.accepted_workshop_count, 1)
+            self.assertEqual(cp.to_be_checked_solution_count, 4)
+            self.assertEqual(cp.checked_solution_count, 2)
+            self.assertEqual(cp.solution_count, 0)
+            self.assertEqual(cp.checked_solution_percentage, 50)
+            self.assertEqual(cp.result_in_percent, 100)
 
     def test_counts_not_qualifying(self):
         workshop = Workshop.objects.create(
@@ -616,14 +658,15 @@ class ParticipantCountTests(TestCase):
         wp = workshop.participants.create(camp_participation=cp)
 
         # Test the count methods
-        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
-        self.assertEqual(cp.workshop_count, 1)
-        self.assertEqual(cp.accepted_workshop_count, 0)
-        self.assertEqual(cp.to_be_checked_solution_count, 0)
-        self.assertEqual(cp.checked_solution_count, 0)
-        self.assertEqual(cp.solution_count, 0)
-        self.assertEqual(cp.checked_solution_percentage, -1)
-        self.assertEqual(cp.result_in_percent, 0)
+        with self.assertNumQueries(4):  # SELECT FROM CampParticipant, WorkshopParticipant, Workshop, Solution
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop', 'workshop_participation__solution').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 1)
+            self.assertEqual(cp.accepted_workshop_count, 0)
+            self.assertEqual(cp.to_be_checked_solution_count, 0)
+            self.assertEqual(cp.checked_solution_count, 0)
+            self.assertEqual(cp.solution_count, 0)
+            self.assertEqual(cp.checked_solution_percentage, -1)
+            self.assertEqual(cp.result_in_percent, 0)
 
     def test_counts_qualification_disabled_later(self):
         # Test an edge case where the qualification was disabled after some scores were already entered
@@ -648,11 +691,108 @@ class ParticipantCountTests(TestCase):
         wp = workshop.participants.create(camp_participation=cp, qualification_result=7.5)
 
         # Test the count methods
-        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
-        self.assertEqual(cp.workshop_count, 1)
-        self.assertEqual(cp.accepted_workshop_count, 0)
-        self.assertEqual(cp.to_be_checked_solution_count, 0)
-        self.assertEqual(cp.checked_solution_count, 0)
-        self.assertEqual(cp.solution_count, 0)
-        self.assertEqual(cp.checked_solution_percentage, -1)
-        self.assertEqual(cp.result_in_percent, 0)
+        with self.assertNumQueries(4):  # SELECT FROM CampParticipant, WorkshopParticipant, Workshop, Solution
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop', 'workshop_participation__solution').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 1)
+            self.assertEqual(cp.accepted_workshop_count, 0)
+            self.assertEqual(cp.to_be_checked_solution_count, 0)
+            self.assertEqual(cp.checked_solution_count, 0)
+            self.assertEqual(cp.solution_count, 0)
+            self.assertEqual(cp.checked_solution_percentage, -1)
+            self.assertEqual(cp.result_in_percent, 0)
+
+    def test_counts_non_prefetched_exception(self):
+        # Make sure that trying to access count methods without prefetching results in an error
+        workshop = Workshop.objects.create(
+            title='Bardzo fajne warsztaty',
+            name='bardzofajne',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+            proposition_description='<p>Testowy opis</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            page_content='<p>Testowa strona</p>',
+            page_content_is_public=True,
+            max_points=10,
+            qualification_threshold=5
+        )
+        workshop.lecturer.add(self.admin_user.user_profile)
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        wp = workshop.participants.create(camp_participation=cp, qualification_result=7.5)
+
+        # Test the count methods
+        with self.assertNumQueries(1):  # SELECT FROM CampParticipant
+            cp = CampParticipant.objects.get(pk=cp.pk)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.workshop_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.accepted_workshop_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.to_be_checked_solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.checked_solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.checked_solution_percentage)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation before using the count methods', lambda: cp.result_in_percent)
+
+    def test_counts_non_prefetched_workshop_exception(self):
+        # Make sure that trying to access count methods without prefetching results in an error
+        workshop = Workshop.objects.create(
+            title='Bardzo fajne warsztaty',
+            name='bardzofajne',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+            proposition_description='<p>Testowy opis</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            page_content='<p>Testowa strona</p>',
+            page_content_is_public=True,
+            max_points=10,
+            qualification_threshold=5
+        )
+        workshop.lecturer.add(self.admin_user.user_profile)
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        wp = workshop.participants.create(camp_participation=cp, qualification_result=7.5)
+
+        # Test the count methods
+        with self.assertNumQueries(2):  # SELECT FROM CampParticipant, WorkshopParticipant
+            cp = CampParticipant.objects.prefetch_related('workshop_participation').get(pk=cp.pk)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.workshop_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.accepted_workshop_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.to_be_checked_solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.checked_solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.checked_solution_percentage)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__workshop before using the count methods', lambda: cp.result_in_percent)
+
+    def test_counts_non_prefetched_solution_exception(self):
+        # Make sure that trying to access count methods without prefetching results in an error
+        workshop = Workshop.objects.create(
+            title='Bardzo fajne warsztaty',
+            name='bardzofajne',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+            proposition_description='<p>Testowy opis</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            page_content='<p>Testowa strona</p>',
+            page_content_is_public=True,
+            max_points=10,
+            qualification_threshold=5
+        )
+        workshop.lecturer.add(self.admin_user.user_profile)
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        wp = workshop.participants.create(camp_participation=cp, qualification_result=7.5)
+
+        # Test the count methods
+        with self.assertNumQueries(3):  # SELECT FROM CampParticipant, WorkshopParticipant, Workshop
+            cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+            self.assertEqual(cp.workshop_count, 1)
+            self.assertEqual(cp.accepted_workshop_count, 1)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__solution before using the count methods', lambda: cp.to_be_checked_solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__solution before using the count methods', lambda: cp.checked_solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__solution before using the count methods', lambda: cp.solution_count)
+            self.assertRaisesMessage(AttributeError, 'Please prefetch workshop_participation__solution before using the count methods', lambda: cp.checked_solution_percentage)
+            self.assertEqual(cp.result_in_percent, 75)

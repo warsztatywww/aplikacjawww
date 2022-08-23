@@ -300,11 +300,17 @@ class CampParticipant(models.Model):
     # no .filter, only .all and iterate the data on the Python side)
 
     def _ensure_wp_prefetched(self):
-        if 'workshop_participation' not in self._prefetched_objects_cache:
+        if not hasattr(self, '_prefetched_objects_cache') or 'workshop_participation' not in self._prefetched_objects_cache:
             raise AttributeError('Please prefetch workshop_participation before using the count methods')
         for wp in self.workshop_participation.all():
             if not WorkshopParticipant.workshop.is_cached(wp):
                 raise AttributeError('Please prefetch workshop_participation__workshop before using the count methods')
+
+    def _ensure_wp_and_solutions_prefetched(self):
+        self._ensure_wp_prefetched()
+        for wp in self.workshop_participation.all():
+            if not WorkshopParticipant.solution.is_cached(wp):
+                raise AttributeError('Please prefetch workshop_participation__solution before using the count methods')
 
     @property
     def workshop_count(self):
@@ -318,19 +324,19 @@ class CampParticipant(models.Model):
 
     @property
     def solution_count(self):
-        self._ensure_wp_prefetched()
+        self._ensure_wp_and_solutions_prefetched()
         return sum(1 if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution') else 0 for wp in self.workshop_participation.all())
 
     @property
     def to_be_checked_solution_count(self):
         # uploaded solutions + workshops with uploads disabled but scoring enabled (solutions sent outside of the system)
-        self._ensure_wp_prefetched()
+        self._ensure_wp_and_solutions_prefetched()
         no_upload_workshops = sum(1 if wp.workshop.is_qualifying and not wp.workshop.solution_uploads_enabled else 0 for wp in self.workshop_participation.all())
         return self.solution_count + no_upload_workshops
 
     @property
     def checked_solution_count(self):
-        self._ensure_wp_prefetched()
+        self._ensure_wp_and_solutions_prefetched()
         return sum(1 if wp.workshop.is_qualifying and wp.qualification_result is not None else 0 for wp in self.workshop_participation.all())
 
     @property
@@ -342,6 +348,7 @@ class CampParticipant(models.Model):
 
     @property
     def result_in_percent(self):
+        self._ensure_wp_prefetched()
         return sum(wp.result_in_percent or 0 for wp in self.workshop_participation.all())
 
 
