@@ -340,6 +340,10 @@ class CampParticipant(models.Model):
         else:
             return self.checked_solution_count / self.to_be_checked_solution_count * 100.0
 
+    @property
+    def result_in_percent(self):
+        return sum(wp.result_in_percent or 0 for wp in self.workshop_participation.all())
+
 
 class PESELField(models.CharField):
     system_check_removed_details = {

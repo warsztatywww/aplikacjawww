@@ -474,6 +474,7 @@ class ParticipantCountTests(TestCase):
         self.assertEqual(cp.checked_solution_count, 2)
         self.assertEqual(cp.solution_count, 3)
         self.assertEqual(cp.checked_solution_percentage, 2/3*100)
+        self.assertEqual(cp.result_in_percent, 100)
 
     def test_counts_nothing_to_check(self):
         workshops = []
@@ -505,6 +506,7 @@ class ParticipantCountTests(TestCase):
         self.assertEqual(cp.checked_solution_count, 0)
         self.assertEqual(cp.solution_count, 0)
         self.assertEqual(cp.checked_solution_percentage, -1)
+        self.assertEqual(cp.result_in_percent, 0)
 
     def test_counts_no_upload(self):
         workshops = []
@@ -544,6 +546,7 @@ class ParticipantCountTests(TestCase):
         self.assertEqual(cp.checked_solution_count, 2)
         self.assertEqual(cp.solution_count, 0)
         self.assertEqual(cp.checked_solution_percentage, 2/3*100)
+        self.assertEqual(cp.result_in_percent, 100)
 
     def test_counts_upload_disabled_later(self):
         # Test an edge case where uploads were disabled after some solutions were already uploaded
@@ -589,6 +592,7 @@ class ParticipantCountTests(TestCase):
         self.assertEqual(cp.checked_solution_count, 2)
         self.assertEqual(cp.solution_count, 0)
         self.assertEqual(cp.checked_solution_percentage, 50)
+        self.assertEqual(cp.result_in_percent, 100)
 
     def test_counts_not_qualifying(self):
         workshop = Workshop.objects.create(
@@ -619,6 +623,7 @@ class ParticipantCountTests(TestCase):
         self.assertEqual(cp.checked_solution_count, 0)
         self.assertEqual(cp.solution_count, 0)
         self.assertEqual(cp.checked_solution_percentage, -1)
+        self.assertEqual(cp.result_in_percent, 0)
 
     def test_counts_qualification_disabled_later(self):
         # Test an edge case where the qualification was disabled after some scores were already entered
@@ -650,3 +655,4 @@ class ParticipantCountTests(TestCase):
         self.assertEqual(cp.checked_solution_count, 0)
         self.assertEqual(cp.solution_count, 0)
         self.assertEqual(cp.checked_solution_percentage, -1)
+        self.assertEqual(cp.result_in_percent, 0)
