@@ -542,11 +542,19 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
     all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(
         user__user_profile__in=participants, question__in=all_questions).all()
 
+    # Group the answers by users
+    user_answers = {}
+    for answer in all_answers:
+        if answer.user.pk not in user_answers:
+            user_answers[answer.user.pk] = []
+        user_answers[answer.user.pk].append(answer)
+
     people = []
 
     for participant in participants:
-        answers = [next(filter(lambda a: a.question == question and a.user == participant.user, all_answers), None) for
-                   question in all_questions]
+        # Arrange the answers array such that the answer at index i matches the question i
+        answers = [next(filter(lambda a: a.question.pk == question.pk, user_answers[participant.user.pk]), None)
+                   for question in all_questions]
 
         birth_field = year.form_question_birth_date if year else None
         birth_answer = next(filter(lambda x: x[0] == birth_field and x[1] and x[1].value, zip(all_questions, answers)),
