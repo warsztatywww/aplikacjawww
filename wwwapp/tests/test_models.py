@@ -5,10 +5,10 @@ from django.db.models import Max
 from django.test.testcases import TestCase
 from django.test.utils import override_settings
 
-from wwwapp.models import Camp, Workshop, Solution, WorkshopType, WorkshopCategory
+from wwwapp.models import Camp, Workshop, Solution, WorkshopType, WorkshopCategory, CampParticipant
 
 
-class TestModels(TestCase):
+class WorkshopCountTests(TestCase):
     def setUp(self):
         self.admin_user = User.objects.create_superuser(
             username='admin', email='admin@example.com', password='admin123')
@@ -412,3 +412,241 @@ class TestModels(TestCase):
         self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).result_in_percent, 0.0)
         self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user5).is_qualified, True)
         self.assertEqual(workshop.participants.get(camp_participation__user_profile__user=self.user6).is_qualified, False)
+
+
+class ParticipantCountTests(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            username='admin', email='admin@example.com', password='admin123')
+        self.user = User.objects.create_user(
+            username='user', email='user@example.com', password='user123')
+
+        # TODO: This is weird because of the constraint that one Camp object needs to exist at all times
+        Camp.objects.all().update(year=2020,
+                                  proposal_end_date=datetime.date(2020, 4, 1),
+                                  start_date=datetime.date(2020, 7, 3),
+                                  end_date=datetime.date(2020, 7, 15),
+                                  program_finalized=False)
+        self.year_2020 = Camp.objects.get()
+        WorkshopType.objects.create(year=self.year_2020, name='Type')
+        WorkshopCategory.objects.create(year=self.year_2020, name='Category')
+
+    def test_counts(self):
+        workshops = []
+        for i in range(5):
+            workshop = Workshop.objects.create(
+                title=f'Bardzo fajne warsztaty {i}',
+                name=f'bardzofajne{i}',
+                year=self.year_2020,
+                type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+                proposition_description='<p>Testowy opis</p>',
+                status=Workshop.STATUS_ACCEPTED,
+                page_content='<p>Testowa strona</p>',
+                page_content_is_public=True,
+                max_points=10,
+                qualification_threshold=5,
+                solution_uploads_enabled=True
+            )
+            workshop.lecturer.add(self.admin_user.user_profile)
+            workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+            workshops.append(workshop)
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        # the user is not participating in workshops[0]
+        # the user is participating in workshops[1], but did not submit a solution
+        wp1 = workshops[1].participants.create(camp_participation=cp)
+        # the user is participating in workshops[2], submitted a solution, but is not graded yet
+        wp2 = workshops[2].participants.create(camp_participation=cp)
+        Solution.objects.create(workshop_participant=wp2)
+        # the user is participating in workshops[3], submitted a solution, and is accepted
+        wp3 = workshops[3].participants.create(camp_participation=cp, qualification_result=7.5)
+        Solution.objects.create(workshop_participant=wp3)
+        # the user is participating in workshops[4], submitted a solution, and is rejected
+        wp4 = workshops[4].participants.create(camp_participation=cp, qualification_result=2.5)
+        Solution.objects.create(workshop_participant=wp4)
+
+        # Test the count methods
+        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+        self.assertEqual(cp.workshop_count, 4)
+        self.assertEqual(cp.accepted_workshop_count, 1)
+        self.assertEqual(cp.to_be_checked_solution_count, 3)
+        self.assertEqual(cp.checked_solution_count, 2)
+        self.assertEqual(cp.solution_count, 3)
+        self.assertEqual(cp.checked_solution_percentage, 2/3*100)
+
+    def test_counts_nothing_to_check(self):
+        workshops = []
+        for i in range(5):
+            workshop = Workshop.objects.create(
+                title=f'Bardzo fajne warsztaty {i}',
+                name=f'bardzofajne{i}',
+                year=self.year_2020,
+                type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+                proposition_description='<p>Testowy opis</p>',
+                status=Workshop.STATUS_ACCEPTED,
+                page_content='<p>Testowa strona</p>',
+                page_content_is_public=True,
+                max_points=10,
+                qualification_threshold=5,
+                solution_uploads_enabled=True
+            )
+            workshop.lecturer.add(self.admin_user.user_profile)
+            workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+            workshops.append(workshop)
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        # Test the count methods
+        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+        self.assertEqual(cp.workshop_count, 0)
+        self.assertEqual(cp.accepted_workshop_count, 0)
+        self.assertEqual(cp.to_be_checked_solution_count, 0)
+        self.assertEqual(cp.checked_solution_count, 0)
+        self.assertEqual(cp.solution_count, 0)
+        self.assertEqual(cp.checked_solution_percentage, -1)
+
+    def test_counts_no_upload(self):
+        workshops = []
+        for i in range(4):
+            workshop = Workshop.objects.create(
+                title=f'Bardzo fajne warsztaty {i}',
+                name=f'bardzofajne{i}',
+                year=self.year_2020,
+                type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+                proposition_description='<p>Testowy opis</p>',
+                status=Workshop.STATUS_ACCEPTED,
+                page_content='<p>Testowa strona</p>',
+                page_content_is_public=True,
+                max_points=10,
+                qualification_threshold=5,
+                solution_uploads_enabled=False
+            )
+            workshop.lecturer.add(self.admin_user.user_profile)
+            workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+            workshops.append(workshop)
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        # the user is not participating in workshops[0]
+        # the user is participating in workshops[1], but is not graded yet
+        wp1 = workshops[1].participants.create(camp_participation=cp)
+        # the user is participating in workshops[2], and is accepted
+        wp2 = workshops[2].participants.create(camp_participation=cp, qualification_result=7.5)
+        # the user is participating in workshops[3], and is rejected
+        wp3 = workshops[3].participants.create(camp_participation=cp, qualification_result=2.5)
+
+        # Test the count methods
+        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+        self.assertEqual(cp.workshop_count, 3)
+        self.assertEqual(cp.accepted_workshop_count, 1)
+        self.assertEqual(cp.to_be_checked_solution_count, 3)
+        self.assertEqual(cp.checked_solution_count, 2)
+        self.assertEqual(cp.solution_count, 0)
+        self.assertEqual(cp.checked_solution_percentage, 2/3*100)
+
+    def test_counts_upload_disabled_later(self):
+        # Test an edge case where uploads were disabled after some solutions were already uploaded
+        workshops = []
+        for i in range(5):
+            workshop = Workshop.objects.create(
+                title=f'Bardzo fajne warsztaty {i}',
+                name=f'bardzofajne{i}',
+                year=self.year_2020,
+                type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+                proposition_description='<p>Testowy opis</p>',
+                status=Workshop.STATUS_ACCEPTED,
+                page_content='<p>Testowa strona</p>',
+                page_content_is_public=True,
+                max_points=10,
+                qualification_threshold=5,
+                solution_uploads_enabled=False
+            )
+            workshop.lecturer.add(self.admin_user.user_profile)
+            workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+            workshops.append(workshop)
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        # the user is not participating in workshops[0]
+        # the user is participating in workshops[1], but did not submit a solution
+        wp1 = workshops[1].participants.create(camp_participation=cp)
+        # the user is participating in workshops[2], submitted a solution, but is not graded yet
+        wp2 = workshops[2].participants.create(camp_participation=cp)
+        Solution.objects.create(workshop_participant=wp2)
+        # the user is participating in workshops[3], submitted a solution, and is accepted
+        wp3 = workshops[3].participants.create(camp_participation=cp, qualification_result=7.5)
+        Solution.objects.create(workshop_participant=wp3)
+        # the user is participating in workshops[4], submitted a solution, and is rejected
+        wp4 = workshops[4].participants.create(camp_participation=cp, qualification_result=2.5)
+        Solution.objects.create(workshop_participant=wp4)
+
+        # Test the count methods
+        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+        self.assertEqual(cp.workshop_count, 4)
+        self.assertEqual(cp.accepted_workshop_count, 1)
+        self.assertEqual(cp.to_be_checked_solution_count, 4)
+        self.assertEqual(cp.checked_solution_count, 2)
+        self.assertEqual(cp.solution_count, 0)
+        self.assertEqual(cp.checked_solution_percentage, 50)
+
+    def test_counts_not_qualifying(self):
+        workshop = Workshop.objects.create(
+            title='Bardzo fajne warsztaty',
+            name='bardzofajne',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+            proposition_description='<p>Testowy opis</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            page_content='<p>Testowa strona</p>',
+            page_content_is_public=True,
+            max_points=10,
+            qualification_threshold=5,
+            is_qualifying=False
+        )
+        workshop.lecturer.add(self.admin_user.user_profile)
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        wp = workshop.participants.create(camp_participation=cp)
+
+        # Test the count methods
+        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+        self.assertEqual(cp.workshop_count, 1)
+        self.assertEqual(cp.accepted_workshop_count, 0)
+        self.assertEqual(cp.to_be_checked_solution_count, 0)
+        self.assertEqual(cp.checked_solution_count, 0)
+        self.assertEqual(cp.solution_count, 0)
+        self.assertEqual(cp.checked_solution_percentage, -1)
+
+    def test_counts_qualification_disabled_later(self):
+        # Test an edge case where the qualification was disabled after some scores were already entered
+        workshop = Workshop.objects.create(
+            title='Bardzo fajne warsztaty',
+            name='bardzofajne',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='Type'),
+            proposition_description='<p>Testowy opis</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            page_content='<p>Testowa strona</p>',
+            page_content_is_public=True,
+            max_points=10,
+            qualification_threshold=5,
+            is_qualifying=False
+        )
+        workshop.lecturer.add(self.admin_user.user_profile)
+        workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='Category'))
+
+        cp = self.year_2020.participants.create(user_profile=self.user.user_profile)
+
+        wp = workshop.participants.create(camp_participation=cp, qualification_result=7.5)
+
+        # Test the count methods
+        cp = CampParticipant.objects.prefetch_related('workshop_participation', 'workshop_participation__workshop').get(pk=cp.pk)
+        self.assertEqual(cp.workshop_count, 1)
+        self.assertEqual(cp.accepted_workshop_count, 0)
+        self.assertEqual(cp.to_be_checked_solution_count, 0)
+        self.assertEqual(cp.checked_solution_count, 0)
+        self.assertEqual(cp.solution_count, 0)
+        self.assertEqual(cp.checked_solution_percentage, -1)

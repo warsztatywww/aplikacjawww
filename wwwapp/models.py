@@ -290,6 +290,56 @@ class CampParticipant(models.Model):
     def __str__(self):
         return '%s: %s, %s' % (self.year, self.user_profile, self.status)
 
+    # Unlike the Workshop and WorkshopParticipant list counts, the CampParticipant list counts are not calculated on the database side
+    # The reason behind that is that:
+    # 1) Using WorkshopParticipant.is_qualified from a custom WorkshopParticipant manager in a CampParticipant manager is not supported by Django
+    # 2) For a good reason: the resulting query would become big and pretty cursed
+    # 3) We need to fetch all WorkshopParticipant objects for display on the tooltip anyway...
+    # All of these methods make sure that you prefetched workshop_participation, to avoid accidental N+1 errors. Make
+    # sure to not perform any operations that can't be fetched from the prefetch cache in these methods (no .count,
+    # no .filter, only .all and iterate the data on the Python side)
+
+    def _ensure_wp_prefetched(self):
+        if 'workshop_participation' not in self._prefetched_objects_cache:
+            raise AttributeError('Please prefetch workshop_participation before using the count methods')
+        for wp in self.workshop_participation.all():
+            if not WorkshopParticipant.workshop.is_cached(wp):
+                raise AttributeError('Please prefetch workshop_participation__workshop before using the count methods')
+
+    @property
+    def workshop_count(self):
+        self._ensure_wp_prefetched()
+        return len(self.workshop_participation.all())
+
+    @property
+    def accepted_workshop_count(self):
+        self._ensure_wp_prefetched()
+        return sum(1 if wp.workshop.is_qualifying and wp.is_qualified else 0 for wp in self.workshop_participation.all())
+
+    @property
+    def solution_count(self):
+        self._ensure_wp_prefetched()
+        return sum(1 if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution') else 0 for wp in self.workshop_participation.all())
+
+    @property
+    def to_be_checked_solution_count(self):
+        # uploaded solutions + workshops with uploads disabled but scoring enabled (solutions sent outside of the system)
+        self._ensure_wp_prefetched()
+        no_upload_workshops = sum(1 if wp.workshop.is_qualifying and not wp.workshop.solution_uploads_enabled else 0 for wp in self.workshop_participation.all())
+        return self.solution_count + no_upload_workshops
+
+    @property
+    def checked_solution_count(self):
+        self._ensure_wp_prefetched()
+        return sum(1 if wp.workshop.is_qualifying and wp.qualification_result is not None else 0 for wp in self.workshop_participation.all())
+
+    @property
+    def checked_solution_percentage(self):
+        if self.to_be_checked_solution_count == 0:
+            return -1
+        else:
+            return self.checked_solution_count / self.to_be_checked_solution_count * 100.0
+
 
 class PESELField(models.CharField):
     system_check_removed_details = {

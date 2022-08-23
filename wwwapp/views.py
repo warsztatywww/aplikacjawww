@@ -560,7 +560,7 @@ def participants_view(request, year=None):
     all_questions = [question for form in all_forms for question in form.questions.all()]
     all_answers = FormQuestionAnswer.objects.prefetch_related('question', 'user').filter(user__user_profile__in=participants, question__in=all_questions).all()
 
-    people = {}
+    people = []
 
     for participant in participants:
         answers = [next(filter(lambda a: a.question == question and a.user == participant.user, all_answers), None) for question in all_questions]
@@ -593,15 +593,16 @@ def participants_view(request, year=None):
             for participation in participation_data:
                 participation['workshops'] = [w for w in participation['workshops'] if w.is_publicly_visible()]
 
-        people[participant.id] = {
+        person = {
             'user': participant.user,
             'is_adult': is_adult,
             'matura_exam_year': participant.matura_exam_year,
-            'workshop_count': 0,
-            'solution_count': 0,
-            'checked_solution_count': 0,
-            'to_be_checked_solution_count': 0,
-            'accepted_workshop_count': 0,
+            'workshop_count': camp_participation.workshop_count if camp_participation else None,
+            'solution_count': camp_participation.solution_count if camp_participation else None,
+            'checked_solution_count': camp_participation.checked_solution_count if camp_participation else None,
+            'to_be_checked_solution_count': camp_participation.to_be_checked_solution_count if camp_participation else None,
+            'accepted_workshop_count': camp_participation.accepted_workshop_count if camp_participation else None,
+            'checked_solution_percentage': camp_participation.checked_solution_percentage if camp_participation else None,
             'has_completed_profile': participant.is_completed,
             'has_cover_letter': len(camp_participation.cover_letter) > 50 if camp_participation else None,
             'status': camp_participation.status if camp_participation else None,
@@ -617,47 +618,25 @@ def participants_view(request, year=None):
         if year:
             assert camp_participation is not None
             for wp in camp_participation.workshop_participation.all():
-                if wp.workshop.is_qualifying:
-                    if not wp.workshop.solution_uploads_enabled or hasattr(wp, 'solution'):
-                        people[participant.id]['to_be_checked_solution_count'] += 1
-
-                    if wp.qualification_result:
-                        people[participant.id]['points'] += float(wp.result_in_percent)
-                        people[participant.id]['checked_solution_count'] += 1
-
-                    if wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution'):
-                            people[participant.id]['solution_count'] += 1
-
-                    if wp.workshop.solution_uploads_enabled and not hasattr(wp, 'solution'):
-                        people[participant.id]['infos'].append((-2, "{title} : Nie przesłano rozwiązań".format(
-                            title=wp.workshop.title
-                        )))
-                    elif wp.qualification_result is None:
-                        people[participant.id]['infos'].append((-1, "{title} : Jeszcze nie sprawdzone".format(
-                            title=wp.workshop.title
-                        )))
-                    else:
-                        people[participant.id]['infos'].append((wp.result_in_percent, "{title} : {result:.1f}%".format(
-                            title=wp.workshop.title,
-                            result=wp.result_in_percent
-                        )))
-                else:
-                    people[participant.id]['infos'].append((-3, "{title} : Warsztaty bez kwalifikacji".format(
+                if not wp.workshop.is_qualifying:
+                    person['infos'].append((-3, "{title} : Warsztaty bez kwalifikacji".format(
                         title=wp.workshop.title
                     )))
-                people[participant.id]['workshop_count'] += 1
-                if wp.is_qualified:
-                    people[participant.id]['accepted_workshop_count'] += 1
-
-    for person in people.values():
-        person['infos'] = list(map(lambda x: x[1], sorted(person['infos'], key=lambda x: x[0], reverse=True)))
-
-        if person['to_be_checked_solution_count'] == 0:
-            person['checked_solution_percentage'] = -1
-        else:
-            person['checked_solution_percentage'] = person['checked_solution_count'] / person['to_be_checked_solution_count'] * 100.0
-
-    people = list(people.values())
+                elif wp.workshop.solution_uploads_enabled and not hasattr(wp, 'solution'):
+                    person['infos'].append((-2, "{title} : Nie przesłano rozwiązań".format(
+                        title=wp.workshop.title
+                    )))
+                elif wp.qualification_result is None:
+                    person['infos'].append((-1, "{title} : Jeszcze nie sprawdzone".format(
+                        title=wp.workshop.title
+                    )))
+                else:
+                    person['infos'].append((wp.result_in_percent, "{title} : {result:.1f}%".format(
+                        title=wp.workshop.title,
+                        result=wp.result_in_percent
+                    )))
+            person['infos'] = list(map(lambda x: x[1], sorted(person['infos'], key=lambda x: x[0], reverse=True)))
+        people.append(person)
 
     context = {}
     context['title'] = ('Uczestnicy: %s' % year) if year is not None else 'Wszyscy ludzie'
