@@ -391,7 +391,7 @@ class WorkshopParticipantPointsForm(ModelForm):
                     </div>
                 </div>
             ''',
-            qualified_mark(self.instance.is_qualified()),
+            qualified_mark(self.instance.is_qualified),
             mark_safe('<small id="hint_id_mark" class="form-text text-muted">To pole jest wypełniane automatycznie na podstawie progu kwalifikacji ustawionego w edytorze warsztatów</small>') if not participant_view else ''))
         )
         if not participant_view:

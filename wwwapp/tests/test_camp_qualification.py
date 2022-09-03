@@ -6,10 +6,8 @@ from django.contrib.messages.api import get_messages
 from django.test.testcases import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
-from freezegun import freeze_time
 
-from wwwapp.templatetags import wwwtags
-from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, WorkshopParticipant, CampParticipant, Camp
+from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, CampParticipant, Camp
 
 
 class CampQualificationViews(TestCase):
@@ -70,36 +68,6 @@ class CampQualificationViews(TestCase):
         cp.workshop_participation.create(workshop=self.workshop2, qualification_result=2.5, comment='Słabo')
         cp.cover_letter = '<p>Jestem fajny</p>'
         cp.save()
-
-    def test_percentage_result(self):
-        cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
-
-        self.assertEqual(
-            cp.workshop_participation.get(workshop=self.workshop1).result_in_percent(),
-            75.0)
-        self.assertEqual(
-            cp.workshop_participation.get(workshop=self.workshop2).result_in_percent(),
-            25.0)
-
-        sum = 0.0
-        for participant in cp.workshop_participation.all():
-            sum += float(participant.result_in_percent())
-        self.assertEqual(sum, 100.0)
-
-    @override_settings(MAX_POINTS_PERCENT=200)
-    def test_percentage_huge(self):
-        cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
-        participant = cp.workshop_participation.get(workshop=self.workshop1)
-        participant.qualification_result = 2137
-        participant.save()
-        self.assertEqual(participant.result_in_percent(), 200.0)
-
-    def test_percentage_negative(self):
-        cp = self.participant_user.user_profile.camp_participation_for(self.year_2020)
-        participant = cp.workshop_participation.get(workshop=self.workshop1)
-        participant.qualification_result = -2137
-        participant.save()
-        self.assertEqual(participant.result_in_percent(), 0.0)
 
     def test_profile_page_unauthenticated(self):
         # Unauthed users see only the profile page

@@ -10,12 +10,13 @@ from django.core.exceptions import ValidationError, SuspiciousOperation
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import QuerySet, Count, F, When, Case, Max, DecimalField
+from django.db.models.functions import Greatest, Least
 from django.db.models.query_utils import Q
 from django.db.models.signals import post_save, pre_delete
 from django.dispatch.dispatcher import receiver
 from django.utils import timezone
 from django.utils.deconstruct import deconstructible
-from django.utils.functional import cached_property
 
 import wwwforms.models
 
@@ -289,6 +290,67 @@ class CampParticipant(models.Model):
     def __str__(self):
         return '%s: %s, %s' % (self.year, self.user_profile, self.status)
 
+    # Unlike the Workshop and WorkshopParticipant list counts, the CampParticipant list counts are not calculated on the database side
+    # The reason behind that is that:
+    # 1) Using WorkshopParticipant.is_qualified from a custom WorkshopParticipant manager in a CampParticipant manager is not supported by Django
+    # 2) For a good reason: the resulting query would become big and pretty cursed
+    # 3) We need to fetch all WorkshopParticipant objects for display on the tooltip anyway...
+    # All of these methods make sure that you prefetched workshop_participation, to avoid accidental N+1 errors. Make
+    # sure to not perform any operations that can't be fetched from the prefetch cache in these methods (no .count,
+    # no .filter, only .all and iterate the data on the Python side)
+
+    def _ensure_wp_prefetched(self):
+        if not hasattr(self, '_prefetched_objects_cache') or 'workshop_participation' not in self._prefetched_objects_cache:
+            raise AttributeError('Please prefetch workshop_participation before using the count methods')
+        for wp in self.workshop_participation.all():
+            if not WorkshopParticipant.workshop.is_cached(wp):
+                raise AttributeError('Please prefetch workshop_participation__workshop before using the count methods')
+
+    def _ensure_wp_and_solutions_prefetched(self):
+        self._ensure_wp_prefetched()
+        for wp in self.workshop_participation.all():
+            if not WorkshopParticipant.solution.is_cached(wp):
+                raise AttributeError('Please prefetch workshop_participation__solution before using the count methods')
+
+    @property
+    def workshop_count(self):
+        self._ensure_wp_prefetched()
+        return len(self.workshop_participation.all())
+
+    @property
+    def accepted_workshop_count(self):
+        self._ensure_wp_prefetched()
+        return sum(1 if wp.workshop.is_qualifying and wp.is_qualified else 0 for wp in self.workshop_participation.all())
+
+    @property
+    def solution_count(self):
+        self._ensure_wp_and_solutions_prefetched()
+        return sum(1 if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled and hasattr(wp, 'solution') else 0 for wp in self.workshop_participation.all())
+
+    @property
+    def to_be_checked_solution_count(self):
+        # uploaded solutions + workshops with uploads disabled but scoring enabled (solutions sent outside of the system)
+        self._ensure_wp_and_solutions_prefetched()
+        no_upload_workshops = sum(1 if wp.workshop.is_qualifying and not wp.workshop.solution_uploads_enabled else 0 for wp in self.workshop_participation.all())
+        return self.solution_count + no_upload_workshops
+
+    @property
+    def checked_solution_count(self):
+        self._ensure_wp_and_solutions_prefetched()
+        return sum(1 if wp.workshop.is_qualifying and wp.qualification_result is not None else 0 for wp in self.workshop_participation.all())
+
+    @property
+    def checked_solution_percentage(self):
+        if self.to_be_checked_solution_count == 0:
+            return -1
+        else:
+            return self.checked_solution_count / self.to_be_checked_solution_count * 100.0
+
+    @property
+    def result_in_percent(self):
+        self._ensure_wp_prefetched()
+        return sum(wp.result_in_percent or 0 for wp in self.workshop_participation.all())
+
 
 class PESELField(models.CharField):
     system_check_removed_details = {
@@ -373,6 +435,34 @@ class WorkshopType(models.Model):
         return '%s: %s' % (self.year, self.name)
 
 
+class WorkshopManager(models.Manager):
+    def get_queryset(self) -> QuerySet['Workshop']:
+        return super().get_queryset().alias(
+            registered_count=Count('participants'),
+            solution_count=Case(
+                When(is_qualifying=True, solution_uploads_enabled=True, then=Count('participants__solution')),
+                default=None
+            ),
+            checked_solution_count=Case(
+                When(is_qualifying=True, solution_uploads_enabled=True, then=Count('participants__qualification_result', filter=Q(participants__solution__isnull=False))),
+                When(is_qualifying=True, solution_uploads_enabled=False, then=Count('participants__qualification_result')),
+                default=None,
+            ),
+            qualified_count=Case(
+                When(is_qualifying=True, qualification_threshold__isnull=False, then=Count('participants', filter=Q(participants__qualification_result__gte=F('qualification_threshold')))),
+                default=None
+            ),
+        )
+
+    def with_counts(self) -> QuerySet['Workshop']:
+        return self.annotate(
+            registered_count=F('registered_count'),
+            solution_count=F('solution_count'),
+            checked_solution_count=F('checked_solution_count'),
+            qualified_count=F('qualified_count'),
+        )
+
+
 class Workshop(models.Model):
     """
     Workshop taking place during a specific workshop/year
@@ -406,6 +496,8 @@ class Workshop(models.Model):
     qualification_threshold = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
     max_points = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)])
 
+    objects = WorkshopManager()
+
     def is_workshop_editable(self) -> bool:
         return self.year.are_workshops_editable()
 
@@ -438,6 +530,7 @@ class Workshop(models.Model):
             raise ValidationError('Maksymalna liczba punktów musi być ustawiona jeśli próg kwalifikacji jest ustawiony')
 
     class Meta:
+        base_manager_name = 'objects'
         permissions = (('see_all_workshops', 'Can see all workshops'),
                        ('edit_all_workshops', 'Can edit all workshops'),
                        ('change_workshop_status', 'Can change workshop status'))
@@ -446,36 +539,19 @@ class Workshop(models.Model):
     def __str__(self):
         return str(self.year) + ': ' + (' (' + self.status + ') ' if self.status else '') + self.title
 
-    def registered_count(self):
-        return self.participants.count()
-
-    def solution_count(self):
-        if not self.solution_uploads_enabled:
-            raise Exception('Solution uploads are not enabled')
-        return self.participants.filter(solution__isnull=False).count()
-
-    def checked_solution_count(self):
-        if self.solution_uploads_enabled:
-            return self.participants.filter(qualification_result__isnull=False, solution__isnull=False).count()
-        else:
-            return self.participants.filter(qualification_result__isnull=False).count()
-
+    @property
     def to_be_checked_solution_count(self):
         if self.solution_uploads_enabled:
-            return self.solution_count()
+            return self.solution_count
         else:
-            return self.registered_count()
+            return self.registered_count
 
+    @property
     def checked_solution_percentage(self):
-        if self.to_be_checked_solution_count() == 0:
+        if not self.is_qualifying or self.to_be_checked_solution_count == 0:
             return -1
         else:
-            return self.checked_solution_count() / self.to_be_checked_solution_count() * 100.0
-
-    def qualified_count(self):
-        if self.qualification_threshold is None:
-            return None
-        return self.participants.filter(qualification_result__gte=self.qualification_threshold).count()
+            return self.checked_solution_count / self.to_be_checked_solution_count * 100.0
 
     def is_publicly_visible(self):
         """
@@ -483,14 +559,30 @@ class Workshop(models.Model):
         """
         return self.status == 'Z' or self.status == 'X'
 
-    @cached_property
-    def max_entered_points(self):
-        """
-        The maximum number of points a participant actually received. Note that this is different from max_points.
 
-        Used if max_points is not set (e.g. in old [< 2020] workshops that didn't have this value)
-        """
-        return self.participants.aggregate(max_points=models.Max('qualification_result'))['max_points']
+class WorkshopParticipantManager(models.Manager):
+    def get_queryset(self) -> QuerySet['WorkshopParticipant']:
+        return super().get_queryset().annotate(
+            is_qualified=Case(
+                When(workshop__is_qualifying=True, qualification_result__isnull=False, workshop__qualification_threshold__isnull=False, then=
+                    Case(
+                        When(qualification_result__gte=F('workshop__qualification_threshold'), then=True),
+                        default=False
+                    )
+                ),
+                default=None
+            ),
+            result_in_percent=Case(
+                # For old [<2020] workshops we didn't have the max_points variable - use the max of qualification results instead in that case
+                When(workshop__is_qualifying=True, qualification_result__isnull=False, then=
+                    Greatest(Least(Case(
+                        When(workshop__max_points__isnull=False, then=F('qualification_result') / F('workshop__max_points')),
+                        default=F('qualification_result') / Max('workshop__participants__qualification_result')
+                    ) * 100.0, settings.MAX_POINTS_PERCENT, output_field=DecimalField()), 0.0, output_field=DecimalField())
+                ),
+                default=None
+            )
+        )
 
 
 class WorkshopParticipant(models.Model):
@@ -500,31 +592,15 @@ class WorkshopParticipant(models.Model):
     qualification_result = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
 
+    objects = WorkshopParticipantManager()
+
     def clean(self):
         super(WorkshopParticipant, self).clean()
         if self.workshop.year != self.camp_participation.year:
             raise ValidationError("You can't participate in a workshop from another year...")
 
-    def is_qualified(self):
-        if not self.workshop.is_qualifying:
-            return None
-        threshold = self.workshop.qualification_threshold
-        if threshold is None or self.qualification_result is None:
-            return None
-        if self.qualification_result >= threshold:
-            return True
-        else:
-            return False
-
-    def result_in_percent(self):
-        if not self.workshop.is_qualifying:
-            return None
-        if self.qualification_result is None:
-            return None
-        max_points = self.workshop.max_points if self.workshop.max_points is not None else self.workshop.max_entered_points
-        return max(min(self.qualification_result / max_points * 100, settings.MAX_POINTS_PERCENT), 0)
-
     class Meta:
+        base_manager_name = 'objects'
         unique_together = [('workshop', 'camp_participation')]
 
     def __str__(self):
