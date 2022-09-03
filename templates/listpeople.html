@@ -8,18 +8,21 @@
     <article>
       <h1>{{ title }}</h1>
       <div class="table-responsive">
-        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people %}[[ 1, "asc" ]]{% else %}[[ 12, "desc" ], [ 1, "asc" ]]{% endif %}'>
+        <table id="participants-table" class="table" style="width:100%!important;" data-order='{% if is_all_people or is_lecturers %}[[ 1, "asc" ]]{% else %}[[ 12, "desc" ], [ 1, "asc" ]]{% endif %}'>
           <thead>
             <tr>
               <th data-visible="true"  data-searchable="false" data-orderable="false" data-search-panes='{"show": false}'></th>
               <th data-visible="true"  data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Imię i nazwisko</th>
               {% if not is_all_people %}
-              <th data-visible="true" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Pełnoletni</th>
+              <th data-visible="{% if not is_lecturers %}true{% else %}false{% endif %}" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Pełnoletni</th>
               {% endif %}
-              <th data-visible="{% if is_all_people %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Email</th>
+              <th data-visible="{% if is_all_people or is_lecturers %}true{% else %}false{% endif %}" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Email</th>
               <th data-visible="false" data-searchable="true"  data-orderable="true" data-search-panes='{"show": false}'>Szkoła</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Rok Matury</th>
               {% if not is_all_people %}
+              {% if is_lecturers %}
+              <th data-visible="true"  data-searchable="true"  data-orderable="false" data-search-panes='{"show": false}'>Warsztaty</th>
+              {% else %}
               <th data-visible="true"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Punkty</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba zapisanych">L.zap.</th>
               <th data-visible="false" data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="Liczba przesłanych rozwiązań">L.rozw.</th>
@@ -28,7 +31,8 @@
               <th data-visible="true"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}' data-toggle="tooltip" data-container="body" data-placement="top" title="List motywacyjny uzupełniony?">List?</th>
               <th data-visible="true"  data-searchable="true" data-orderable="true" data-search-panes='{"show": true, "initCollapsed": false}'>Status</th>
               {% endif %}
-              <th data-visible="true"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Poprzednie edycje</th>
+              {% endif %}
+              <th data-visible="{% if not is_lecturers %}true{% else %}false{% endif %}"  data-searchable="false" data-orderable="true" data-search-panes='{"show": false}'>Poprzednie edycje</th>
               <th data-visible="false" data-searchable="false" data-orderable="false" data-search-panes='{"show": false}'>Skąd wiesz o WWW?</th>
               {% for question in form_questions %}
                 <th data-visible="false" data-searchable="{% if question.is_searchable %}true{% else %}false{% endif %}" data-orderable="{% if question.is_orderable %}true{% else %}false{% endif %}" data-search-panes='{"show": false}' data-type="{{ question.datatables_type_hint }}">{{ question.form.title }}: {{ question.title }}</th>
@@ -66,6 +70,16 @@
                   {{ person.matura_exam_year | question_mark_on_none_value }}
                 </td>
                 {% if not is_all_people %}
+                {% if is_lecturers %}
+                <td>
+                  {% for workshop in person.workshops %}
+                    <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
+                      {{ workshop.title }}
+                    </a>
+                    <br>
+                  {% endfor %}
+                </td>
+                {% else %}
                 <td data-order="{{ person.points | unlocalize }}">
                   <a tabindex="0" data-html="true" role="button" data-trigger="focus" data-toggle="popover" data-placement="bottom" title="Komentarze" data-content="<ul>{% for info in person.infos %} <li> {{ info }} </li> {% endfor %}</ul>">
                     {{ person.points | floatformat }}%
@@ -103,6 +117,7 @@
                     <span class="font-weight-bolder"> {{ person.status_display|default_if_none:"Brak" }} </span>
                   {% endif %}
                 </td>
+                {% endif %}
                 {% endif %}
                 <td data-order="{% for participation in person.participation_data reversed %}{{ participation.year }}:{% if participation.workshops %}2{% elif participation.status == 'Z' %}1{% else %}0{% endif %} {% endfor %}">
                     {% include '_pastParticipation.html' with participation_data=person.participation_data only %}
@@ -142,6 +157,7 @@
   <script>
     $(document).ready(() => {
       $('#participants-table').DataTable(gen_datatables_config({
+          filters: {% if is_all_people or is_lecturers %}false{% else %}true{% endif %},
           vcardEnable: true,
           vcardName: "{{ title }}",
       }));
