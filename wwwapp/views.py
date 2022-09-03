@@ -580,6 +580,7 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
         person = {
             'user': participant.user,
             'workshops': filter(lambda x: year is not None and x.year == year, participant.lecturer_workshops.all()),
+            'gender': participant.get_gender_display(),
             'is_adult': is_adult,
             'matura_exam_year': participant.matura_exam_year,
             'workshop_count': camp_participation.workshop_count if camp_participation else 0,
