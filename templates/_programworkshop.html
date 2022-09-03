@@ -36,13 +36,13 @@
   <div class="card-body">
     <div class="row justify-content-end">
       {% if workshop.short_description %}
-        <div class="col-12 col-md-5 col-lg-6">
+        <div class="col-12 col-lg-6">
           <blockquote class="blockquote">
             {{ workshop.short_description }}
           </blockquote>
         </div>
       {% endif %}
-      <div class="col-12 col-sm-8 col-md-5 col-lg-4">
+      <div class="col-12 col-sm-8 col-lg-4">
         <div class="mt-2 mb-3">
           {% if workshop.is_qualifying %}
             <span class="d-inline-block w-100 mb-1 qualification-problems-button"
@@ -89,7 +89,7 @@
           {% endfor %}
         </div>
       </div>
-      <div class="col-12 col-sm-4 col-md-2 text-center button-div {% if not no_workshop_card_header %}d-none d-sm-block{% endif %}">
+      <div class="col-12 col-sm-4 col-lg-2 text-center button-div {% if not no_workshop_card_header %}d-none d-sm-block{% endif %}">
         {% if workshop.is_qualification_editable %}
           {% if registered %}
             <div onclick="handle_registration_change('{{ workshop.name }}', false);"
