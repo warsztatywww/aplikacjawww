@@ -9,9 +9,7 @@
             {% if workshop.page_content_is_public %}
               <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
             {% endif %}
-            {% if workshop.status == 'X' %}
-              <del>
-            {% endif %}
+            {% if workshop.status == 'X' %}<del>{% endif %}
             <b>{{ workshop.title }}</b>
             {% if workshop.status == 'X' %}</del>{% endif %}
             {% if workshop.page_content_is_public %}</a>{% endif %}
@@ -24,7 +22,7 @@
           <h5 class="m-0">
             {% for lecturer in workshop.lecturer.all %}
               <span class="d-inline-block"> {# this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name #}
-              <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>
+                <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>
                 {% if not forloop.last %},{% endif %}
               </span>
             {% endfor %}
@@ -46,7 +44,7 @@
         <div class="mt-2 mb-3">
           {% if workshop.is_qualifying %}
             <span class="d-inline-block w-100 mb-1 qualification-problems-button"
-                    {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+                  {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
                   {% if not workshop.qualification_problems %}data-toggle="tooltip"
                   data-placement="right"
                   title="Zadania kwalifikacyjne pojawią się wkrótce"{% endif %}
@@ -61,22 +59,22 @@
 
             {% if workshop.can_access_solution_upload and workshop.are_solutions_editable %}
               <span class="{% if not no_workshop_card_header %}d-none d-md-inline-block{% else %}d-inline-block{% endif %} w-100 mb-1 solutions-button"
-                      {# this wrapper div is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
-                    {% if not registered %}data-toggle="tooltip"
-                    data-placement="right"
-                    title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"{% endif %}
+                    {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+                    {% if not registered %}
+                      data-toggle="tooltip"
+                      data-placement="right"
+                      title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"
+                    {% endif %}
               >
                 <a role="button"
                    class="btn btn-primary btn-sm w-100 {% if not registered %}disabled{% endif %}"
                    href="{% url 'workshop_my_solution' workshop.year.pk workshop.name %}">
-                  <i class="fas fa-paper-plane"></i> Prześlij<span
-                        class="d-none d-xl-inline"> rozwiązania</span>!
+                  <i class="fas fa-paper-plane"></i> Prześlij<span class="d-none d-xl-inline"> rozwiązania</span>!
                 </a>
-                </span>
+              </span>
             {% endif %}
           {% else %}
-            <button type="button" class="btn btn-sm w-100 btn-outline-dark"
-                    disabled>
+            <button type="button" class="btn btn-sm w-100 btn-outline-dark" disabled>
               Na te warsztaty nie ma kwalifikacji. Nie liczą się do puli
               wymaganych zgłoszeń.
             </button>
