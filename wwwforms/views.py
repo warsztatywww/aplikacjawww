@@ -42,7 +42,7 @@ def form_results_view(request, name):
         user_answers[answer.user].append(answer)
     # Make sure the user_answers array is arranged such that the answer at index i matches the question i
     for user in user_answers.keys():
-        user_answers[user] = [next(filter(lambda a: a.question == question, user_answers[user]), None) for question in all_questions]
+        user_answers[user] = [next(filter(lambda a: a.question.pk == question.pk, user_answers[user]), None) for question in all_questions]
 
     context = {}
     context['title'] = form.title
