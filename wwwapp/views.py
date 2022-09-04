@@ -519,7 +519,8 @@ def save_points_view(request):
                          'mark': qualified_mark(workshop_participant.is_qualified)})
 
 
-def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: QuerySet[UserProfile], all_forms: QuerySet[Form], context: Dict[str, Any]) -> HttpResponse:
+def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: QuerySet[UserProfile],
+                      all_forms: QuerySet[Form], context: Dict[str, Any]) -> HttpResponse:
     participants = participants \
         .select_related('user') \
         .prefetch_related(
@@ -531,7 +532,8 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
 
     if year is not None:
         participants = participants.prefetch_related(
-            Prefetch('camp_participation__workshop_participation', queryset=WorkshopParticipant.objects.filter(camp_participation__year=year)),
+            Prefetch('camp_participation__workshop_participation',
+                     queryset=WorkshopParticipant.objects.filter(camp_participation__year=year)),
             'camp_participation__workshop_participation__solution',
             'camp_participation__workshop_participation__workshop',
             'camp_participation__workshop_participation__workshop__year',
@@ -553,7 +555,7 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
 
     for participant in participants:
         # Arrange the answers array such that the answer at index i matches the question i
-        answers = [next(filter(lambda a: a.question.pk == question.pk, user_answers[participant.user.pk]), None)
+        answers = [next(filter(lambda a: a.question.pk == question.pk, user_answers.get(participant.user.pk, [])), None)
                    for question in all_questions]
 
         birth_field = year.form_question_birth_date if year else None
