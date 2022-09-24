@@ -1045,6 +1045,7 @@ def as_article(name):
 
 
 index_view = as_article("index")
+privacy_policy_view = as_article("privacy_policy")
 template_for_workshop_page_view = as_article("template_for_workshop_page")
 
 

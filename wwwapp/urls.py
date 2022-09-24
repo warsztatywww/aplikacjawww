@@ -68,6 +68,7 @@ urlpatterns = [
     path('resource_auth/', views.resource_auth_view, name='resource_auth'),
     path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain')),
     path('', views.index_view, name='index'),
+    path('privacy_policy/', views.privacy_policy_view, name='privacy-policy'),
 ]
 
 if settings.DEBUG:
