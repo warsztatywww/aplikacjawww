@@ -136,7 +136,7 @@ def profile_view(request, user_id):
     can_see_all_workshops = request.user.has_perm('wwwapp.see_all_workshops')
     can_use_secret_notes = request.user.has_perm('wwwapp.use_secret_notes')
 
-    can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
+    can_qualify = request.user.has_perm('wwwapp.change_campparticipant')
     context['can_qualify'] = can_qualify
     context['can_see_all_workshops'] = can_see_all_workshops
     context['can_use_secret_notes'] = can_use_secret_notes
