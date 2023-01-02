@@ -146,6 +146,7 @@ class UserProfile(models.Model):
     matura_exam_year = models.PositiveSmallIntegerField(null=True, default=None, blank=True)
     how_do_you_know_about = models.CharField(max_length=1000, default="", blank=True)
     profile_page = models.TextField(max_length=100000, blank=True, default="")
+    secret_notes = models.TextField(max_length=100000, blank=True, default="")
 
     def is_participating_in(self, year: Camp) -> bool:
         return self.is_participant_in(year) or self.is_lecturer_in(year)
@@ -255,7 +256,8 @@ class UserProfile(models.Model):
 
     class Meta:
         permissions = [('see_all_users', 'Can see all users'),
-                       ('export_workshop_registration', 'Can download workshop registration data')]
+                       ('export_workshop_registration', 'Can download workshop registration data'),
+                       ('use_secret_notes', 'Can see and edit secret notes about users')]
 
 
 @receiver(post_save, sender=User)
