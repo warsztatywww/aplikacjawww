@@ -32,7 +32,7 @@ from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from .forms import ArticleForm, UserProfileForm, UserForm, \
-    UserProfilePageForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
+    UserProfilePageForm, UserSecretNotesForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload, SolutionFileFormSet, SolutionForm
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
     CampParticipant, ResourceYearPermission, Camp, Solution
@@ -134,32 +134,46 @@ def profile_view(request, user_id):
     is_my_profile = (request.user == user)
     can_see_all_users = request.user.has_perm('wwwapp.see_all_users')
     can_see_all_workshops = request.user.has_perm('wwwapp.see_all_workshops')
+    can_use_secret_notes = request.user.has_perm('wwwapp.use_secret_notes')
 
     can_qualify = request.user.has_perm('wwwapp.change_workshop_user_profile')
     context['can_qualify'] = can_qualify
+    context['can_see_all_workshops'] = can_see_all_workshops
+    context['can_use_secret_notes'] = can_use_secret_notes
     context['camp_participation'] = camp_participant
+
+    if can_use_secret_notes:
+        context['secret_notes_form'] = UserSecretNotesForm(instance=user.user_profile)
 
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return redirect_to_login(reverse('profile', args=[user_id]))
-        if not can_qualify:
-            return HttpResponseForbidden()
-        if not camp_participant:
-            return HttpResponseNotFound('This user is not registered for the current edition')
-        if request.POST['qualify'] == 'accept':
-            camp_participant.status = CampParticipant.STATUS_ACCEPTED
-            camp_participant.save()
-        elif request.POST['qualify'] == 'reject':
-            camp_participant.status = CampParticipant.STATUS_REJECTED
-            camp_participant.save()
-        elif request.POST['qualify'] == 'cancel':
-            camp_participant.status = CampParticipant.STATUS_CANCELLED
-            camp_participant.save()
-        elif request.POST['qualify'] == 'delete':
-            camp_participant.status = None
-            camp_participant.save()
+        if 'qualify' in request.POST:
+            if not can_qualify:
+                return HttpResponseForbidden()
+            if not camp_participant:
+                return HttpResponseNotFound('This user is not registered for the current edition')
+            if request.POST['qualify'] == 'accept':
+                camp_participant.status = CampParticipant.STATUS_ACCEPTED
+                camp_participant.save()
+            elif request.POST['qualify'] == 'reject':
+                camp_participant.status = CampParticipant.STATUS_REJECTED
+                camp_participant.save()
+            elif request.POST['qualify'] == 'cancel':
+                camp_participant.status = CampParticipant.STATUS_CANCELLED
+                camp_participant.save()
+            elif request.POST['qualify'] == 'delete':
+                camp_participant.status = None
+                camp_participant.save()
+            else:
+                raise SuspiciousOperation("Invalid argument")
+        elif can_use_secret_notes and 'secret_note' in request.POST:
+            context['secret_notes_form'] = UserSecretNotesForm(request.POST, instance=user.user_profile)
+            if context['secret_notes_form'].is_valid():
+                context['secret_notes_form'].save()
+                messages.info(request, 'Zapisano.', extra_tags='auto-dismiss')
         else:
-            raise SuspiciousOperation("Invalid argument")
+            raise SuspiciousOperation("Invalid request")
         return redirect('profile', user.pk)
 
     context['title'] = "{0.first_name} {0.last_name}".format(user)
@@ -182,7 +196,6 @@ def profile_view(request, user_id):
         context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('year').all().order_by('year')
     else:
         context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('year').filter(Q(status='Z') | Q(status='X')).order_by('year')
-    context['can_see_all_workshops'] = can_see_all_workshops
 
     return render(request, 'profile.html', context)
 

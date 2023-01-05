@@ -98,6 +98,23 @@ class UserProfileForm(ModelForm):
         }
 
 
+class UserSecretNotesForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(UserSecretNotesForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.include_media = False
+        self.helper.layout.fields.append(FormActions(
+            StrictButton('Zapisz', type='submit', name='secret_note', css_class='btn-outline-primary btn-lg mx-1 my-3'),
+            css_class='text-right'
+        ))
+
+    class Meta:
+        model = UserProfile
+        fields = ['secret_notes']
+        labels = {'secret_notes': "Tajne notatki"}
+        widgets = {'secret_notes': Textarea(attrs={'rows': 4})}
+
+
 class UserForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)

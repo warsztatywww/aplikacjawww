@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load bleach_tags %}
+{% load crispy_forms_tags %}
 
 {% block content %}
     <article>
@@ -79,6 +80,10 @@
               </tr>
             </tbody>
           </table>
+        {% endif %}
+
+        {% if secret_notes_form %}
+          {% crispy secret_notes_form %}
         {% endif %}
 
         {% if results_data %}
