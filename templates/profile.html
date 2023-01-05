@@ -20,7 +20,7 @@
                 <th class="w-25">Edycje WWW:</th>
                 <td class="w-75">
                   {% include '_pastParticipation.html' with participation_data=participation_data only %}
-                  {% if perms.wwwapp.change_workshop_user_profile and camp_participation %}
+                  {% if perms.wwwapp.change_campparticipant and camp_participation %}
                     <form method="post" class="d-inline">
                       {% csrf_token %}
                       {% if camp_participation.status %}
