@@ -42,7 +42,7 @@ class Camp(models.Model):
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
 
-    forms = models.ManyToManyField(wwwforms.models.Form, related_name='years', verbose_name='Formularze')
+    forms = models.ManyToManyField(wwwforms.models.Form, blank=True, related_name='years', verbose_name='Formularze')
     form_question_birth_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data urodzenia', help_text='Pole typu Data lub PESEL')
     form_question_arrival_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data przyjazdu', help_text='Pole typu Data')
     form_question_departure_date = models.ForeignKey(wwwforms.models.FormQuestion, blank=True, null=True, on_delete=models.SET_NULL, related_name='+', verbose_name='Data wyjazdu', help_text='Pole typu Data')
