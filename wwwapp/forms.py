@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import FileExtensionValidator
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
-from django.forms.fields import ImageField, ChoiceField, DateField
+from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
 from django.forms.widgets import Textarea, Widget
@@ -457,11 +457,8 @@ class SolutionForm(ModelForm):
 
     def __init__(self, *args, is_editable=True, **kwargs):
         super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
+        self.helper = FormHelper(self)
         self.helper.form_tag = False  # handled in template
-        self.helper.layout = Layout(
-            'message',
-        )
         if not is_editable:
             self.fields['message'].disabled = True
 
@@ -547,3 +544,26 @@ class MailFilterForm(Form):
     @property
     def filter_name(self):
         return self.filter_methods[self.cleaned_data['filter']][1]
+
+
+class CampInterestEmailForm(Form):
+    email = EmailField()
+
+    def __init__(self, *args, user: User = None, is_registered: bool = False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.form_show_labels = False
+        if not is_registered:
+            button = StrictButton('Powiadom mnie, gdy rozpocznie się rejestracja', type='submit', css_class='btn btn-primary btn-sm w-100')
+        else:
+            button = StrictButton('Powiadomimy Cię, gdy rozpocznie się rejestracja', type='submit', css_class='btn btn-primary btn-sm w-100', disabled=True)
+        self.helper.layout = Layout(
+            Div(
+                Div('email', css_class='col-xl-6'),
+                Div(FormActions(button), css_class='col-xl-4'),
+                css_class='row justify-content-center'
+            )
+        )
+        if user and user.is_authenticated:
+            self.fields['email'].initial = user.email
+            self.fields['email'].disabled = True
