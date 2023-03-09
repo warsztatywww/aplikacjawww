@@ -9,8 +9,8 @@
 
   {% if show_results %}
     <h3 class="pt-5">{{ chosen_filter_name|capfirst }} w edycji {{ selected_year }}</h3>
-    {% if filtered_users %}
-      <textarea class="form-control" rows="8">{% for user in filtered_users %}{{ user.email }}, {% endfor %}</textarea>
+    {% if filtered_emails %}
+      <textarea class="form-control" rows="8">{% for email in filtered_emails %}{{ email }}, {% endfor %}</textarea>
     {% else %}
       <div class="alert alert-info">Nie znaleziono użytkowników spełniających kryteria!</div>
     {% endif %}

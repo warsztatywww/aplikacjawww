@@ -33,9 +33,9 @@ from django_sendfile import sendfile
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, UserSecretNotesForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
-    TinyMCEUpload, SolutionFileFormSet, SolutionForm
+    TinyMCEUpload, SolutionFileFormSet, SolutionForm, CampInterestEmailForm
 from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
-    CampParticipant, ResourceYearPermission, Camp, Solution
+    CampParticipant, ResourceYearPermission, Camp, Solution, CampInterestEmail
 from .templatetags.wwwtags import qualified_mark
 
 
@@ -91,21 +91,43 @@ def program_view(request, year):
                             in workshops]
     context['has_results'] = has_results and year == Camp.current()
     context['is_registered'] = camp_participation is not None
+    if year.is_qualification_editable():
+        camp_interest_email_form = CampInterestEmailForm(user=request.user, is_registered=camp_participation is not None)
+        camp_interest_email_form.helper.form_action = reverse('register_to_camp', args=[year.pk])
+        context['camp_interest_email_form'] = camp_interest_email_form
 
     context['selected_year'] = year
     return render(request, 'program.html', context)
 
 
-@login_required()
 def register_to_camp_view(request, year):
     year = get_object_or_404(Camp, pk=year)
 
     if not year.is_qualification_editable():
         return HttpResponseForbidden('Kwalifikacja na te warsztaty została zakończona.')
 
-    camp_participation, created = year.participants.get_or_create(user_profile=request.user.user_profile)
-    if created:
-        messages.info(request, 'Powiadomimy Cię, gdy rozpocznie się rejestracja', extra_tags='auto-dismiss')
+    form = CampInterestEmailForm(request.POST, user=request.user)
+    if form.is_valid():
+        created = None
+        if request.user.is_authenticated:
+            # Logged in user flow
+            _, created = year.participants.get_or_create(user_profile=request.user.user_profile)
+        else:
+            # Email flow
+            email = form.cleaned_data['email']
+            user = User.objects.filter(email=email).order_by('-last_login').first()
+            if user:
+                # We have a user with this email
+                _, created = year.participants.get_or_create(user_profile=user.user_profile)
+            else:
+                # We have no user with this email - add an unregistered user entry
+                _, created = year.interested_via_email.get_or_create(email=email)
+        if created:
+            messages.info(request, 'Powiadomimy Cię, gdy rozpocznie się rejestracja', extra_tags='auto-dismiss')
+        else:
+            messages.warning(request, 'Już znajdujesz się już na tegorocznej liście', extra_tags='auto-dismiss')
+    else:
+        messages.error(request, form.errors.as_ul(), extra_tags='auto-dismiss danger')  # HACK: it should be alert-danger instead of alert-error
     return redirect('program', year.pk)
 
 
@@ -533,7 +555,7 @@ def save_points_view(request):
 
 
 def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: QuerySet[UserProfile],
-                      all_forms: QuerySet[Form], context: Dict[str, Any]) -> HttpResponse:
+                      interested: QuerySet[str], all_forms: QuerySet[Form], context: Dict[str, Any]) -> HttpResponse:
     participants = participants \
         .select_related('user') \
         .prefetch_related(
@@ -602,6 +624,7 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
 
         person = {
             'user': participant.user,
+            'email': participant.user.email,
             'workshops': filter(lambda x: year is not None and x.year == year, participant.lecturer_workshops.all()),
             'gender': participant.get_gender_display(),
             'is_adult': is_adult,
@@ -646,6 +669,33 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
             person['infos'] = list(map(lambda x: x[1], sorted(person['infos'], key=lambda x: x[0], reverse=True)))
         people.append(person)
 
+    for email in interested:
+        person = {
+            'user': None,
+            'email': email,
+            'workshops': [],
+            'gender': None,
+            'is_adult': None,
+            'matura_exam_year': None,
+            'workshop_count': 0,
+            'solution_count': 0,
+            'checked_solution_count': 0,
+            'to_be_checked_solution_count': 0,
+            'accepted_workshop_count': 0,
+            'checked_solution_percentage': -1,
+            'has_completed_profile': False,
+            'has_cover_letter': None,
+            'status': None,
+            'status_display': None,
+            'participation_data': [],
+            'school': '',
+            'points': 0.0,
+            'infos': [],
+            'how_do_you_know_about': '',
+            'form_answers': [],
+        }
+        people.append(person)
+
     context = context.copy()
     context['people'] = people
     context['form_questions'] = all_questions
@@ -658,8 +708,12 @@ def participants_view(request: HttpRequest, year: Optional[int] = None) -> HttpR
         year = get_object_or_404(Camp, pk=year)
         participants = UserProfile.objects.filter(camp_participation__year=year)
         participants = participants.exclude(lecturer_workshops__in=Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED))
+        interested = CampInterestEmail.objects.filter(year=year)
     else:
         participants = UserProfile.objects.all()
+        interested = CampInterestEmail.objects.all()
+    interested = interested.exclude(email__in=[p.user.email for p in participants])
+    interested = interested.values_list('email', flat=True).distinct()
 
     if year is not None:
         # Participants view only displays forms for the selected year
@@ -668,7 +722,7 @@ def participants_view(request: HttpRequest, year: Optional[int] = None) -> HttpR
         # All people view only displays forms not bound to any year
         all_forms = Form.objects.filter(years=None)
 
-    return _people_datatable(request, year, participants, all_forms, {
+    return _people_datatable(request, year, participants, interested, all_forms, {
         'selected_year': year,
         'title': ('Uczestnicy: %s' % year) if year is not None else 'Wszyscy ludzie',
         'is_all_people': year is None,
@@ -682,8 +736,9 @@ def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = get_object_or_404(Camp, pk=year)
 
     lecturers = UserProfile.objects.filter(lecturer_workshops__in=Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED))
+    interested = CampInterestEmail.objects.none()
 
-    return _people_datatable(request, year, lecturers, year.forms.all(), {
+    return _people_datatable(request, year, lecturers, interested, year.forms.all(), {
         'selected_year': year,
         'title': 'Prowadzący: %s' % year,
         'is_all_people': False,

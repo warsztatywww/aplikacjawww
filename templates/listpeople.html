@@ -48,7 +48,8 @@
               <tr>
                 <td>
                 </td>
-                <td data-order="{{ person.user.last_name }} {{ person.user.first_name }}">
+                {% if person.user %}
+                <td data-order="1 {{ person.user.last_name }} {{ person.user.first_name }}">
                   <a href="{% url 'profile' person.user.id %}">
                     {{ person.user.get_full_name | question_mark_on_empty_string }}
                   </a>
@@ -56,6 +57,12 @@
                     <span class="text-warning" data-toggle="tooltip" data-placement="top" title="Niekompletny profil"><i class="fas fa-exclamation-circle"></i></span>
                   {% endif %}
                 </td>
+                {% else %}
+                <td data-order="2 {{ person.email }}">
+                  {{ person.email | question_mark_on_empty_string }}
+                  <span class="text-info" data-toggle="tooltip" data-placement="top" title="Zainteresowana osoba, która nie założyła konta"><i class="fas fa-exclamation-circle"></i></span>
+                </td>
+                {% endif %}
                 {% if not is_all_people %}
                 <td>
                   {{ person.is_adult | qualified_mark }}
@@ -65,7 +72,7 @@
                   {{ person.gender }}
                 </td>
                 <td>
-                  {{ person.user.email | question_mark_on_empty_string }}
+                  {{ person.email | question_mark_on_empty_string }}
                 </td>
                 <td>
                   {{ person.school }}

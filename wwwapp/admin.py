@@ -11,7 +11,7 @@ from django.http.request import HttpRequest
 import wwwforms.models
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
-    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile
+    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail
 
 admin.site.unregister(User)
 
@@ -230,6 +230,7 @@ class SolutionAdmin(admin.ModelAdmin):
 
 admin.site.register(WorkshopParticipant, WorkshopParticipantAdmin)
 admin.site.register(CampParticipant, CampParticipantAdmin)
+admin.site.register(CampInterestEmail)
 admin.site.register(Solution, SolutionAdmin)
 
 admin.site.register(ResourceYearPermission)

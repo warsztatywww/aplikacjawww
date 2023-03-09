@@ -365,6 +365,17 @@ class PESELField(models.CharField):
     }
 
 
+class CampInterestEmail(models.Model):
+    year = models.ForeignKey(Camp, on_delete=models.CASCADE, related_name='interested_via_email')
+    email = models.EmailField()
+
+    def __str__(self):
+        return "{} ({})".format(self.email, self.year_id)
+
+    class Meta:
+        unique_together = ('year', 'email',)
+
+
 class ArticleContentHistory(models.Model):
     version = models.IntegerField(editable=False)
     article = models.ForeignKey('Article', null=True, on_delete=models.SET_NULL, related_name='content_history')

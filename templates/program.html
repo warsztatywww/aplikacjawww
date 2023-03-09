@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load wwwtags %}
+{% load crispy_forms_tags %}
 
 {% block content %}
     <article>
@@ -32,18 +33,10 @@
           {% include "_programworkshop.html" %}
         {% endfor %}
       {% else %}
-        <div class="w-100 text-center mb-5">
-          <p class="pt-4">Program nie jest jeszcze dostępny.</p>
-          {% if selected_year.is_qualification_editable %}
-            <form action="{% url 'register_to_camp' selected_year.pk %}">
-              {% if not is_registered %}
-                <button type="submit" class="btn btn-primary">Powiadom mnie, gdy rozpocznie się rejestracja</button>
-              {% else %}
-                <button type="submit" class="btn btn-primary" disabled="disabled">Powiadomimy Cię, gdy rozpocznie się rejestracja</button>
-              {% endif %}
-            </form>
-          {% endif %}
+        <div class="w-100 text-center">
+          <p class="p-4">Program nie jest jeszcze dostępny.</p>
         </div>
+        {% crispy camp_interest_email_form %}
       {% endif %}
 
       {% if selected_year == current_year %}
