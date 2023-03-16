@@ -559,10 +559,10 @@ class CampInterestEmailForm(Form):
             button = StrictButton('Powiadomimy Cię, gdy rozpocznie się rejestracja', type='submit', css_class='btn btn-primary btn-sm w-100', disabled=True)
         self.helper.layout = Layout(
             Div(
-                Div('email', css_class='col-xl-6'),
+                Div(Field('email', placeholder='Twój adres e-mail'), css_class='col-xl-6'),
                 Div(FormActions(button), css_class='col-xl-4'),
                 css_class='row justify-content-center'
-            )
+            ),
         )
         if user and user.is_authenticated:
             self.fields['email'].initial = user.email
