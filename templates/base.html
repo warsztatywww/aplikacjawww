@@ -35,6 +35,7 @@
     <link href="{% static 'dist/main.css' %}" rel="stylesheet">
     <link href="{% static 'dist/fonts.css' %}" rel="stylesheet">
     {% block styles %}{% endblock %}
+    {% include "_posthog.html" %}
   </head>
 
   <body>
