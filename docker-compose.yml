@@ -35,7 +35,7 @@ services:
       - static_volume:/usr/share/nginx/static
       - media_volume:/usr/share/nginx/media
       - uploads_volume:/usr/share/nginx/uploads
-      - ${INTERNETY:-/dev/null}:/usr/share/nginx/internet
+      - ${INTERNETY:-/dev/null}:/usr/share/nginx/internety
     ports:
       - 8000:8000
     depends_on:

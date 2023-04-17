@@ -1119,20 +1119,31 @@ template_for_workshop_page_view = as_article("template_for_workshop_page")
 def resource_auth_view(request):
     """
     View checking permission for resource (header X-Original-URI). Returns 200
-    when currently logged in user should be granted access to resource and 403
-    when access should be denied.
+    when currently logged in user should be granted access to resource, 403
+    when access should be denied and 401 if the user is not logged in, with a
+    Location header if applicable.
+
+    Using a Location header with 403 is kinda weird, but this is a requirement
+    of auth_request in NGINX. The NGINX config rewrites it to a proper redirect
+    later.
 
     See https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-subrequest-authentication/
     for intended usage.
     """
+
+    uri = request.META.get('HTTP_X_ORIGINAL_URI', '')
+
     if not request.user.is_authenticated:
-        return HttpResponseForbidden("You need to login.")
+        # Response to auth_request in NGINX has to be 200, 401 or 403
+        # We rewrite this to a redirect again in nginx config
+        r = redirect_to_login(uri)
+        r.status_code = 401
+        return r
+
     if request.user.has_perm('wwwapp.access_all_resources'):
         return HttpResponse("Glory to WWW and the ELITARNY MIMUW!!!")
 
     user_profile = UserProfile.objects.get(user=request.user)
-
-    uri = request.META.get('HTTP_X_ORIGINAL_URI', '')
 
     for resource in ResourceYearPermission.resources_for_uri(uri):
         if user_profile.is_participating_in(resource.year):
