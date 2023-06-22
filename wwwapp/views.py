@@ -692,7 +692,7 @@ def _people_datatable(request: HttpRequest, year: Optional[Camp], participants: 
             'points': 0.0,
             'infos': [],
             'how_do_you_know_about': '',
-            'form_answers': [],
+            'form_answers': zip(all_questions, [None for _ in all_questions]),
         }
         people.append(person)
 
