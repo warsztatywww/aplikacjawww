@@ -32,13 +32,13 @@ for uid in users.keys():
     depart = datetime.strptime(users[uid]['end'], "%Y-%m-%d")
     del users[uid]['start']
     del users[uid]['end']
-    if arrive <= datetime(2022, 8, 10) and depart >= datetime(2022, 8, 12):
+    if arrive <= datetime(2023, 7, 26) and depart >= datetime(2023, 7, 28):
         users[uid]['blocks'].add(0)
         users[uid]['blocks'].add(1)
-    if arrive <= datetime(2022, 8, 14) and depart >= datetime(2022, 8, 16):
+    if arrive <= datetime(2023, 7, 30) and depart >= datetime(2023, 8, 1):
         users[uid]['blocks'].add(2)
         users[uid]['blocks'].add(3)
-    if arrive <= datetime(2022, 8, 18) and depart >= datetime(2022, 8, 20):
+    if arrive <= datetime(2023, 8, 3) and depart >= datetime(2023, 8, 5):
         users[uid]['blocks'].add(4)
         users[uid]['blocks'].add(5)
 
@@ -188,6 +188,17 @@ class Plan(object):
                         print "DISALLOWED BLOCK"
                         print "\twid={wid} block={block}".format(wid=wid, block=disallowed_block), workshops[wid]['name']
                     points -= points_not_allowed
+
+        for block in self.blocks:
+            lectures_in_block = set()
+            for wid in block:
+                for lec_uid in workshops[wid]['lecturers']:
+                    if lec_uid in lectures_in_block:
+                        if verbose:
+                            print "LECTURER IN MORE THAN ONE WORKSHOP"
+                            print "\tuid={uid} wid={wid}".format(uid=lec_uid, wid=wid)
+                        points -= 10**6
+                    lectures_in_block.add(lec_uid)
 
         for block in self.blocks:
             if abs(workshops_per_block - len(block)) > 0.9:
