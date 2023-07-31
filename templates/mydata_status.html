@@ -111,7 +111,7 @@
       <div class="card mb-3 w-100">
         <h4 class="card-header">Wyniki kwalifikacji</h4>
         <div class="card-body p-0">
-        {% include '_qualificationsTable.html' with your_qualifications=current_status.qualification_results %}
+        {% include '_qualificationsTable.html' with your_qualifications=current_status.qualification_results is_my_profile=True %}
         </div>
       </div>
     {% endif %}
