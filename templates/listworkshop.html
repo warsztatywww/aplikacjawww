@@ -47,22 +47,27 @@
                   <td>
                       <p>{{ workshop.type.name }}</p>
                   </td>
-                  <td>
-                    {% if workshop.is_qualifying and workshop.qualification_threshold and workshop.is_publicly_visible %}
+                  {% if workshop.is_qualifying and workshop.qualification_threshold and workshop.is_publicly_visible %}
+                    <td data-order="{{ workshop.qualified_count }}">
                       <p>{{ workshop.qualified_count }}</p>
-                    {% else %}
+                    </td>
+                  {% else %}
+                    <td data-order="0">
                       <p>-</p>
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if workshop.is_qualifying and workshop.solution_uploads_enabled and workshop.is_publicly_visible and workshop.qualification_problems %}
+                    </td>
+                  {% endif %}
+
+                  {% if workshop.is_qualifying and workshop.solution_uploads_enabled and workshop.is_publicly_visible and workshop.qualification_problems %}
+                    <td data-order="{{ workshop.solution_count }}">
                       <p>{{ workshop.solution_count }}</p>
-                    {% else %}
+                    </td>
+                  {% else %}
+                    <td data-order="0">
                       <p>-</p>
-                    {% endif %}
-                  </td>
-                  <td data-order="{{ workshop.checked_solution_percentage | unlocalize }}">
+                    </td>
+                  {% endif %}
                     {% if workshop.is_qualifying %}
+                    <td data-order="{{ workshop.checked_solution_percentage | unlocalize }}">
                       {% if workshop.to_be_checked_solution_count == 0 %}
                         {{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}
                       {% elif workshop.checked_solution_count == workshop.to_be_checked_solution_count %}
@@ -70,17 +75,23 @@
                       {% else %}
                         <span class="text-danger">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
                       {% endif %}
-                    {% else %}
-                      <p>-</p>
-                    {% endif %}
                   </td>
-                  <td>
-                    {% if workshop.is_publicly_visible %}
+                  {% else %}
+                    <td data-order="-2">
+                      <p>-</p>
+                    </td>
+                  {% endif %}
+
+                  {% if workshop.is_publicly_visible %}
+                    <td data-order="{{ workshop.registered_count }}">
                       <p>{{ workshop.registered_count }}</p>
-                    {% else %}
+                    </td>
+                  {% else %}
+                    <td data-order="0">
                       <p>-</p>
-                    {% endif %}
-                  </td>
+                    </td>
+                  {% endif %}
+
                   <td>
                     {% if workshop.is_qualifying and workshop.is_publicly_visible %}
                       {% if workshop.qualification_threshold %}
