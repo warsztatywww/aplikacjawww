@@ -22,8 +22,8 @@
           <h5 class="m-0">
             {% for lecturer in workshop.lecturer.all %}
               <span class="d-inline-block"> {# this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name #}
-                <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>
-                {% if not forloop.last %},{% endif %}
+                <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a><!-- remove space between tags
+             -->{% if not forloop.last %},{% endif %}
               </span>
             {% endfor %}
           </h5>
