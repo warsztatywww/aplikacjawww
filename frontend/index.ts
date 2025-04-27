@@ -6,10 +6,9 @@ import 'bootstrap/dist/js/bootstrap.js';
 // Font Awesome
 // Explicitly specify the used icons to make the bundle size smaller
 import { library, dom } from "@fortawesome/fontawesome-svg-core";
-import { faCheckCircle, faTimesCircle, faMinusCircle, faExclamationCircle, faQuestionCircle, faPlus, faMinus, faCheck, faHome, faFile, faPencilAlt, faSignOutAlt, faEye, faEyeSlash, faColumns, faCopy, faFileExcel, faFilePdf, faPrint, faSave, faCloudUploadAlt, faPaperPlane, faTasks, faAddressBook } from "@fortawesome/free-solid-svg-icons";
-library.add(faCheckCircle, faTimesCircle, faMinusCircle, faExclamationCircle, faQuestionCircle, faPlus, faMinus, faCheck, faHome, faFile, faPencilAlt, faSignOutAlt, faEye, faEyeSlash, faColumns, faCopy, faFileExcel, faFilePdf, faPrint, faSave, faCloudUploadAlt, faPaperPlane, faTasks, faAddressBook);
+import { faCheckCircle, faTimesCircle, faMinusCircle, faExclamationCircle, faQuestionCircle, faPlus, faMinus, faCheck, faHome, faFile, faPencilAlt, faSignOutAlt, faEye, faEyeSlash, faColumns, faCopy, faFileExcel, faFilePdf, faPrint, faSave, faCloudUploadAlt, faPaperPlane, faTasks, faAddressBook, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+library.add(faCheckCircle, faTimesCircle, faMinusCircle, faExclamationCircle, faQuestionCircle, faPlus, faMinus, faCheck, faHome, faFile, faPencilAlt, faSignOutAlt, faEye, faEyeSlash, faColumns, faCopy, faFileExcel, faFilePdf, faPrint, faSave, faCloudUploadAlt, faPaperPlane, faTasks, faAddressBook, faInfoCircle);
 dom.watch();
-
 
 // Select2 (type/category in workshop editor)
 import 'select2';
