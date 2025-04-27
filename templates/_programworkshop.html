@@ -57,7 +57,7 @@
                  class="btn btn-dark btn-sm w-100 {% if not workshop.page_content_is_public %}disabled{% endif %}"
                  href="{% url 'workshop_page' workshop.year.pk workshop.name %}"
                  target="_blank">
-                 Strona warsztatów
+                 <i class="fas fa-info-circle"></i> Dowiedz się więcej
               </a>
             </span>
           {% if workshop.is_qualifying %}
