@@ -142,7 +142,7 @@ class Command(BaseCommand):
     """
 
     def fake_workshop(self,
-                      lecturer: UserProfile,
+                      lecturers: List[UserProfile],
                       participants: List[UserProfile],
                       types: List[WorkshopType],
                       categories: List[WorkshopCategory],
@@ -175,7 +175,9 @@ class Command(BaseCommand):
         for el in self.fake.random_choices(categories,
                                            length=self.fake.random_int(1, 4)):
             workshop.category.add(el)
-        workshop.lecturer.add(lecturer)
+        
+        for lecturer in lecturers:
+            workshop.lecturer.add(lecturer)
         workshop.save()
 
         return workshop
@@ -271,8 +273,8 @@ class Command(BaseCommand):
         for i in range(self.NUM_OF_CATEGORIES):
             categories.append(self.fake_category(year))
 
-        lecturers = user_profiles[:self.NUM_OF_WORKSHOPS]
-        participants = user_profiles[self.NUM_OF_WORKSHOPS:]
+        lecturers = user_profiles[:self.NUM_OF_WORKSHOPS // 2]  # Use fewer lecturers to ensure some get multiple workshops
+        participants = user_profiles[self.NUM_OF_WORKSHOPS // 2:]
         participants_per_workshop = len(participants) // self.NUM_OF_WORKSHOPS
         participants = [participants[
                         participants_per_workshop * i:participants_per_workshop * (
@@ -280,8 +282,9 @@ class Command(BaseCommand):
                         for i in range(self.NUM_OF_WORKSHOPS)]
 
         workshops = []
-        for i, (lecturer, participants) in enumerate(
-                zip(lecturers, participants)):
+        for i in range(self.NUM_OF_WORKSHOPS):
+            # Randomly select 1-2 lecturers for each workshop
+            workshop_lecturers = self.fake.random_choices(lecturers, length=self.fake.random_int(1, 2))
+            workshop_participants = participants[i]
             workshops.append(
-                self.fake_workshop(lecturer, participants, types, categories,
-                                   i))
+                self.fake_workshop(workshop_lecturers, workshop_participants, types, categories, i))
