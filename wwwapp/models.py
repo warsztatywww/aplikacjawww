@@ -615,7 +615,7 @@ class WorkshopParticipant(models.Model):
     class Meta:
         base_manager_name = 'objects'
         unique_together = [('workshop', 'camp_participation')]
-        ordering = ['id']  # Reverse order for testing
+        ordering = ['id']
 
     def __str__(self):
         return '{}: {}'.format(self.workshop, self.camp_participation.user_profile)
