@@ -1,0 +1,20 @@
+{
+  "name": "Aplikacja WWW Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "settings": {
+    "python.pythonPath": "/usr/local/bin/python",
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.vscode-pytest",
+    "ms-azuretools.vscode-docker"
+  ],
+  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt && npm ci",
+  "forwardPorts": [8000]
+}
