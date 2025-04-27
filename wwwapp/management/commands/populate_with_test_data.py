@@ -49,14 +49,17 @@ class Command(BaseCommand):
     """
 
     def fake_user(self) -> Tuple[User, UserProfile]:
-        ok = False
-        while not ok:
-            ok = True
-            try:
-                profile_data = self.fake.profile()
-                user = User.objects.create_user(profile_data['username'],
-                                                profile_data['mail'],
-                                                'password')
+        user = None
+        
+        while user is None:
+            profile_data = self.fake.profile()
+            username = profile_data['username']
+            
+            # Check if the username already exists
+            if not User.objects.filter(username=username).exists():
+                user = User.objects.create_user(username,
+                                              profile_data['mail'],
+                                              'password')
                 user.first_name = self.fake.first_name()
                 user.last_name = self.fake.last_name()
                 user.save()
@@ -69,16 +72,12 @@ class Command(BaseCommand):
                 user.user_profile.save()
 
                 self.question_pesel.answers.create(user=user,
-                                                   value_string=profile_data[
-                                                       'ssn'])
+                                                value_string=profile_data['ssn'])
                 self.question_address.answers.create(user=user,
-                                                     value_string=profile_data[
-                                                         'address'])
+                                                  value_string=profile_data['address'])
                 self.question_comments.answers.create(user=user,
-                                                      value_string=self.fake.text(
-                                                          100))
-            except django.db.utils.IntegrityError:
-                ok = False
+                                                   value_string=self.fake.text(100))
+                
 
         return user, user.user_profile
 
