@@ -518,7 +518,7 @@ def workshop_participants_view(request, year, name):
     context['has_perm_to_view_details'] = True
 
     context['workshop_participants'] = workshop.participants.select_related(
-            'workshop', 'workshop__year', 'camp_participation__user_profile', 'camp_participation__user_profile__user', 'solution')
+            'workshop', 'workshop__year', 'camp_participation__user_profile', 'camp_participation__user_profile__user', 'solution').order_by('id')
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))

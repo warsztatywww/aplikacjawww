@@ -1,0 +1,19 @@
+version: '3'
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    volumes:
+      - ..:/usr/src/app:cached
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY
+      - SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+      - SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET
+      - SOCIAL_AUTH_FACEBOOK_KEY
+      - SOCIAL_AUTH_FACEBOOK_SECRET
+      - MEDIA_ROOT=/usr/src/app/media
+      - SENDFILE_ROOT=/usr/src/app/uploads
+    command: bash -lc "pip install -r requirements.txt && npm ci && npm run build-dev && python manage.py migrate && python manage.py populate_with_test_data && python manage.py runserver 0.0.0.0:8000"
