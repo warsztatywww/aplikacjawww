@@ -6,12 +6,13 @@ from django.utils.text import slugify
 
 from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, \
     WorkshopCategory, \
-    WorkshopType, WorkshopParticipant, Camp, CampParticipant
+    WorkshopType, WorkshopParticipant, Camp, CampParticipant, Solution
+
 from typing import Tuple, List, Union, Callable
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
 import datetime
-
+import random
 from wwwforms.models import Form, FormQuestion
 
 """
@@ -285,3 +286,14 @@ class Command(BaseCommand):
             workshops.append(
                 self.fake_workshop(lecturer, participants, types, categories,
                                    i))
+        
+        # Get all WorkshopParticipant objects for the created year
+        wps = WorkshopParticipant.objects.filter(workshop__year=year)
+        
+        # Pick a random subset (e.g., 30%) to submit solutions
+        for wp in wps:
+            if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled:
+                if random.random() < 0.3:  # 30% chance
+                    # Only add if not already present
+                    if not hasattr(wp, 'solution'):
+                        Solution.objects.create(workshop_participant=wp, message="Testowa odpowiedź na zadanie.")
