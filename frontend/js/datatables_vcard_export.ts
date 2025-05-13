@@ -25,7 +25,7 @@ export function vcard_export(e, dt, button, config) {
     const emergencyDescriptionColumn = dt.columns().indexes().map(function (idx) {
         const column = dt.column(idx);
         const columnName = column.header().innerText;
-        return columnName === "Do kogo jest powyższy numer?" ? idx : -1;
+        return columnName.includes  ("Do kogo jest powyższy numer?") ? idx : -1;
     }).toArray().filter(index => index !== -1)[0];
 
     const data = dt.buttons.exportData().body;
@@ -52,8 +52,8 @@ export function vcard_export(e, dt, button, config) {
                 let phoneLabel = "Numer uczestnika"; // Default label for participant's phone
                 
                 // If it's an emergency phone, get its description if available
-                if (columnName.includes("awaryjn") && emergencyDescriptionColumn !== -1 && row[emergencyDescriptionColumn] 
-                    && row[emergencyDescriptionColumn].includes("powyższy numer")) {
+                if (columnName.includes("awaryjn") && emergencyDescriptionColumn !== -1 && row[emergencyDescriptionColumn]) {
+                    // Use the description from the emergency contact description column
                     phoneLabel = `Numer awaryjny(${row[emergencyDescriptionColumn]})`;
                 } else if (columnName.includes("awaryjn")) {
                     phoneLabel = "Numer awaryjny";
