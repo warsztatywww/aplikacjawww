@@ -735,7 +735,7 @@ def participants_view(request: HttpRequest, year: Optional[int] = None) -> HttpR
 def lecturers_view(request: HttpRequest, year: int) -> HttpResponse:
     year = get_object_or_404(Camp, pk=year)
 
-    lecturers = UserProfile.objects.filter(lecturer_workshops__in=Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED))
+    lecturers = UserProfile.objects.filter(lecturer_workshops__in=Workshop.objects.filter(year=year, status=Workshop.STATUS_ACCEPTED)).distinct()
     interested = CampInterestEmail.objects.none()
 
     return _people_datatable(request, year, lecturers, interested, year.forms.all(), {
