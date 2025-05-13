@@ -69,7 +69,7 @@ jobs:
 
       - name: Run a multi-line script
         run: |
-          echo warsztatywww.pl ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNWqatTc0A9bJT+WmSHOuSpm+a83QcSScetN5KClPbOjtEum1IeA6sU+QXHbTh2TLXYPr2H+/5IoXgFIyPt4NAc= >~/.ssh/known_hosts
+          warsztatywww.pl ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBH8TyCqaBATwxCy+nXdOMxcMXh7McCDnRMPJbSL1bqvP1fXfp6rD3Zl+MuEJ4X/VZ6h84B8LJ8Y3vylg+3R4ppI= >~/.ssh/known_hosts
           ssh deploy@warsztatywww.pl "$GITHUB_SHA"
 
       - name: Create Sentry release
