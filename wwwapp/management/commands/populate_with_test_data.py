@@ -76,6 +76,25 @@ class Command(BaseCommand):
                                                 value_string=profile_data['ssn'])
                 self.question_address.answers.create(user=user,
                                                   value_string=profile_data['address'])
+                
+                # Add participant's phone number
+                phone_number = "+48" + self.fake.numerify(text="#########") # Polish number format
+                self.question_phone.answers.create(user=user,
+                                               value_string=phone_number)
+                
+                # Add emergency phone number only for some participants (75% of them)
+                if random.random() < 0.75:
+                    emergency_phone = "+48" + self.fake.numerify(text="#########")
+                    self.question_emergency_phone.answers.create(user=user,
+                                                   value_string=emergency_phone)
+                    
+                    # Add description for some emergency phone numbers
+                    if random.random() < 0.75:
+                        emergency_contacts = ["Mama", "Tata", "Rodzice", "Opiekun", "Babcia", "Dziadek", "Siostra", "Brat"]
+                        emergency_desc = self.fake.random_element(emergency_contacts)
+                        self.question_emergency_phone_desc.answers.create(user=user,
+                                                        value_string=emergency_desc)
+                    
                 self.question_comments.answers.create(user=user,
                                                    value_string=self.fake.text(100))
                 
@@ -195,17 +214,23 @@ class Command(BaseCommand):
             title='Adres zameldowania', data_type=FormQuestion.TYPE_TEXTBOX,
             is_required=True, order=1)
         self.question_phone, _ = self.form_userinfo.questions.get_or_create(
-            title='Numer telefonu', data_type=FormQuestion.TYPE_STRING,
+            title='Numer telefonu do Ciebie', data_type=FormQuestion.TYPE_PHONE,
             is_required=True, order=2)
+        self.question_emergency_phone, _ = self.form_userinfo.questions.get_or_create(
+            title='Numer telefonu w sytuacjach awaryjnych (np. do rodziców)', data_type=FormQuestion.TYPE_PHONE,
+            is_required=True, order=3)
+        self.question_emergency_phone_desc, _ = self.form_userinfo.questions.get_or_create(
+            title='Do kogo jest powyższy numer?', data_type=FormQuestion.TYPE_STRING,
+            is_required=True, order=4)
         self.question_start_date, _ = self.form_userinfo.questions.get_or_create(
             title='Data przyjazdu :-)', data_type=FormQuestion.TYPE_DATE,
-            is_required=True, order=3)
+            is_required=True, order=5)
         self.question_end_date, _ = self.form_userinfo.questions.get_or_create(
             title='Data wyjazdu :-(', data_type=FormQuestion.TYPE_DATE,
-            is_required=True, order=4)
+            is_required=True, order=6)
         self.question_tshirt_size, _ = self.form_userinfo.questions.get_or_create(
             title='Rozmiar koszulki', data_type=FormQuestion.TYPE_SELECT,
-            is_required=False, order=5)
+            is_required=False, order=7)
         self.tshirt_sizes = {}
         for size in ['XS', 'S', 'M', 'L', 'XL', 'XXL']:
             self.tshirt_sizes[
@@ -213,7 +238,7 @@ class Command(BaseCommand):
                 title=size)
         self.question_comments, _ = self.form_userinfo.questions.get_or_create(
             title='Dodatkowe uwagi (np. wegetarianin, uczulony na X, ale też inne)',
-            data_type=FormQuestion.TYPE_TEXTBOX, is_required=False, order=6)
+            data_type=FormQuestion.TYPE_TEXTBOX, is_required=False, order=8)
         self.form_userinfo.save()
 
     def do_ignore_integrity_error(self, task: Callable[[], None]) -> None:

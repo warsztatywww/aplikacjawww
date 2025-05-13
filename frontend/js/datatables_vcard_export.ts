@@ -18,7 +18,15 @@ export function vcard_export(e, dt, button, config) {
 
     const columnName = columnRoles.indexOf("name");
     const columnEmail = columnRoles.indexOf("email");
+    // Get all phone number columns
     const columnPhone = columnRoles.map((role, i) => role === 'phoneNumber' ? i : -1).filter(index => index !== -1);
+    
+    // Get the description column for emergency contact phone
+    const emergencyDescriptionColumn = dt.columns().indexes().map(function (idx) {
+        const column = dt.column(idx);
+        const columnName = column.header().innerText;
+        return columnName === "Do kogo jest powyższy numer?" ? idx : -1;
+    }).toArray().filter(index => index !== -1)[0];
 
     const data = dt.buttons.exportData().body;
 
@@ -34,9 +42,36 @@ export function vcard_export(e, dt, button, config) {
             vcard.addEmail(row[columnEmail]);
         }
 
-        columnPhone.forEach((columnIdx) => {
+        // Handle phone numbers with labels
+        columnPhone.forEach((columnIdx, idx) => {
             if (row[columnIdx]) {
-                vcard.addPhoneNumber(row[columnIdx]);
+                const number = row[columnIdx];
+                const columnName = dt.column(columnIdx).header().innerText;
+                
+                // Determine the appropriate label based on column name or index
+                let phoneLabel = "Numer uczestnika"; // Default label for participant's phone
+                
+                // If it's an emergency phone, get its description if available
+                if (columnName.includes("awaryjn") && emergencyDescriptionColumn !== -1 && row[emergencyDescriptionColumn] 
+                    && row[emergencyDescriptionColumn].includes("powyższy numer")) {
+                    phoneLabel = `Numer awaryjny(${row[emergencyDescriptionColumn]})`;
+                } else if (columnName.includes("awaryjn")) {
+                    phoneLabel = "Numer awaryjny";
+                }
+                
+                // Use the hack to add the labeled phone number
+                // This hack is needed because X-ABLabel is not directly exposed in the library 
+                // and the 'phoneNumber' argument is only a sanity check
+                vcard.setProperty(
+                  'phoneNumber',
+                  `item${idx+1}.TEL`,
+                  `${number}`
+                );
+                vcard.setProperty(
+                  'phoneNumber',
+                  `item${idx+1}.X-ABLabel`,
+                  phoneLabel
+                );
             }
         });
 
