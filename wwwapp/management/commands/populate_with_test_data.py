@@ -32,6 +32,13 @@ class Command(BaseCommand):
     NUM_OF_ARTICLES = 2
     NUM_OF_CATEGORIES = 2
     NUM_OF_TYPES = 2
+    
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--quiet',
+            action='store_true',
+            help='Suppress output messages',
+        )
 
     """
     Constructor of the command
@@ -44,8 +51,14 @@ class Command(BaseCommand):
         fake.add_provider(date_time)
         fake.add_provider(internet)
         self.fake = fake
+        self.quiet = False
 
         super().__init__()
+
+    def debug_print(self, message):
+        """Print debug messages if not in quiet mode"""
+        if not self.quiet:
+            print(message)
 
     """
     Create and returns a fake random user.
@@ -123,7 +136,7 @@ class Command(BaseCommand):
     """
 
     def fake_article(self, users: List[User],
-                     sequence: Union[str, None] = None) -> Article:
+                     sequence: int) -> Article:
         article = Article(
             name=self.fake.unique.uri_page() + self.tail_for_sequence(sequence),
             title=self.fake.text(50),
@@ -304,11 +317,20 @@ class Command(BaseCommand):
         Create CampParticipant objects for the selected user profiles
         """
         camp_participants = {}
+        cover_letter_count = 0
 
-        for profile in selected_profiles:
+        for i, profile in enumerate(selected_profiles):
+            if i > 0 and i % 50 == 0:
+                self.debug_print(
+                    f"    Created {i}/{len(selected_profiles)} camp participants...")
+
             # Create camp participant with 80% chance of having a cover letter
             has_cover_letter = random.random() < 0.8
-            cover_letter = self._generate_cover_letter() if has_cover_letter else ""
+            if has_cover_letter:
+                cover_letter_count += 1
+                cover_letter = self._generate_cover_letter()
+            else:
+                cover_letter = ""
 
             camp_participant, created = CampParticipant.objects.get_or_create(
                 year=camp,
@@ -323,6 +345,8 @@ class Command(BaseCommand):
 
             camp_participants[profile] = camp_participant
 
+        self.debug_print(
+            f"    Created {len(camp_participants)} camp participants ({cover_letter_count} with cover letters)")
         return camp_participants
 
     def _assign_random_workshops(self, camp: Camp, camp_participants: Dict[UserProfile, CampParticipant],
@@ -337,8 +361,14 @@ class Command(BaseCommand):
         # Anyone can be a lecturer or participant for different workshops
         # All profiles can potentially be lecturers
         potential_lecturers = profiles.copy()
+        self.debug_print(
+            f"    Found {len(profiles)} potential participants for workshops")
 
         for workshop_index in range(num_workshops):
+            if workshop_index > 0 and workshop_index % 10 == 0:
+                self.debug_print(
+                    f"    Created {workshop_index}/{num_workshops} workshops...")
+
             # For each workshop, randomly select 1-2 lecturers
             if potential_lecturers:
                 num_lecturers = min(random.randint(
@@ -371,8 +401,11 @@ class Command(BaseCommand):
                     workshop_lecturers, workshop_participants, types, categories, workshop_name)
                 workshops.append(workshop)
             except django.db.utils.IntegrityError as e:
-                print(f"Error creating workshop {workshop_name}: {e}")
+                self.debug_print(
+                    f"    Error creating workshop {workshop_name}: {e}")
 
+        self.debug_print(
+            f"    Successfully created {len(workshops)} workshops for year {camp.year}")
         return workshops
 
     def _assign_participant_statuses(self, camp: Camp, is_past_year: bool) -> None:
@@ -384,6 +417,8 @@ class Command(BaseCommand):
 
         # Get all CampParticipants for this year
         camp_participants = CampParticipant.objects.filter(year=camp)
+        self.debug_print(
+            f"    Assigning statuses to {camp_participants.count()} participants for year {camp.year}")
 
         # Status distribution weights - more acceptances than rejections
         status_weights = {
@@ -394,11 +429,17 @@ class Command(BaseCommand):
 
         statuses = list(status_weights.keys())
         weights = list(status_weights.values())
+        status_counts = {status: 0 for status in statuses}
 
         for cp in camp_participants:
             # Assign a random non-None status based on weights
-            cp.status = random.choices(statuses, weights=weights, k=1)[0]
+            assigned_status = random.choices(statuses, weights=weights, k=1)[0]
+            cp.status = assigned_status
             cp.save()
+            status_counts[assigned_status] += 1
+
+        self.debug_print(
+            f"    Status assignment complete: {status_counts}")
 
     def _add_solutions_and_results(self, camp: Camp, is_past_year: bool) -> None:
         """
@@ -406,6 +447,8 @@ class Command(BaseCommand):
         """
         # Get all workshop participants for this year
         wps = WorkshopParticipant.objects.filter(workshop__year=camp)
+        self.debug_print(
+            f"    Adding solutions for {wps.count()} workshop participants in year {camp.year}")
 
         # Sample solution messages for variety
         solution_messages = [
@@ -416,10 +459,13 @@ class Command(BaseCommand):
             "Proszę o sprawdzenie mojego rozwiązania."
         ]
 
+        solutions_added = 0
+        results_added = 0
+
         for wp in wps:
             if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled:
                 # Higher chance of solutions for past years
-                solution_chance = 0.6 if is_past_year else 0.3
+                solution_chance = 0.8 if is_past_year else 0.5
 
                 if random.random() < solution_chance:
                     # Only add if not already present
@@ -427,36 +473,50 @@ class Command(BaseCommand):
                         message = random.choice(solution_messages)
                         Solution.objects.create(
                             workshop_participant=wp, message=message)
+                        solutions_added += 1
 
                     # For past years, add qualification results to most solutions
                     if is_past_year and random.random() < 0.9:  # 90% chance for past years
                         # More realistic distribution of scores
-                        if random.random() < 0.7:  # 70% get good scores
+                        if random.random() < 0.7:  # 70% get higher scores
                             wp.qualification_result = round(
                                 random.uniform(60, 100), 2)
                         else:  # 30% get lower scores
                             wp.qualification_result = round(
                                 random.uniform(0, 59), 2)
                         wp.save()
+                        results_added += 1
+
+        self.debug_print(
+            f"    Added {solutions_added} solutions and {results_added} qualification results")
 
     def create_camp_year(self, year_number: int, num_workshops: int, users: List[User], user_profiles: List[UserProfile]) -> Tuple[Camp, List[Workshop]]:
         """
         Create a camp year with workshops, categories, and types
         """
         # Setup the camp object
+        self.debug_print(f"  Setting up camp for year {year_number}...")
         camp = self._setup_camp(year_number)
 
         # Create workshop types and categories
+        self.debug_print(
+            f"  Creating workshop metadata for year {year_number}...")
         types, categories = self._create_workshop_metadata(camp)
 
         # Select 50% of users to participate in this camp
+        self.debug_print(f"  Selecting participants for year {year_number}...")
         selected_profiles = self._select_camp_participants(user_profiles)
+        self.debug_print(
+            f"  Selected {len(selected_profiles)} participants for year {year_number}")
 
         # Create camp participants with cover letters
+        self.debug_print(f"  Creating camp participants with cover letters...")
         camp_participants = self._create_camp_participants(
             camp, selected_profiles)
 
         # Create workshops with randomly assigned lecturers and participants
+        self.debug_print(
+            f"  Creating {num_workshops} workshops with random assignments for year {year_number}...")
         workshops = self._assign_random_workshops(
             camp, camp_participants, num_workshops, types, categories)
 
@@ -464,34 +524,50 @@ class Command(BaseCommand):
         is_past_year = year_number < datetime.date.today().year
 
         # Assign statuses to camp participants for past years
-        self._assign_participant_statuses(camp, is_past_year)
+        if is_past_year:
+            self.debug_print(
+                f"  Assigning statuses to participants for past year {year_number}...")
+            self._assign_participant_statuses(camp, is_past_year)
 
         # Add solutions and qualification results
+        self.debug_print(f"  Adding solutions and qualification results...")
         self._add_solutions_and_results(camp, is_past_year)
 
         return camp, workshops
 
     def handle(self, *args, **options) -> None:
+        # Set quiet mode from options
+        self.quiet = options.get('quiet', False)
+
         if not settings.DEBUG:
             print("Command not allowed in production")
             return
 
+        self.debug_print("Initializing userinfo form...")
         self.make_userinfo_form()
 
+        self.debug_print("Creating admin user...")
         self.do_ignore_integrity_error(
             lambda: User.objects.create_superuser("admin", "admin@admin.admin",
                                                   "admin"))
 
+        self.debug_print(f"Creating {self.NUM_OF_USERS} fake users...")
         users = []
         user_profiles = []
         for i in range(self.NUM_OF_USERS):
+            if i > 0 and i % 50 == 0:
+                self.debug_print(f"Created {i}/{self.NUM_OF_USERS} users...")
             (user, user_profile) = self.fake_user()
             users.append(user)
             user_profiles.append(user_profile)
+        self.debug_print(f"Created all {self.NUM_OF_USERS} users successfully")
 
+        self.debug_print(f"Creating {self.NUM_OF_ARTICLES} articles...")
         articles = []
-        for i in range(self.NUM_OF_ARTICLES):
+        previously_existing_articles = Article.objects.count()
+        for i in range(previously_existing_articles, previously_existing_articles + self.NUM_OF_ARTICLES):
             articles.append(self.fake_article(users, i))
+        self.debug_print("Articles created successfully")
 
         # Calculate years for camps
         current_date = datetime.date.today()
@@ -507,10 +583,18 @@ class Command(BaseCommand):
             (current_year - 2, self.NUM_OF_WORKSHOPS_OLDEST)
         ]
 
+        self.debug_print("Starting camp creation process...")
         all_workshops = []
         for year_number, num_workshops in camp_years:
-            print(
+            self.debug_print(
                 f"Creating camp for year {year_number} with {num_workshops} workshops...")
             _, workshops = self.create_camp_year(
                 year_number, num_workshops, users, user_profiles)
             all_workshops.extend(workshops)
+            self.debug_print(
+                f"Completed camp for year {year_number} with {len(workshops)} workshops")
+
+        self.debug_print(
+            f"Data population complete. Created {len(all_workshops)} total workshops across {len(camp_years)} years.")
+        self.debug_print(
+            f"User count: {User.objects.count()}, Workshop count: {Workshop.objects.count()}")
