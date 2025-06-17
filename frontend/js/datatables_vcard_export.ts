@@ -49,14 +49,14 @@ export function vcard_export(e, dt, button, config) {
                 const columnName = dt.column(columnIdx).header().innerText;
                 
                 // Determine the appropriate label based on column name or index
-                let phoneLabel = "Numer uczestnika"; // Default label for participant's phone
+                let phoneLabel = "WWW własny"; // Default label for participant's phone
                 
                 // If it's an emergency phone, get its description if available
                 if (columnName.includes("awaryjn") && emergencyDescriptionColumn !== -1 && row[emergencyDescriptionColumn]) {
                     // Use the description from the emergency contact description column
-                    phoneLabel = `Numer awaryjny(${row[emergencyDescriptionColumn]})`;
+                    phoneLabel = `WWW awaryjny(${row[emergencyDescriptionColumn]})`;
                 } else if (columnName.includes("awaryjn")) {
-                    phoneLabel = "Numer awaryjny";
+                    phoneLabel = "WWW awaryjny";
                 }
                 
                 // Use the hack to add the labeled phone number
