@@ -86,33 +86,6 @@
           {% crispy secret_notes_form %}
         {% endif %}
 
-        {% if results_data %}
-          {% for status in results_data %}
-            {% if status.camp_participant %}
-              <div class="card mb-3 w-100">
-                <h4 class="card-header p-2">
-                  {{ status.year }}
-                </h4>
-                <div class="card-body p-0">
-                  {% if status.qualification_results %}
-                    {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results is_my_profile=False %}
-                  {% else %}
-                    <div class="p-3">
-                      <p class="text-center">Był zainteresowany, ale nie zapisał się na żadne warsztaty</p>
-                    </div>
-                  {% endif %}
-                  {% if status.camp_participant.cover_letter %}
-                    <div class="p-3">
-                      <h3>List motywacyjny</h3>
-                      {{ status.camp_participant.cover_letter | bleach }}
-                    </div>
-                  {% endif %}
-                </div>
-              </div>
-            {% endif %}
-          {% endfor %}
-        {% endif %}
-
         {% if lecturer_workshops %}
           <h3>Prowadził{% if gender == 'F' %}a{% endif %} warsztaty:</h3>
           <ul>
@@ -147,6 +120,47 @@
             {% endfor %}
           </ul>
         {% endif %}
+
+        {% if results_data %}
+          {% for status in results_data %}
+            {% if forloop.counter == 2 %}
+              {# Add toggle button before the first previous year entry #}
+              <button class="btn btn-outline-secondary mb-3" type="button" data-toggle="collapse" data-target="#previousYearsData" aria-expanded="false" aria-controls="previousYearsData">
+                <i class="fas fa-history"></i> Pokaż dane z poprzednich lat
+              </button>
+              
+              <div class="collapse" id="previousYearsData">
+            {% endif %}
+            {% if status.camp_participant %}
+              {# Previous years' data #}
+              <div class="card mb-3 w-100">
+                <h4 class="card-header p-2">
+                  {{ status.year }}
+                </h4>
+                <div class="card-body p-0">
+                  {% if status.qualification_results %}
+                    {% include '_qualificationsTable.html' with your_qualifications=status.qualification_results is_my_profile=False %}
+                  {% else %}
+                    <div class="p-3">
+                      <p class="text-center">Był zainteresowany, ale nie zapisał się na żadne warsztaty</p>
+                    </div>
+                  {% endif %}
+                  {% if status.camp_participant.cover_letter %}
+                    <div class="p-3">
+                      <h3>List motywacyjny</h3>
+                      {{ status.camp_participant.cover_letter | bleach }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              
+              {% if forloop.last and forloop.counter > 1 %}
+                </div> {# Close the collapse div #}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+
 
         {% if profile %}
           {% if is_my_profile and camp_participation and camp_participation.cover_letter %}
