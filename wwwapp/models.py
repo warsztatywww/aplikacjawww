@@ -196,7 +196,7 @@ class UserProfile(models.Model):
                     data_for_year['status'] = None
                 data_for_year['type'] = 'lecturer'
 
-        data.sort(key=lambda x: x['year'].year)
+        data.sort(key=lambda x: -x['year'].year)
         return data
 
     def workshop_results_by_year(self):

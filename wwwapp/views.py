@@ -215,9 +215,9 @@ def profile_view(request, user_id):
         context['results_data'] = user.user_profile.workshop_results_by_year()
 
     if can_see_all_workshops or is_my_profile:
-        context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('year').all().order_by('year')
+        context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('year').all().order_by('-year')
     else:
-        context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('year').filter(Q(status='Z') | Q(status='X')).order_by('year')
+        context['lecturer_workshops'] = user.user_profile.lecturer_workshops.prefetch_related('year').filter(Q(status='Z') | Q(status='X')).order_by('-year')
 
     return render(request, 'profile.html', context)
 

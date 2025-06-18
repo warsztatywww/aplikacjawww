@@ -8,7 +8,7 @@ from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop,
     WorkshopCategory, \
     WorkshopType, WorkshopParticipant, Camp, CampParticipant, Solution
 
-from typing import Tuple, List, Union, Callable
+from typing import Tuple, List, Union, Callable, Dict
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
 import datetime
@@ -26,10 +26,19 @@ class Command(BaseCommand):
     help = 'Populate the database with data for development'
     LOCALE = 'pl_PL'
     NUM_OF_USERS = 200
-    NUM_OF_WORKSHOPS = 40
+    NUM_OF_WORKSHOPS_CURRENT = 40  # Current year workshops
+    NUM_OF_WORKSHOPS_PREVIOUS = 20  # Previous year workshops
+    NUM_OF_WORKSHOPS_OLDEST = 10  # Oldest year workshops
     NUM_OF_ARTICLES = 2
     NUM_OF_CATEGORIES = 2
     NUM_OF_TYPES = 2
+    
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--quiet',
+            action='store_true',
+            help='Suppress output messages',
+        )
 
     """
     Constructor of the command
@@ -42,8 +51,14 @@ class Command(BaseCommand):
         fake.add_provider(date_time)
         fake.add_provider(internet)
         self.fake = fake
+        self.quiet = False
 
         super().__init__()
+
+    def debug_print(self, message):
+        """Print debug messages if not in quiet mode"""
+        if not self.quiet:
+            print(message)
 
     """
     Create and returns a fake random user.
@@ -51,16 +66,16 @@ class Command(BaseCommand):
 
     def fake_user(self) -> Tuple[User, UserProfile]:
         user = None
-        
+
         while user is None:
             profile_data = self.fake.profile()
             username = profile_data['username']
-            
+
             # Check if the username already exists
             if not User.objects.filter(username=username).exists():
                 user = User.objects.create_user(username,
-                                              profile_data['mail'],
-                                              'password')
+                                                profile_data['mail'],
+                                                'password')
                 user.first_name = self.fake.first_name()
                 user.last_name = self.fake.last_name()
                 user.save()
@@ -73,31 +88,34 @@ class Command(BaseCommand):
                 user.user_profile.save()
 
                 self.question_pesel.answers.create(user=user,
-                                                value_string=profile_data['ssn'])
+                                                   value_string=profile_data['ssn'])
                 self.question_address.answers.create(user=user,
-                                                  value_string=profile_data['address'])
-                
+                                                     value_string=profile_data['address'])
+
                 # Add participant's phone number
-                phone_number = "+48" + self.fake.numerify(text="#########") # Polish number format
+                # Polish number format
+                phone_number = "+48" + self.fake.numerify(text="#########")
                 self.question_phone.answers.create(user=user,
-                                               value_string=phone_number)
-                
+                                                   value_string=phone_number)
+
                 # Add emergency phone number only for some participants (75% of them)
                 if random.random() < 0.75:
-                    emergency_phone = "+48" + self.fake.numerify(text="#########")
+                    emergency_phone = "+48" + \
+                        self.fake.numerify(text="#########")
                     self.question_emergency_phone.answers.create(user=user,
-                                                   value_string=emergency_phone)
-                    
+                                                                 value_string=emergency_phone)
+
                     # Add description for some emergency phone numbers
                     if random.random() < 0.75:
-                        emergency_contacts = ["Mama", "Tata", "Rodzice", "Opiekun", "Babcia", "Dziadek", "Siostra", "Brat"]
-                        emergency_desc = self.fake.random_element(emergency_contacts)
+                        emergency_contacts = [
+                            "Mama", "Tata", "Rodzice", "Opiekun", "Babcia", "Dziadek", "Siostra", "Brat"]
+                        emergency_desc = self.fake.random_element(
+                            emergency_contacts)
                         self.question_emergency_phone_desc.answers.create(user=user,
-                                                        value_string=emergency_desc)
-                    
+                                                                          value_string=emergency_desc)
+
                 self.question_comments.answers.create(user=user,
-                                                   value_string=self.fake.text(100))
-                
+                                                      value_string=self.fake.text(100))
 
         return user, user.user_profile
 
@@ -118,9 +136,9 @@ class Command(BaseCommand):
     """
 
     def fake_article(self, users: List[User],
-                     sequence: Union[str, None] = None) -> Article:
+                     sequence: int) -> Article:
         article = Article(
-            name=self.fake.uri_page() + self.tail_for_sequence(sequence),
+            name=self.fake.unique.uri_page() + self.tail_for_sequence(sequence),
             title=self.fake.text(50),
             content=self.fake.paragraph(),
             modified_by=self.fake.random_choices(users, length=1)[0],
@@ -132,8 +150,8 @@ class Command(BaseCommand):
             ArticleContentHistory(version=i,
                                   article=article,
                                   content=self.fake.paragraph(),
-                                  modified_by=
-                                  self.fake.random_choices(users, length=1)[0],
+                                  modified_by=self.fake.random_choices(
+                                      users, length=1)[0],
                                   time=self.fake.date_time_this_year()).save()
 
         return article
@@ -174,9 +192,11 @@ class Command(BaseCommand):
             proposition_description=self.fake.paragraph(),
             type=workshop_type,
             year=workshop_type.year,
-            status=self.fake.random_choices(['Z', 'O', 'X', None], length=1)[0],
+            status=self.fake.random_choices(
+                ['Z', 'O', 'X', None], length=1)[0],
             page_content=self.fake.paragraph(),
-            page_content_is_public=self.fake.boolean(chance_of_getting_true=80),
+            page_content_is_public=self.fake.boolean(
+                chance_of_getting_true=80),
             is_qualifying=self.fake.boolean(chance_of_getting_true=70),
             short_description=self.fake.text(150) if self.fake.boolean(
                 chance_of_getting_true=80) else ""
@@ -194,7 +214,7 @@ class Command(BaseCommand):
         for el in self.fake.random_choices(categories,
                                            length=self.fake.random_int(1, 4)):
             workshop.category.add(el)
-        
+
         for lecturer in lecturers:
             workshop.lecturer.add(lecturer)
         workshop.save()
@@ -251,76 +271,330 @@ class Command(BaseCommand):
     Handles the command
     """
 
+    def _setup_camp(self, year_number: int) -> Camp:
+        """
+        Create and configure a Camp object for the given year
+        """
+        camp, _ = Camp.objects.get_or_create(year=year_number)
+        camp.start_date = datetime.datetime(year_number, 7, 1)
+        camp.end_date = datetime.datetime(year_number, 8, 1)
+        camp.save()
+        camp.forms.add(self.form_userinfo)
+        camp.form_question_arrival_date = self.question_start_date
+        camp.form_question_departure_date = self.question_end_date
+        camp.save()
+        return camp
+
+    def _create_workshop_metadata(self, camp: Camp) -> Tuple[List[WorkshopType], List[WorkshopCategory]]:
+        """
+        Create workshop types and categories for a camp year
+        """
+        types = [self.fake_type(camp) for _ in range(self.NUM_OF_TYPES)]
+        categories = [self.fake_category(camp)
+                      for _ in range(self.NUM_OF_CATEGORIES)]
+        return types, categories
+
+    def _select_camp_participants(self, user_profiles: List[UserProfile]) -> List[UserProfile]:
+        """
+        Select 50% of users to participate in this camp year
+        """
+        # Randomly select 50% of all users for this camp
+        return random.sample(user_profiles, k=len(user_profiles) // 2)
+
+    def _generate_cover_letter(self) -> str:
+        """
+        Generate a cover letter for a camp participant using Faker
+        """
+        # Generate 1-3 paragraphs for the cover letter
+        num_paragraphs = random.randint(1, 3)
+        paragraphs = [self.fake.paragraph() for _ in range(num_paragraphs)]
+
+        # Join paragraphs with newlines
+        return "\n\n".join(paragraphs)
+
+    def _create_camp_participants(self, camp: Camp, selected_profiles: List[UserProfile]) -> Dict[UserProfile, CampParticipant]:
+        """
+        Create CampParticipant objects for the selected user profiles
+        """
+        camp_participants = {}
+        cover_letter_count = 0
+
+        for i, profile in enumerate(selected_profiles):
+            if i > 0 and i % 50 == 0:
+                self.debug_print(
+                    f"    Created {i}/{len(selected_profiles)} camp participants...")
+
+            # Create camp participant with 80% chance of having a cover letter
+            has_cover_letter = random.random() < 0.8
+            if has_cover_letter:
+                cover_letter_count += 1
+                cover_letter = self._generate_cover_letter()
+            else:
+                cover_letter = ""
+
+            camp_participant, created = CampParticipant.objects.get_or_create(
+                year=camp,
+                user_profile=profile,
+                defaults={'cover_letter': cover_letter}
+            )
+
+            # If not created now but exists from before, maybe update the cover letter
+            if not created and has_cover_letter and not camp_participant.cover_letter:
+                camp_participant.cover_letter = cover_letter
+                camp_participant.save()
+
+            camp_participants[profile] = camp_participant
+
+        self.debug_print(
+            f"    Created {len(camp_participants)} camp participants ({cover_letter_count} with cover letters)")
+        return camp_participants
+
+    def _assign_random_workshops(self, camp: Camp, camp_participants: Dict[UserProfile, CampParticipant],
+                                 num_workshops: int, types: List[WorkshopType], categories: List[WorkshopCategory]) -> List[Workshop]:
+        """
+        Create workshops and randomly assign participants and lecturers
+        """
+        workshops = []
+        profiles = list(camp_participants.keys())
+
+        # Divide profiles into potential lecturers and participants
+        # Anyone can be a lecturer or participant for different workshops
+        # All profiles can potentially be lecturers
+        potential_lecturers = profiles.copy()
+        self.debug_print(
+            f"    Found {len(profiles)} potential participants for workshops")
+
+        for workshop_index in range(num_workshops):
+            if workshop_index > 0 and workshop_index % 10 == 0:
+                self.debug_print(
+                    f"    Created {workshop_index}/{num_workshops} workshops...")
+
+            # For each workshop, randomly select 1-2 lecturers
+            if potential_lecturers:
+                num_lecturers = min(random.randint(
+                    1, 2), len(potential_lecturers))
+                workshop_lecturers = random.sample(
+                    potential_lecturers, num_lecturers)
+            else:
+                # Fallback if we somehow ran out of lecturers
+                workshop_lecturers = random.sample(
+                    profiles, min(2, len(profiles)))
+
+            # Exclude the lecturers from being participants in their own workshop
+            potential_participants = [
+                p for p in profiles if p not in workshop_lecturers]
+
+            # Randomly determine how many participants for this workshop (3-15)
+            num_participants = min(random.randint(
+                3, 15), len(potential_participants))
+
+            # Randomly select participants for this workshop
+            workshop_participants = random.sample(
+                potential_participants, num_participants) if potential_participants else []
+
+            # Create unique workshop name with year prefix
+            workshop_name = f"{camp.year}-{workshop_index}"
+
+            # Create the workshop
+            try:
+                workshop = self.fake_workshop(
+                    workshop_lecturers, workshop_participants, types, categories, workshop_name)
+                workshops.append(workshop)
+            except django.db.utils.IntegrityError as e:
+                self.debug_print(
+                    f"    Error creating workshop {workshop_name}: {e}")
+
+        self.debug_print(
+            f"    Successfully created {len(workshops)} workshops for year {camp.year}")
+        return workshops
+
+    def _assign_participant_statuses(self, camp: Camp, is_past_year: bool) -> None:
+        """
+        Assign statuses to camp participants for past years
+        """
+        if not is_past_year:
+            return
+
+        # Get all CampParticipants for this year
+        camp_participants = CampParticipant.objects.filter(year=camp)
+        self.debug_print(
+            f"    Assigning statuses to {camp_participants.count()} participants for year {camp.year}")
+
+        # Status distribution weights - more acceptances than rejections
+        status_weights = {
+            CampParticipant.STATUS_ACCEPTED: 0.7,  # 70% accepted
+            CampParticipant.STATUS_REJECTED: 0.2,  # 20% rejected
+            CampParticipant.STATUS_CANCELLED: 0.1   # 10% cancelled
+        }
+
+        statuses = list(status_weights.keys())
+        weights = list(status_weights.values())
+        status_counts = {status: 0 for status in statuses}
+
+        for cp in camp_participants:
+            # Assign a random non-None status based on weights
+            assigned_status = random.choices(statuses, weights=weights, k=1)[0]
+            cp.status = assigned_status
+            cp.save()
+            status_counts[assigned_status] += 1
+
+        self.debug_print(
+            f"    Status assignment complete: {status_counts}")
+
+    def _add_solutions_and_results(self, camp: Camp, is_past_year: bool) -> None:
+        """
+        Add solutions and qualification results for workshop participants
+        """
+        # Get all workshop participants for this year
+        wps = WorkshopParticipant.objects.filter(workshop__year=camp)
+        self.debug_print(
+            f"    Adding solutions for {wps.count()} workshop participants in year {camp.year}")
+
+        # Sample solution messages for variety
+        solution_messages = [
+            "Testowa odpowiedź na zadanie.",
+            "Moje rozwiązanie zadania kwalifikacyjnego.",
+            "Przesyłam rozwiązanie, mam nadzieję że jest poprawne.",
+            "Rozwiązałem/am to w następujący sposób...",
+            "Proszę o sprawdzenie mojego rozwiązania."
+        ]
+
+        solutions_added = 0
+        results_added = 0
+
+        for wp in wps:
+            if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled:
+                # Higher chance of solutions for past years
+                solution_chance = 0.8 if is_past_year else 0.5
+
+                if random.random() < solution_chance:
+                    # Only add if not already present
+                    if not hasattr(wp, 'solution'):
+                        message = random.choice(solution_messages)
+                        Solution.objects.create(
+                            workshop_participant=wp, message=message)
+                        solutions_added += 1
+
+                    # For past years, add qualification results to most solutions
+                    if is_past_year and random.random() < 0.9:  # 90% chance for past years
+                        # More realistic distribution of scores
+                        if random.random() < 0.7:  # 70% get higher scores
+                            wp.qualification_result = round(
+                                random.uniform(60, 100), 2)
+                        else:  # 30% get lower scores
+                            wp.qualification_result = round(
+                                random.uniform(0, 59), 2)
+                        wp.save()
+                        results_added += 1
+
+        self.debug_print(
+            f"    Added {solutions_added} solutions and {results_added} qualification results")
+
+    def create_camp_year(self, year_number: int, num_workshops: int, users: List[User], user_profiles: List[UserProfile]) -> Tuple[Camp, List[Workshop]]:
+        """
+        Create a camp year with workshops, categories, and types
+        """
+        # Setup the camp object
+        self.debug_print(f"  Setting up camp for year {year_number}...")
+        camp = self._setup_camp(year_number)
+
+        # Create workshop types and categories
+        self.debug_print(
+            f"  Creating workshop metadata for year {year_number}...")
+        types, categories = self._create_workshop_metadata(camp)
+
+        # Select 50% of users to participate in this camp
+        self.debug_print(f"  Selecting participants for year {year_number}...")
+        selected_profiles = self._select_camp_participants(user_profiles)
+        self.debug_print(
+            f"  Selected {len(selected_profiles)} participants for year {year_number}")
+
+        # Create camp participants with cover letters
+        self.debug_print(f"  Creating camp participants with cover letters...")
+        camp_participants = self._create_camp_participants(
+            camp, selected_profiles)
+
+        # Create workshops with randomly assigned lecturers and participants
+        self.debug_print(
+            f"  Creating {num_workshops} workshops with random assignments for year {year_number}...")
+        workshops = self._assign_random_workshops(
+            camp, camp_participants, num_workshops, types, categories)
+
+        # Determine if this is a past year
+        is_past_year = year_number < datetime.date.today().year
+
+        # Assign statuses to camp participants for past years
+        if is_past_year:
+            self.debug_print(
+                f"  Assigning statuses to participants for past year {year_number}...")
+            self._assign_participant_statuses(camp, is_past_year)
+
+        # Add solutions and qualification results
+        self.debug_print(f"  Adding solutions and qualification results...")
+        self._add_solutions_and_results(camp, is_past_year)
+
+        return camp, workshops
+
     def handle(self, *args, **options) -> None:
+        # Set quiet mode from options
+        self.quiet = options.get('quiet', False)
+
         if not settings.DEBUG:
             print("Command not allowed in production")
             return
 
+        self.debug_print("Initializing userinfo form...")
         self.make_userinfo_form()
 
+        self.debug_print("Creating admin user...")
         self.do_ignore_integrity_error(
             lambda: User.objects.create_superuser("admin", "admin@admin.admin",
                                                   "admin"))
 
+        self.debug_print(f"Creating {self.NUM_OF_USERS} fake users...")
         users = []
         user_profiles = []
         for i in range(self.NUM_OF_USERS):
+            if i > 0 and i % 50 == 0:
+                self.debug_print(f"Created {i}/{self.NUM_OF_USERS} users...")
             (user, user_profile) = self.fake_user()
             users.append(user)
             user_profiles.append(user_profile)
+        self.debug_print(f"Created all {self.NUM_OF_USERS} users successfully")
 
+        self.debug_print(f"Creating {self.NUM_OF_ARTICLES} articles...")
         articles = []
-        for i in range(self.NUM_OF_ARTICLES):
+        previously_existing_articles = Article.objects.count()
+        for i in range(previously_existing_articles, previously_existing_articles + self.NUM_OF_ARTICLES):
             articles.append(self.fake_article(users, i))
+        self.debug_print("Articles created successfully")
 
-        # Adding default years for start and end of camp
+        # Calculate years for camps
         current_date = datetime.date.today()
-
         if current_date.month < 7:
-            target_year = current_date.year
+            current_year = current_date.year
         else:
-            target_year = current_date.year + 1
+            current_year = current_date.year + 1
 
-        year, created = Camp.objects.get_or_create(year=target_year)
-        year.start_date = datetime.datetime(year.year, 7, 1)
-        year.end_date = datetime.datetime(year.year, 8, 1)
-        year.save()
-        year.forms.add(self.form_userinfo)
-        year.form_question_arrival_date = self.question_start_date
-        year.form_question_departure_date = self.question_end_date
-        year.save()
+        # Create 3 camp years: current, previous, and oldest
+        camp_years = [
+            (current_year, self.NUM_OF_WORKSHOPS_CURRENT),
+            (current_year - 1, self.NUM_OF_WORKSHOPS_PREVIOUS),
+            (current_year - 2, self.NUM_OF_WORKSHOPS_OLDEST)
+        ]
 
-        types = []
-        for i in range(self.NUM_OF_TYPES):
-            types.append(self.fake_type(year))
+        self.debug_print("Starting camp creation process...")
+        all_workshops = []
+        for year_number, num_workshops in camp_years:
+            self.debug_print(
+                f"Creating camp for year {year_number} with {num_workshops} workshops...")
+            _, workshops = self.create_camp_year(
+                year_number, num_workshops, users, user_profiles)
+            all_workshops.extend(workshops)
+            self.debug_print(
+                f"Completed camp for year {year_number} with {len(workshops)} workshops")
 
-        categories = []
-        for i in range(self.NUM_OF_CATEGORIES):
-            categories.append(self.fake_category(year))
-
-        lecturers = user_profiles[:self.NUM_OF_WORKSHOPS // 2]  # Use fewer lecturers to ensure some get multiple workshops
-        participants = user_profiles[self.NUM_OF_WORKSHOPS // 2:]
-        participants_per_workshop = len(participants) // self.NUM_OF_WORKSHOPS
-        participants = [participants[
-                        participants_per_workshop * i:participants_per_workshop * (
-                                i + 1)]
-                        for i in range(self.NUM_OF_WORKSHOPS)]
-
-        workshops = []
-        for i in range(self.NUM_OF_WORKSHOPS):
-            # Randomly select 1-2 lecturers for each workshop
-            workshop_lecturers = self.fake.random_choices(lecturers, length=self.fake.random_int(1, 2))
-            workshop_participants = participants[i]
-            workshops.append(
-                self.fake_workshop(workshop_lecturers, workshop_participants, types, categories, i))
-
-        # Get all WorkshopParticipant objects for the created year
-        wps = WorkshopParticipant.objects.filter(workshop__year=year)
-        
-        # Pick a random subset (e.g., 30%) to submit solutions
-        for wp in wps:
-            if wp.workshop.is_qualifying and wp.workshop.solution_uploads_enabled:
-                if random.random() < 0.3:  # 30% chance
-                    # Only add if not already present
-                    if not hasattr(wp, 'solution'):
-                        Solution.objects.create(workshop_participant=wp, message="Testowa odpowiedź na zadanie.")
+        self.debug_print(
+            f"Data population complete. Created {len(all_workshops)} total workshops across {len(camp_years)} years.")
+        self.debug_print(
+            f"User count: {User.objects.count()}, Workshop count: {Workshop.objects.count()}")
