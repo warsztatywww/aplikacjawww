@@ -67,15 +67,21 @@
                     </td>
                   {% endif %}
                   {% if workshop.is_qualifying %}
-                    <td data-order="{{ workshop.checked_solution_percentage | unlocalize }}">
-                      {% if workshop.to_be_checked_solution_count == 0 %}
-                        {{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}
-                      {% elif workshop.checked_solution_count == workshop.to_be_checked_solution_count %}
-                        <span class="text-success">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
-                      {% else %}
-                        <span class="text-danger">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
-                      {% endif %}
-                    </td>
+                    {% if workshop.qualification_problems %}
+                      <td data-order="{{ workshop.checked_solution_percentage | unlocalize }}">
+                        {% if workshop.to_be_checked_solution_count == 0 %}
+                          {{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}
+                        {% elif workshop.checked_solution_count == workshop.to_be_checked_solution_count %}
+                          <span class="text-success">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
+                        {% else %}
+                          <span class="text-danger">{{ workshop.checked_solution_count }} / {{ workshop.to_be_checked_solution_count }}</span>
+                        {% endif %}
+                      </td>
+                    {% else %}
+                      <td data-order="-1">
+                        <p>-</p>
+                      </td>
+                    {% endif %}
                   {% else %}
                     <td data-order="-2">
                       <p>-</p>
