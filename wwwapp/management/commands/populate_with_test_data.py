@@ -1,8 +1,11 @@
 import django.db.utils
+import os
+import tempfile
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
 from django.utils.text import slugify
+from django.core.files import File
 
 from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, \
     WorkshopCategory, \
@@ -161,13 +164,20 @@ class Command(BaseCommand):
     """
 
     def fake_workshop(self,
-                      lecturers: List[UserProfile],
-                      participants: List[UserProfile],
-                      types: List[WorkshopType],
-                      categories: List[WorkshopCategory],
-                      sequence: Union[str, None] = None) -> Workshop:
+                       lecturers: List[UserProfile],
+                       participants: List[UserProfile],
+                       types: List[WorkshopType],
+                       categories: List[WorkshopCategory],
+                       sequence: Union[str, None] = None) -> Workshop:
         workshop_type = self.fake.random_choices(types, length=1)[0]
         title = self.fake.unique.text(50).replace(".", "")
+        is_qualifying = self.fake.boolean(chance_of_getting_true=70)
+        
+        # For qualifying workshops, decide if they have qualification tasks
+        has_qualification_tasks = False
+        if is_qualifying:
+            has_qualification_tasks = self.fake.boolean(chance_of_getting_true=60)
+        
         workshop = Workshop(
             name=slugify(title),
             title=title,
@@ -177,11 +187,31 @@ class Command(BaseCommand):
             status=self.fake.random_choices(['Z', 'O', 'X', None], length=1)[0],
             page_content=self.fake.paragraph(),
             page_content_is_public=self.fake.boolean(chance_of_getting_true=80),
-            is_qualifying=self.fake.boolean(chance_of_getting_true=70),
+            is_qualifying=is_qualifying,
             short_description=self.fake.text(150) if self.fake.boolean(
                 chance_of_getting_true=80) else ""
         )
         workshop.save()
+        
+        # Add qualification tasks for some qualifying workshops
+        if workshop.is_qualifying and has_qualification_tasks:
+            # Create a simple qualification tasks file
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                tmp.write(b'This is a sample qualification task file for testing.')
+                tmp_path = tmp.name
+            
+            # Open the file and assign it to the workshop
+            with open(tmp_path, 'rb') as f:
+                workshop.qualification_problems.save(f'qualification_tasks_{workshop.id}.pdf', File(f), save=True)
+            
+            # Clean up the temporary file
+            os.unlink(tmp_path)
+            
+            # Set qualification threshold and max points for some workshops with tasks
+            if self.fake.boolean(chance_of_getting_true=70):
+                workshop.qualification_threshold = self.fake.random_int(50, 70)
+                workshop.max_points = 100
+                workshop.save()
 
         for participant in participants:
             camp_participant, _ = CampParticipant.objects.get_or_create(
