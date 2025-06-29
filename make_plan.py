@@ -19,40 +19,43 @@ from copy import deepcopy
 import json
 import sys
 import time
+import argparse
 from datetime import datetime
-
-if len(sys.argv) not in [2, 3]:
-    print("Usage {file} data.json".format(file=sys.argv[0]))
-    print("Usage {file} data.json [[1, 2, 3], [4, 5, 6]]".format(file=sys.argv[0]))
-    sys.exit(1)
 
 # Constants
 NUM_BLOCKS = 6                      # Total number of workshop blocks
 DATE_FORMAT = "%Y-%m-%d"           # Format for parsing date strings
 DEFAULT_MAX_ITERATIONS = 10**5     # Default max iterations for optimization
 DEFAULT_TIME_LIMIT_SECONDS = 10    # Default time limit for optimization in seconds
-PROGRESS_REPORT_INTERVAL = 10**4   # How often to report progress during optimization
-NUM_INITIAL_PLANS = 1000           # Number of initial random plans to generate
-NUM_MUTATIONS_PER_IMPROVE = 5      # Maximum number of mutations per improvement step
+# Default number of initial random plans to generate
+DEFAULT_NUM_INITIAL_PLANS = 1000
+DEFAULT_TOP_PLANS = 1              # Default number of top plans to display
+# How often to report progress during optimization
+PROGRESS_REPORT_INTERVAL = 10**4
+# Maximum number of mutations per improvement step
+NUM_MUTATIONS_PER_IMPROVE = 5
+
 
 def load_data(filename):
-    """Load workshop and user data from JSON file."""
+    """Load workshop and user data from JSON file.
+
+    Args:
+        filename: Path to the JSON file
+
+    Returns:
+        Loaded data as a dictionary
+    """
     with open(filename) as f:
         return json.load(f)
 
-# Reads data in format of dataForPlan.
-data = load_data(sys.argv[1])
-
-# Create workshop lookup dictionary by workshop ID
-workshops = {ws['wid']: ws for ws in data['workshops']}
-workshops_per_block = len(workshops) / NUM_BLOCKS  # Average workshops per block
 
 # Scoring penalties
-PENALTY_DISALLOWED_BLOCK = 10**4       # Penalty for placing workshop in disallowed block
-PENALTY_WRONG_WORKSHOPS_PER_BLOCK = 10**3  # Penalty for uneven workshop distribution
-PENALTY_LECTURER_COLLISION = 10**6     # Penalty for lecturer scheduled in multiple workshops
-
-verbose = False
+# Penalty for placing workshop in disallowed block
+PENALTY_DISALLOWED_BLOCK = 10**4
+# Penalty for uneven workshop distribution
+PENALTY_WRONG_WORKSHOPS_PER_BLOCK = 10**3
+# Penalty for lecturer scheduled in multiple workshops
+PENALTY_LECTURER_COLLISION = 10**6
 
 # Block dates for 2023 WWW workshops
 BLOCK_0_1_START = datetime(2023, 7, 26)
@@ -62,23 +65,27 @@ BLOCK_2_3_END = datetime(2023, 8, 1)
 BLOCK_4_5_START = datetime(2023, 8, 3)
 BLOCK_4_5_END = datetime(2023, 8, 5)
 
+# Global verbose flag (will be set in main function)
+verbose = False
+
+
 def initialize_users(user_data):
     """Initialize user data with attendance blocks and workshop participation sets."""
     users_dict = {u['uid']: u for u in user_data}
-    
+
     for uid in users_dict:
         # Initialize sets for tracking participation and available blocks
         users_dict[uid]['part'] = set()  # Workshops the user participates in
         users_dict[uid]['blocks'] = set()  # Blocks the user can attend
-        
+
         # Parse arrival and departure dates
         arrive = datetime.strptime(users_dict[uid]['start'], DATE_FORMAT)
         depart = datetime.strptime(users_dict[uid]['end'], DATE_FORMAT)
-        
+
         # Remove original date strings as they're no longer needed
         del users_dict[uid]['start']
         del users_dict[uid]['end']
-        
+
         # Assign blocks based on user attendance dates
         if arrive <= BLOCK_0_1_START and depart >= BLOCK_0_1_END:
             users_dict[uid]['blocks'].add(0)
@@ -89,11 +96,9 @@ def initialize_users(user_data):
         if arrive <= BLOCK_4_5_START and depart >= BLOCK_4_5_END:
             users_dict[uid]['blocks'].add(4)
             users_dict[uid]['blocks'].add(5)
-            
+
     return users_dict
 
-# Initialize users with their attendance blocks
-users = initialize_users(data['users'])
 
 def process_participation(participation_data, users_dict, workshop_ids):
     """Process participation data to track which users are participating in which workshops."""
@@ -101,46 +106,41 @@ def process_participation(participation_data, users_dict, workshop_ids):
     for part in participation_data:
         if part['wid'] in workshop_ids:
             users_dict[part['uid']]['part'].add(part['wid'])
-    
+
     # Lecturers automatically participate in their own workshops
-    for ws in workshops.values():
-        for lec_uid in ws['lecturers']:
-            users_dict[lec_uid]['part'].add(ws['wid'])
-
-# Create list of workshop IDs for easy access
-wid_list = list(workshops.keys())
-
-# Process participation data
-process_participation(data['participation'], users, wid_list)
+    for ws in workshop_ids:
+        for lec_uid in workshops[ws]['lecturers']:
+            users_dict[lec_uid]['part'].add(ws)
 
 
 class Plan(object):
     """Represents a workshop plan with workshops assigned to specific blocks.
-    
+
     A plan consists of:
     - blocks: A list of sets, where each set contains workshop IDs for that block
     - workshops: A dictionary mapping workshop IDs to their assigned block
     """
+
     def __init__(self, tab=None):
         """Initialize a new plan, either empty or from an existing plan table.
-        
+
         Args:
             tab: Optional list of lists representing existing block assignments
         """
-        self.workshops = dict()  # Maps workshop ID to block number
+        self.workshops = {}  # Maps workshop ID to block number
         if tab is None:
             # Create empty blocks
-            self.blocks = [set() for i in range(NUM_BLOCKS)]
+            self.blocks = [set() for _ in range(NUM_BLOCKS)]
         else:
             # Initialize from existing plan
-            self.blocks = [set() for i in range(NUM_BLOCKS)]
-            for i in range(NUM_BLOCKS):
-                for wid in tab[i]:
-                    self.add(i, wid)
-    
+            self.blocks = [set() for _ in range(NUM_BLOCKS)]
+            for block_idx in range(NUM_BLOCKS):
+                for wid in tab[block_idx]:
+                    self.add(block_idx, wid)
+
     def tab(self):
         """Convert the plan to a tabular format (list of lists).
-        
+
         Returns:
             List of lists where each inner list contains workshop IDs for a block
         """
@@ -150,14 +150,14 @@ class Plan(object):
             for wid in self.blocks[i]:
                 tab[i].append(wid)
         return tab
-    
+
     def add(self, block, wid):
         """Add a workshop to a specific block.
-        
+
         Args:
             block: Block number (0-5)
             wid: Workshop ID to add
-            
+
         Raises:
             AssertionError: If block is invalid, workshop doesn't exist,
                            or workshop is already assigned
@@ -165,13 +165,13 @@ class Plan(object):
         assert 0 <= block < NUM_BLOCKS, f"Block must be between 0 and {NUM_BLOCKS-1}"
         assert wid in workshops, f"Workshop {wid} does not exist"
         assert wid not in self.workshops, f"Workshop {wid} already assigned to block {self.workshops.get(wid)}"
-        
+
         self.blocks[block].add(wid)
         self.workshops[wid] = block
-    
+
     def copy(self):
         """Create a deep copy of this plan.
-        
+
         Returns:
             A new Plan instance with the same workshop assignments
         """
@@ -179,12 +179,12 @@ class Plan(object):
         plan.blocks = deepcopy(self.blocks)
         plan.workshops = deepcopy(self.workshops)
         return plan
-    
+
     def mutate(self, wid=None, block=None):
         """Move a workshop to a different block.
-        
+
         This is used during optimization to explore different plan configurations.
-        
+
         Args:
             wid: Optional workshop ID to move, random if None
             block: Optional target block, random if None
@@ -194,45 +194,45 @@ class Plan(object):
             random_wid = random.choice(wid_list)
         else:
             random_wid = wid
-            
+
         # Select a target block (either specified or random)
         if block is None:
             random_block = random.randint(0, NUM_BLOCKS - 1)
         else:
             random_block = block
-            
+
         # Make sure we're moving to a different block
         while random_block == self.workshops[random_wid]:
             random_block = random.randint(0, NUM_BLOCKS - 1)
-        
+
         # Remove from current block
         self.blocks[self.workshops[random_wid]].remove(random_wid)
         del self.workshops[random_wid]
-        
+
         # Add to new block
         self.add(random_block, random_wid)
-    
+
     def mutate_by_exchange(self):
         """Swap the blocks of two randomly selected workshops.
-        
+
         This is used during optimization to explore different plan configurations.
         """
         # Select two random workshops
         random_wid1 = random.choice(wid_list)
         random_wid2 = random.choice(wid_list)
-        
+
         # Get their current blocks
         random_block1 = self.workshops[random_wid1]
         random_block2 = self.workshops[random_wid2]
-        
+
         # Swap their blocks
         self.mutate(random_wid1, random_block2)
         self.mutate(random_wid2, random_block1)
-        
+
     @staticmethod
     def make_random_plan():
         """Create a new plan with workshops randomly assigned to blocks.
-        
+
         Returns:
             A new Plan instance with random workshop assignments
         """
@@ -240,19 +240,21 @@ class Plan(object):
         for wid in workshops:
             plan.add(random.randint(0, NUM_BLOCKS - 1), wid)
         return plan
-    
+
     def describe(self):
         for uid in users:
             printed_user_already = False
             for block in users[uid]['blocks']:
-                wids_on_block_for_user = [wid for wid in users[uid]['part'] if wid in self.blocks[block]]
+                wids_on_block_for_user = [
+                    wid for wid in users[uid]['part'] if wid in self.blocks[block]]
                 if len(wids_on_block_for_user) > 1:
                     if printed_user_already is False:
-                        print(" *", users[uid]['name'], " registered for", len(users[uid]['part']), "workshops")
+                        print(" *", users[uid]['name'], " registered for",
+                              len(users[uid]['part']), "workshops")
                         printed_user_already = True
-                    print("  ", len(wids_on_block_for_user), "collisions:", [workshops[wid]['name'] for wid in wids_on_block_for_user])
-                    
-        
+                    print("  ", len(wids_on_block_for_user), "collisions:", [
+                          workshops[wid]['name'] for wid in wids_on_block_for_user])
+
         collision_sum = 0
         collision_user_sum = 0
         # Print details for each block
@@ -279,32 +281,47 @@ class Plan(object):
                                         collided = True
                                     collisions += 1
                                     collision_sum += 1
-                print(" *", wid, workshops[wid]['name'], "-", [users[lid]['name'] for lid in workshops[wid]['lecturers']][0])
-                print("   participants today/willing:", participants_today, "/", participants_willing_to)
-                print("   collisions / user collisions:", collisions, "/", collision_users)
+                print(" *", wid, workshops[wid]['name'], "-", [users[lid]['name']
+                      for lid in workshops[wid]['lecturers']][0])
+                print("   participants today/willing:",
+                      participants_today, "/", participants_willing_to)
+                print("   collisions / user collisions:",
+                      collisions, "/", collision_users)
             print("-------")
-        print("colisions total = {sum}, colision users total = {users}".format(sum=collision_sum, users=collision_user_sum))
+        print("colisions total = {sum}, colision users total = {users}".format(
+            sum=collision_sum, users=collision_user_sum))
 
-    def evaluate(self, verbose=False):
+    def evaluate(self, verbose=False, return_stats=False):
+        """Evaluate the plan quality based on constraints and collisions.
+
+        Args:
+            verbose: Whether to print detailed evaluation information
+            return_stats: Whether to return statistics about collisions and empty blocks
+
+        Returns:
+            If return_stats is False: The plan score (higher is better)
+            If return_stats is True: Tuple of (collisions_count, empty_blocks_count)
+        """
         all_wids = set()
         all_lecturer_uids = set()
         for widset in self.blocks:
             all_wids.update(widset)
-        
+
         for wid in wid_list:
             if wid not in all_wids:
                 raise KeyError("There is no wid", wid, all_wids)
-        
+
         points = 0
         points_col = 0
-        
+
         for wid in all_wids:
             for lec_uid in workshops[wid]['lecturers']:
                 all_lecturer_uids.add(lec_uid)
                 if self.workshops[wid] not in users[lec_uid]['blocks']:
                     if verbose:
                         print("COLLISION OF LECTURER")
-                        print("\tlec_uid={uid} wid={wid}".format(uid=lec_uid, wid=wid))
+                        print("\tlec_uid={uid} wid={wid}".format(
+                            uid=lec_uid, wid=wid))
                     points -= 10**6
 
         for wid in all_wids:
@@ -312,7 +329,8 @@ class Plan(object):
                 if wid in self.blocks[disallowed_block]:
                     if verbose:
                         print("DISALLOWED BLOCK")
-                        print("\twid={wid} block={block}".format(wid=wid, block=disallowed_block), workshops[wid]['name'])
+                        print("\twid={wid} block={block}".format(
+                            wid=wid, block=disallowed_block), workshops[wid]['name'])
                     points -= PENALTY_DISALLOWED_BLOCK
 
         for block in self.blocks:
@@ -322,20 +340,23 @@ class Plan(object):
                     if lec_uid in lectures_in_block:
                         if verbose:
                             print("LECTURER IN MORE THAN ONE WORKSHOP")
-                            print("\tuid={uid} wid={wid}".format(uid=lec_uid, wid=wid))
+                            print("\tuid={uid} wid={wid}".format(
+                                uid=lec_uid, wid=wid))
                         points -= PENALTY_LECTURER_COLLISION
                     lectures_in_block.add(lec_uid)
 
         for block in self.blocks:
             if abs(workshops_per_block - len(block)) > 0.9:
                 if verbose:
-                    print("WRONG NUMBER OF WORKSHOPS IN BLOCK {block}".format(block=block))
-                points -= abs(workshops_per_block - len(block)) * PENALTY_WRONG_WORKSHOPS_PER_BLOCK
+                    print("WRONG NUMBER OF WORKSHOPS IN BLOCK {block}".format(
+                        block=block))
+                points -= abs(workshops_per_block - len(block)) * \
+                    PENALTY_WRONG_WORKSHOPS_PER_BLOCK
 
-
-        col_counter = {wid:0 for wid in all_wids}
+        collision_sum = 0
+        col_counter = dict.fromkeys(all_wids, 0)
         for uid in (uid for uid in users if uid not in all_lecturer_uids):
-            user_blocks = dict()
+            user_blocks = {}
             for wid in users[uid]['part']:
                 if self.workshops[wid] in users[uid]['blocks']:
                     if self.workshops[wid] not in user_blocks:
@@ -345,45 +366,70 @@ class Plan(object):
                 if len(user_blocks[block]) > 1:
                     for wid in user_blocks[block]:
                         col_counter[wid] += 1
-                    
-            empty_blocks = min(len(users[uid]['blocks']), len(users[uid]['part'])) - len(user_blocks)
+                        collision_sum += 1
+
+            empty_blocks = min(len(users[uid]['blocks']), len(
+                users[uid]['part'])) - len(user_blocks)
             assert empty_blocks >= 0
-            #print(empty_blocks, users[uid]['name'])
-            points -= empty_blocks**empty_blocks if empty_blocks>0 else 0
+
             if empty_blocks > 0:
+                points -= empty_blocks**empty_blocks
                 if verbose:
                     print(empty_blocks, "EMPTY BLOCKS for", users[uid]['name'])
                     print("\tuid={uid}".format(uid=uid))
-            #points += len(user_blocks)
-        
+            # points += len(user_blocks)
+
         for wid in col_counter:
             points_col -= col_counter[wid]**2
-        
-        return points * 5 + points_col
+
+        # Calculate final score
+        final_score = points * 5 + points_col
+
+        # Return statistics if requested
+        if return_stats:
+            # Count empty blocks
+            empty_blocks_count = 0
+            for uid in users:
+                if uid not in all_lecturer_uids:
+                    user_blocks = set()
+                    for wid in users[uid]['part']:
+                        if self.workshops[wid] in users[uid]['blocks']:
+                            user_blocks.add(self.workshops[wid])
+                    empty_blocks_count += max(
+                        0, min(len(users[uid]['blocks']), len(users[uid]['part'])) - len(user_blocks))
+
+            return collision_sum, empty_blocks_count
+        else:
+            return final_score
+
 
 def improve_plan(plan, current_score):
     """Improve a plan through random mutations.
-    
+
     Args:
         plan: The Plan object to improve
         current_score: Current score of the plan
-        
+
     Returns:
         Tuple of (improved_plan, improved_score)
     """
     # Create a copy to avoid modifying the original
     improved_plan = plan.copy()
-    
+
+    # Determine number of mutations to apply (1-5)
+    num_mutations = random.randint(1, NUM_MUTATIONS_PER_IMPROVE)
+
     # Apply random mutations
-    for _ in range(random.randint(1, NUM_MUTATIONS_PER_IMPROVE)):
+    for _ in range(num_mutations):
+        # 50% chance for each mutation type
         if random.randint(0, 1) == 0:
             improved_plan.mutate()
         else:
             improved_plan.mutate_by_exchange()
-            
+
     # Evaluate the improved plan
     improved_score = improved_plan.evaluate()
-    
+
     # Return the better plan
     if improved_score >= current_score:
         return improved_plan, improved_score
@@ -391,111 +437,203 @@ def improve_plan(plan, current_score):
         return plan, current_score
 
 
-def optimize_plan(time_limit_seconds=DEFAULT_TIME_LIMIT_SECONDS):
+def optimize_plan(time_limit_seconds=DEFAULT_TIME_LIMIT_SECONDS, num_initial_plans=DEFAULT_NUM_INITIAL_PLANS):
     """Generate and optimize multiple workshop plans.
-    
+
     Args:
         time_limit_seconds: Maximum time to run optimization in seconds
-        
+        num_initial_plans: Number of initial random plans to generate
+
     Returns:
-        The best Plan object found
+        List of (plan, score) tuples
     """
     # Generate multiple random plans
-    print(f"Generating {NUM_INITIAL_PLANS} initial random plans...")
+    print(f"Generating {num_initial_plans} initial random plans...")
     plans_and_scores = []
-    for _ in range(NUM_INITIAL_PLANS):
+    for _ in range(num_initial_plans):
         plan = Plan.make_random_plan()
         score = plan.evaluate()
         plans_and_scores.append((plan, score))
-    
+
     # Track the best plan
     best_score = max(score for _, score in plans_and_scores)
-    
+
     # Track optimization progress
     start = time.time()
     last_print_time = start
     iteration = 0
-    
+
     try:
         # Continue improving until time limit or keyboard interrupt
         while time.time() - start < time_limit_seconds:
             # Improve each plan
             for i in range(len(plans_and_scores)):
-                plans_and_scores[i] = improve_plan(plans_and_scores[i][0], plans_and_scores[i][1])
-                
+                plans_and_scores[i] = improve_plan(
+                    plans_and_scores[i][0], plans_and_scores[i][1])
+
                 # Update best score if needed
                 if plans_and_scores[i][1] > best_score:
                     best_score = plans_and_scores[i][1]
-                    
+
                 # Print progress periodically
                 if verbose and iteration % PROGRESS_REPORT_INTERVAL == 0:
                     print(f"Iteration {iteration}, Best score: {best_score}")
-                    
+
                 iteration += 1
-                
+
             # Print progress every second
             if time.time() - last_print_time > 1.0:
                 print(f"Best score so far: {best_score}")
                 last_print_time = time.time()
-                
+
     except KeyboardInterrupt:
         print("Optimization interrupted by user")
-    
-    # Find the best plan
-    best_plan = None
-    for plan, score in plans_and_scores:
-        if score == best_score:
-            best_plan = plan
-            break
-            
-    return best_plan, best_score
 
-def display_results(plan, score):
+    # Sort plans by score (descending)
+    sorted_plans = sorted(plans_and_scores, key=lambda x: x[1], reverse=True)
+
+    return sorted_plans
+
+
+def display_results(plans_and_scores, num_top_plans=DEFAULT_TOP_PLANS):
     """Display the results of plan optimization.
-    
-    Args:
-        plan: The best Plan object found
-        score: The score of the best plan
-    """
-    print("Best score", score)
-    print("Plan")
-    plan.describe()
-    plan.evaluate(verbose=True)
-    print("JSON:")
-    print(json.dumps(plan.tab()))
 
-def evaluate_existing_plan(plan_json):
-    """Evaluate an existing plan provided as a JSON string.
-    
     Args:
-        plan_json: JSON string representing a plan
+        plans_and_scores: List of (plan, score) tuples
+        num_top_plans: Number of top plans to display
     """
-    plan = Plan(json.loads(plan_json))
-    plan.describe()
-    plan.evaluate(verbose=True)
+    # Sort plans by score (descending)
+    sorted_plans = sorted(plans_and_scores, key=lambda x: x[1], reverse=True)
+
+    # Display top plans
+    for i, (plan, score) in enumerate(sorted_plans[:num_top_plans]):
+        if i > 0:
+            print("\n" + "=" * 80 + "\n")
+
+        print(f"Plan #{i+1} - Score: {score}")
+
+        if verbose:
+            # Full details in verbose mode
+            plan.describe()
+            plan.evaluate(verbose=True)
+        else:
+            # Limited details in non-verbose mode
+            collisions, empty_blocks = plan.evaluate(
+                verbose=False, return_stats=True)
+            print(
+                f"Total collisions: {collisions}, Total empty blocks: {empty_blocks}")
+
+            # Print block assignments
+            for block_num in range(NUM_BLOCKS):
+                print(
+                    f"BLOCK {block_num}: {', '.join(str(wid) for wid in plan.blocks[block_num])}")
+
+        print("\nJSON:")
+        print(json.dumps(plan.tab()))
+
+
+def evaluate_existing_plan(plan_input):
+    """Evaluate an existing plan provided as a JSON string.
+
+    Args:
+        plan_input: JSON string or file path representing a plan
+    """
+    # Try to parse as JSON string first
+    try:
+        plan_data = json.loads(plan_input)
+    except json.JSONDecodeError:
+        # If not a valid JSON string, try to load from file
+        try:
+            with open(plan_input) as f:
+                plan_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            print(
+                f"Error: Could not parse plan input as JSON or load from file: {plan_input}")
+            sys.exit(1)
+
+    plan = Plan(plan_data)
+
+    if verbose:
+        plan.describe()
+        plan.evaluate(verbose=True)
+    else:
+        collisions, empty_blocks = plan.evaluate(
+            verbose=False, return_stats=True)
+        print(
+            f"Total collisions: {collisions}, Total empty blocks: {empty_blocks}")
+
+        # Print block assignments
+        for block_num in range(NUM_BLOCKS):
+            print(
+                f"BLOCK {block_num}: {', '.join(str(wid) for wid in plan.blocks[block_num])}")
+
+    print("\nJSON:")
+    print(json.dumps(plan.tab()))
     sys.exit(0)
 
-def main():
-    """Main entry point for the script.
-    
-    Usage:
-      python3 make_plan.py data.json                  # Generate a new plan
-      python3 make_plan.py data.json [[1,2],[3,4]]    # Load and evaluate an existing plan
+
+def parse_arguments():
+    """Parse command line arguments.
+
+    Returns:
+        Parsed arguments object
     """
-    # Check if we have the right number of arguments
-    if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} data.json [plan_json]")
-        sys.exit(1)
-        
-    # Generate a new plan if only data file is provided
-    if len(sys.argv) == 2:
-        best_plan, best_score = optimize_plan(DEFAULT_TIME_LIMIT_SECONDS)
-        display_results(best_plan, best_score)
-    # Evaluate an existing plan if plan JSON is also provided
-    elif len(sys.argv) > 2:
-        evaluate_existing_plan(sys.argv[2])
-    else:
-        print("Invalid number of arguments")
+    parser = argparse.ArgumentParser(description="Workshop Plan Generator")
+
+    # Required arguments
+    parser.add_argument(
+        "data_file", help="JSON file with workshop and user data")
+
+    # Optional arguments
+    parser.add_argument(
+        "--plan", "-p", help="JSON string or file path of an existing plan to evaluate")
+    parser.add_argument("--verbose", "-v", action="store_true",
+                        help="Enable verbose output")
+    parser.add_argument("--time-limit", "-t", type=int, default=DEFAULT_TIME_LIMIT_SECONDS,
+                        help=f"Time limit for optimization in seconds (default: {DEFAULT_TIME_LIMIT_SECONDS})")
+    parser.add_argument("--initial-plans", "-i", type=int, default=DEFAULT_NUM_INITIAL_PLANS,
+                        help=f"Number of initial random plans to generate (default: {DEFAULT_NUM_INITIAL_PLANS})")
+    parser.add_argument("--top-plans", "-n", type=int, default=DEFAULT_TOP_PLANS,
+                        help=f"Number of top plans to display (default: {DEFAULT_TOP_PLANS})")
+
+    return parser.parse_args()
+
+
+def main():
+    """Main entry point for the script."""
+    # Parse command line arguments
+    args = parse_arguments()
+
+    # Make workshops and users available globally for Plan class methods
+    global workshops, users, wid_list
+
+    # Set global verbose flag
+    global verbose
+    verbose = args.verbose
+
+    # Load data file
+    data = load_data(args.data_file)
+
+    # Initialize data structures
+    workshops = {ws['wid']: ws for ws in data['workshops']}
+    global workshops_per_block
+    # Average workshops per block
+    workshops_per_block = len(workshops) / NUM_BLOCKS
+
+    users = initialize_users(data['users'])
+    wid_list = list(workshops.keys())
+    process_participation(data['participation'], users, wid_list)
+
+    # Evaluate existing plan if provided
+    if args.plan:
+        evaluate_existing_plan(args.plan)
+
+    # Generate and optimize plans
+    plans_and_scores = optimize_plan(args.time_limit, args.initial_plans)
+
+    # Display results
+    display_results(plans_and_scores, args.top_plans)
+
 
 if __name__ == "__main__":
     main()
