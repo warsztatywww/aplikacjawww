@@ -329,8 +329,9 @@ class Plan(object):
                                         collided = True
                                     collisions += 1
                                     collision_sum += 1
-                print(" *", wid, workshops[wid]['name'], "-", [users[lid]['name']
-                      for lid in workshops[wid]['lecturers']][0])
+                # Get all lecturer names for this workshop
+                lecturer_names = [users[lid]['name'] for lid in workshops[wid]['lecturers']]
+                print(f" * {wid} {workshops[wid]['name']} - {', '.join(lecturer_names)}")
                 print("   participants today/willing:",
                       participants_today, "/", participants_willing_to)
                 print("   collisions / user collisions:",
