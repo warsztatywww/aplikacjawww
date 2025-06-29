@@ -58,12 +58,12 @@ PENALTY_WRONG_WORKSHOPS_PER_BLOCK = 10**3
 PENALTY_LECTURER_COLLISION = 10**6
 
 # Block dates for 2023 WWW workshops
-BLOCK_0_1_START = datetime(2023, 7, 26)
-BLOCK_0_1_END = datetime(2023, 7, 28)
-BLOCK_2_3_START = datetime(2023, 7, 30)
-BLOCK_2_3_END = datetime(2023, 8, 1)
-BLOCK_4_5_START = datetime(2023, 8, 3)
-BLOCK_4_5_END = datetime(2023, 8, 5)
+BLOCK_0_1_START = datetime(2025, 7, 23)
+BLOCK_0_1_END = datetime(2025, 7, 25)
+BLOCK_2_3_START = datetime(2025, 7, 27)
+BLOCK_2_3_END = datetime(2025, 7, 29)
+BLOCK_4_5_START = datetime(2025, 7, 31)
+BLOCK_4_5_END = datetime(2025, 8, 2)
 
 # Global verbose flag (will be set in main function)
 verbose = False
