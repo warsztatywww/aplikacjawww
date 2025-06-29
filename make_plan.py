@@ -69,48 +69,96 @@ BLOCK_4_5_END = datetime(2025, 8, 2)
 verbose = False
 
 
-def initialize_users(user_data):
-    """Initialize user data with attendance blocks and workshop participation sets."""
+def initialize_users(user_data, blocks_for_lecturers=None):
+    """Initialize user data with attendance blocks and workshop participation sets.
+    
+    Args:
+        user_data: List of user dictionaries with uid, name, start, end dates
+        blocks_for_lecturers: Optional dictionary mapping lecturer names to allowed blocks
+        
+    Returns:
+        Dictionary of users with initialized blocks and participation sets
+        
+    Raises:
+        ValueError: If a name in blocks_for_lecturers doesn't match any user name
+    """
     users_dict = {u['uid']: u for u in user_data}
-
+    
+    # Get all user names for validation
+    all_user_names = {users_dict[uid]['name'] for uid in users_dict}
+    
+    # Create a lookup dictionary for lecturers by name if blocks_for_lecturers is provided
+    lecturer_blocks = {}
+    if blocks_for_lecturers:
+        for lecturer in blocks_for_lecturers:
+            lecturer_name = lecturer['name']
+            
+            # Validate that the lecturer name exists in the user data
+            if lecturer_name not in all_user_names:
+                raise ValueError(f"Error: Lecturer name '{lecturer_name}' in blocks_for_lecturers doesn't match any user name")
+                
+            lecturer_blocks[lecturer_name] = set(lecturer['allowed-block'])
+    
     for uid in users_dict:
         # Initialize sets for tracking participation and available blocks
         users_dict[uid]['part'] = set()  # Workshops the user participates in
         users_dict[uid]['blocks'] = set()  # Blocks the user can attend
-
-        # Parse arrival and departure dates
-        arrive = datetime.strptime(users_dict[uid]['start'], DATE_FORMAT)
-        depart = datetime.strptime(users_dict[uid]['end'], DATE_FORMAT)
-
-        # Remove original date strings as they're no longer needed
-        del users_dict[uid]['start']
-        del users_dict[uid]['end']
-
-        # Assign blocks based on user attendance dates
-        if arrive <= BLOCK_0_1_START and depart >= BLOCK_0_1_END:
-            users_dict[uid]['blocks'].add(0)
-            users_dict[uid]['blocks'].add(1)
-        if arrive <= BLOCK_2_3_START and depart >= BLOCK_2_3_END:
-            users_dict[uid]['blocks'].add(2)
-            users_dict[uid]['blocks'].add(3)
-        if arrive <= BLOCK_4_5_START and depart >= BLOCK_4_5_END:
-            users_dict[uid]['blocks'].add(4)
-            users_dict[uid]['blocks'].add(5)
+        
+        # Check if this user is a lecturer with specified blocks
+        user_name = users_dict[uid]['name']
+        if lecturer_blocks and user_name in lecturer_blocks:
+            # Use the specified blocks for this lecturer
+            users_dict[uid]['blocks'] = lecturer_blocks[user_name]
+            if verbose:
+                print(f"Lecturer {user_name} assigned blocks: {users_dict[uid]['blocks']}")
+        else:
+            # For regular users, use arrival and departure dates
+            arrive = datetime.strptime(users_dict[uid]['start'], DATE_FORMAT)
+            depart = datetime.strptime(users_dict[uid]['end'], DATE_FORMAT)
+            
+            # Remove original date strings as they're no longer needed
+            del users_dict[uid]['start']
+            del users_dict[uid]['end']
+            
+            # Assign blocks based on user attendance dates
+            if arrive <= BLOCK_0_1_START and depart >= BLOCK_0_1_END:
+                users_dict[uid]['blocks'].add(0)
+                users_dict[uid]['blocks'].add(1)
+            if arrive <= BLOCK_2_3_START and depart >= BLOCK_2_3_END:
+                users_dict[uid]['blocks'].add(2)
+                users_dict[uid]['blocks'].add(3)
+            if arrive <= BLOCK_4_5_START and depart >= BLOCK_4_5_END:
+                users_dict[uid]['blocks'].add(4)
+                users_dict[uid]['blocks'].add(5)
 
     return users_dict
 
 
 def process_participation(participation_data, users_dict, workshop_ids):
-    """Process participation data to track which users are participating in which workshops."""
+    """Process participation data to track which users are participating in which workshops.
+    
+    Args:
+        participation_data: List of participation records with uid and wid
+        users_dict: Dictionary of users with initialized blocks and participation sets
+        workshop_ids: List of workshop IDs
+        
+    Returns:
+        Dictionary mapping user names to whether they are lecturers
+    """
     # Add workshop participation based on explicit participation records
     for part in participation_data:
         if part['wid'] in workshop_ids:
             users_dict[part['uid']]['part'].add(part['wid'])
 
     # Lecturers automatically participate in their own workshops
+    # Track which users are lecturers
+    lecturers = {}
     for ws in workshop_ids:
         for lec_uid in workshops[ws]['lecturers']:
             users_dict[lec_uid]['part'].add(ws)
+            lecturers[users_dict[lec_uid]['name']] = True
+            
+    return lecturers
 
 
 class Plan(object):
@@ -619,10 +667,27 @@ def main():
     global workshops_per_block
     # Average workshops per block
     workshops_per_block = len(workshops) / NUM_BLOCKS
+    
+    # Get blocks_for_lecturers data if available
+    blocks_for_lecturers = data.get('blocks_for_lecturers', None)
+    if blocks_for_lecturers and verbose:
+        print(f"Found blocks_for_lecturers data for {len(blocks_for_lecturers)} lecturers")
 
-    users = initialize_users(data['users'])
+    users = initialize_users(data['users'], blocks_for_lecturers)
     wid_list = list(workshops.keys())
-    process_participation(data['participation'], users, wid_list)
+    
+    # Process participation and get lecturer information
+    lecturer_names = process_participation(data['participation'], users, wid_list)
+    
+    # Validate that all names in blocks_for_lecturers correspond to actual lecturers
+    if blocks_for_lecturers:
+        for lecturer in blocks_for_lecturers:
+            lecturer_name = lecturer['name']
+            if lecturer_name not in lecturer_names:
+                raise ValueError(f"Error: '{lecturer_name}' in blocks_for_lecturers is not a lecturer (doesn't teach any workshop)")
+                
+        if verbose:
+            print("All lecturer names in blocks_for_lecturers validated successfully")
 
     # Evaluate existing plan if provided
     if args.plan:
