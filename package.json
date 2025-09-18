@@ -39,7 +39,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.36",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
-    "bootstrap": "^4.6.1",
+    "bootstrap": "^5.3.8",
     "datatables.net": "^1.11.3",
     "datatables.net-bs4": "^1.11.3",
     "datatables.net-buttons": "^2.2.1",
