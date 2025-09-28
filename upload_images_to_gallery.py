@@ -7,17 +7,11 @@ from bs4 import BeautifulSoup
 
 ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif'}
 
-# ID of the album to upload images - it has to be created beforehand
+# ID of the album to upload images - it has to be created beforehand via admin panel
 ALBUM_ID = ""
-FORM_URL = "https://warsztatywww.pl/gallery/upload"
+FORM_URL = "https://warsztatywww.pl/gallery/upload/"
 
-# To set the below cookies go to your browser, make a request to the gallery upload page and copy the request cookies
-
-# Django session cookie
-COOKIE_NAME = ""
-COOKIE_VALUE = r''
-
-# Session id cookie - it is always named "sessionid" in Django
+# To set the below cookie go to your browser, make a request to the gallery upload page and copy the sessionid cookie
 SESSION_ID = ""
 
 
@@ -35,7 +29,6 @@ def send_file(session, path):
 
 def upload_images(images_dir):
     session = requests.Session()
-    session.cookies.set(COOKIE_NAME, COOKIE_VALUE)
     session.cookies.set("sessionid", SESSION_ID)
     print(f"Uploading images from {images_dir} to album {ALBUM_ID}...")
     for root, dirs, files in os.walk(images_dir):
