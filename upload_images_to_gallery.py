@@ -9,21 +9,29 @@ ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif'}
 
 # ID of the album to upload images - it has to be created beforehand via admin panel
 ALBUM_ID = ""
-FORM_URL = "https://warsztatywww.pl/gallery/upload/"
+FORM_URL = "https://warsztatywww.pl/gallery/upload"
 
 # To set the below cookie go to your browser, make a request to the gallery upload page and copy the sessionid cookie
 SESSION_ID = ""
 
+HEADERS = {
+    "Referer": "https://warsztatywww.pl",
+}
+
 
 def send_file(session, path):
-    form_response = session.get(FORM_URL)
+    form_response = session.get(FORM_URL, headers=HEADERS)
+    if form_response.status_code != 200:
+        print("Failed to get form page")
+        print(form_response.text)
+        return False
     soup = BeautifulSoup(form_response.text, 'html.parser')
     csrf_token = soup.find('input', {'name': 'csrfmiddlewaretoken'})['value']
     filename = path.split("/")[-1]
     files = [("data", (filename, open(path, 'rb')))]
     payload = {'csrfmiddlewaretoken': csrf_token,
                "apk": ALBUM_ID, "next": f"/gallery/album/{ALBUM_ID}/upload"}
-    res = session.post(FORM_URL, files=files, data=payload)
+    res = session.post(FORM_URL, files=files, data=payload, headers=HEADERS)
     return res.status_code == 200
 
 
