@@ -93,5 +93,9 @@
       <label for="participants_emails">Maile:</label>
       <input id="participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{{ workshop_participant.camp_participation.user_profile.user.email }}{% if not forloop.last %}, {% endif %}{% endfor %}" />
     </div>
+    <div class="form-group">
+      <label for="qualified_participants_emails">Maile osób zaakceptowanych na WWW:</label>
+      <input id="qualified_participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{% if workshop_participant.camp_participation.status != 'O' %}{{ workshop_participant.camp_participation.user_profile.user.email }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}" />
+    </div>
   </div>
 {% endblock %}
