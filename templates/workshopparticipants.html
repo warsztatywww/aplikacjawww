@@ -16,6 +16,7 @@
     <th></th>
     <th>Zakwalifikowano</th>
     {%  endif %}
+    <th>Zaakceptowano na WWW</th>
     </thead>
     <tbody>
     {% for workshop_participant in workshop_participants %}
@@ -36,8 +37,12 @@
         </td>
         {% if workshop.is_qualifying %}
           {% if workshop.solution_uploads_enabled and not workshop_participant.solution %}
-            <td class="align-middle text-center" colspan="4">
-              Nie przesłano rozwiązań
+            <td class="align-middle text-center" colspan="5">
+              {% if workshop_participant.is_lecturer %}
+                Prowadzi warsztaty
+              {% else %}
+                Nie przesłano rozwiązań
+              {% endif %}
             </td>
           {% else %}
             {% if workshop.solution_uploads_enabled %}
@@ -65,11 +70,20 @@
                 <button class="btn btn-outline-primary savePointsButton" style="padding: 6px 12px;"><i class="fas fa-check-circle" style="width: 16px;"></i></button>
               {% endif %}
             </td>
+            <td class="align-middle qualified-mark">
+              {{ workshop_participant.is_qualified | qualified_mark }}
+            </td>
           {% endif %}
-          <td class="align-middle qualified-mark">
-            {{ workshop_participant.is_qualified | qualified_mark }}
-          </td>
         {% endif %}
+        <td class="align-middle">
+          {% if workshop_participant.camp_participation.status == 'Z' %}
+            {{ True | qualified_mark }}
+          {% elif workshop_participant.camp_participation.status == 'O' %}
+            {{ False | qualified_mark }}
+          {% else %}
+            {{ None | qualified_mark }}
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
     </tbody>
