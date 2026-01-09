@@ -34,7 +34,9 @@ export function vcard_export(e, dt, button, config) {
         const vcard = new VCard();
 
         if (columnName !== -1 && row[columnName]) {
-            const [firstName, lastName] = row[columnName].split(' ', 2); // TODO: this is stored as firstName and lastName in the db, find a better way to get this in JS...
+            const names = row[columnName].trim().split(/\s+/);
+            const firstName = names[0];
+            const lastName = names.length > 1 ? names[names.length - 1] : '';
             vcard.addName(firstName, lastName);
         }
 
