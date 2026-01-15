@@ -60,7 +60,7 @@
     "pdfmake": "^0.2.4",
     "popper.js": "^1.16.1",
     "select2": "^4.0.13",
-    "tinymce": "^5.10.2",
+    "tinymce": "^7.2.0",
     "tinymce-i18n": "^20.12.25",
     "vcard-creator": "^0.4.2"
   }
