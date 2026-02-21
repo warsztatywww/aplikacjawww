@@ -517,15 +517,15 @@ def workshop_participants_view(request, year, name):
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = True
 
-    accepted_workshop_subquery = Workshop.objects.filter(
+    lecturer_subquery = Workshop.objects.filter(
         status=Workshop.STATUS_ACCEPTED,
-        lecturer=OuterRef('camp_participation__user_profile')
+        lecturer=OuterRef('camp_participation__user_profile'),
+        year=workshop.year
     )
-
 
     context['workshop_participants'] = workshop.participants.select_related(
             'workshop', 'workshop__year', 'camp_participation__user_profile', 'camp_participation__user_profile__user', 'solution'
-            ).annotate(is_lecturer=Exists(accepted_workshop_subquery)).order_by('id')
+            ).annotate(is_lecturer=Exists(lecturer_subquery)).order_by('id')
 
     for participant in context['workshop_participants']:
         participant.form = WorkshopParticipantPointsForm(instance=participant, auto_id='%s_'+str(participant.id))

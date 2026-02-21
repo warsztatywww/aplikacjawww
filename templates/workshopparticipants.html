@@ -76,7 +76,7 @@
           {% endif %}
         {% endif %}
         <td class="align-middle">
-          {% if workshop_participant.camp_participation.status == 'Z' %}
+          {% if workshop_participant.camp_participation.status == 'Z' or workshop_participant.is_lecturer %}
             {{ True | qualified_mark }}
           {% elif workshop_participant.camp_participation.status == 'O' %}
             {{ False | qualified_mark }}
@@ -95,7 +95,7 @@
     </div>
     <div class="form-group">
       <label for="qualified_participants_emails">Maile osób zaakceptowanych na WWW:</label>
-      <input id="qualified_participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{% if workshop_participant.camp_participation.status != 'O' %}{{ workshop_participant.camp_participation.user_profile.user.email }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}" />
+      <input id="qualified_participants_emails" class="form-control" value="{% for workshop_participant in workshop_participants %}{% if workshop_participant.camp_participation.status == 'Z' or workshop_participant.is_lecturer %}{{ workshop_participant.camp_participation.user_profile.user.email }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}" />
     </div>
   </div>
 {% endblock %}

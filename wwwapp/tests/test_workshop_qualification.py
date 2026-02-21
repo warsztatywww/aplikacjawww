@@ -24,10 +24,16 @@ class WorkshopQualificationViews(TestCase):
             username='admin', email='admin@example.com', password='admin123')
         self.lecturer_user = User.objects.create_user(
             username='lecturer', email='lecturer@example.com', password='user123')
+        self.lecturer_user2 = User.objects.create_user(
+            username='lecturer2', email='lecturer2@example.com', password='user123')
+        self.lecturer_user3 = User.objects.create_user(
+            username='lecturer3', email='lecturer3@example.com', password='user123')
         self.participant_user = User.objects.create_user(
             username='participant', email='participant@example.com', password='user123')
         self.participant_user2 = User.objects.create_user(
             username='participant2', email='participant2@example.com', password='user2_123')
+        self.participant_user3 = User.objects.create_user(
+            username='participant3', email='participant3@example.com', password='user3_123')
 
         WorkshopType.objects.create(year=self.year_2019, name='Not this type')
         WorkshopType.objects.create(year=self.year_2020, name='This type')
@@ -50,6 +56,38 @@ class WorkshopQualificationViews(TestCase):
         self.workshop.lecturer.add(self.lecturer_user.user_profile)
         self.workshop.save()
 
+        self.workshop2 = Workshop.objects.create(
+            title='Inne fajne warsztaty 2',
+            name='bardzofajne2',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
+            proposition_description='<p>Testowy opis 2</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            solution_uploads_enabled=False,
+            qualification_problems=SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024)),
+            qualification_threshold=5,
+            max_points=10,
+        )
+        self.workshop2.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
+        self.workshop2.lecturer.add(self.lecturer_user2.user_profile)
+        self.workshop2.save()
+
+        self.workshop3 = Workshop.objects.create(
+            title='Inniejsze fajne warsztaty 3',
+            name='bardzofajne3',
+            year=self.year_2019,
+            type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
+            proposition_description='<p>Testowy opis 3</p>',
+            status=Workshop.STATUS_ACCEPTED,
+            solution_uploads_enabled=False,
+            qualification_problems=SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024)),
+            qualification_threshold=5,
+            max_points=10,
+        )
+        self.workshop3.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
+        self.workshop3.lecturer.add(self.lecturer_user2.user_profile)
+        self.workshop3.save()
+
         self.workshop_proposal = Workshop.objects.create(
             title='To tylko propozycja',
             name='propozycja',
@@ -62,6 +100,19 @@ class WorkshopQualificationViews(TestCase):
         self.workshop_proposal.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
         self.workshop_proposal.lecturer.add(self.lecturer_user.user_profile)
         self.workshop_proposal.save()
+        
+        self.workshop_proposal2 = Workshop.objects.create(
+            title='To inna propozycja',
+            name='propozycja2',
+            year=self.year_2020,
+            type=WorkshopType.objects.get(year=self.year_2020, name='This type'),
+            proposition_description='<p>nie akceptuj tego</p>',
+            status=None,
+            solution_uploads_enabled=False
+        )
+        self.workshop_proposal2.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category'))
+        self.workshop_proposal2.lecturer.add(self.participant_user3.user_profile)
+        self.workshop_proposal2.save()
 
         self.previous_year_workshop = Workshop.objects.create(
             title='Jakiś staroć',
@@ -417,6 +468,69 @@ class WorkshopQualificationViews(TestCase):
         self.client.force_login(self.participant_user)
         response = self.client.get(reverse('mydata_status'))
         self.assertContains(response, wwwtags.qualified_mark(None))
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_workshop_participant_did_not_send_solutions(self):
+        self.workshop.solution_uploads_enabled = True
+        self.workshop.save()
+
+        # Regular participant who did NOT submit a solution
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user2.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
+
+        self.client.force_login(self.lecturer_user)
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, "Nie przesłano rozwiązań")
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_another_lecturer_did_not_send_solutions(self):
+        self.workshop.solution_uploads_enabled = True
+        self.workshop.save()
+
+        # Current year lecturer as a participant 
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.lecturer_user2.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
+
+        self.client.force_login(self.lecturer_user)
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, "Prowadzi warsztaty")
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_last_year_lecturer_did_not_send_solutions(self):
+        self.workshop.solution_uploads_enabled = True
+        self.workshop.save()
+
+        # Previous year lecturer as a participant 
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.lecturer_user3.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
+
+        self.client.force_login(self.lecturer_user)
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, "Nie przesłano rozwiązań")
+        self.assertNotContains(response, "Prowadzi warsztaty")
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_participant_with_unaccepted_workshops_did_not_send_solutions(self):
+        self.workshop.solution_uploads_enabled = True
+        self.workshop.save()
+
+        # Participant that submitted a workshop proposal but it was not accepted
+        cp, _ = CampParticipant.objects.get_or_create(user_profile=self.participant_user3.user_profile, year=self.year_2020)
+        cp.workshop_participation.create(workshop=self.workshop)
+
+        self.client.force_login(self.lecturer_user)
+        response = self.client.get(reverse('workshop_participants', args=[self.workshop.year.pk, self.workshop.name]))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, "Nie przesłano rozwiązań")
+        self.assertNotContains(response, "Prowadzi warsztaty")
+
 
     def assertUsersSeeOnlyTheirOwn(self, url, users_and_data):
         all_data = []
