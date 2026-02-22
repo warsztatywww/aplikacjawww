@@ -1,16 +1,17 @@
-<div class="card mb-3 w-100" id="{{ workshop.name }}"
+<div class="card" id="{{ workshop.name }}"
      data-register="{% url 'register_to_workshop' workshop.year.pk workshop.name %}"
-     data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}">
+     data-unregister="{% url 'unregister_from_workshop' workshop.year.pk workshop.name %}"
+    >
   {% if not no_workshop_card_header %}
     <div class="card-header">
-      <div class="row">
-        <div class="col-12 col-lg-8">
+      <div class="d-flex flex-column">
+        <div class="mb-2">
           <h4 class="m-0">
             {% if workshop.page_content_is_public %}
-              <a href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
+              <a class="text-dark" href="{% url 'workshop_page' workshop.year.pk workshop.name %}">
             {% endif %}
             {% if workshop.status == 'X' %}<del>{% endif %}
-            <b>{{ workshop.title }}</b>
+            <b class="workshop-title">{{ workshop.title }}</b>
             {% if workshop.status == 'X' %}</del>{% endif %}
             {% if workshop.page_content_is_public %}</a>{% endif %}
             {% if workshop.status == 'X' %}&nbsp;&nbsp;
@@ -18,12 +19,11 @@
             {% endif %}
           </h4>
         </div>
-        <div class="col-12 col-lg-4 text-right mt-2 mt-lg-0">
+        <div class="">
           <h5 class="m-0">
             {% for lecturer in workshop.lecturer.all %}
               <span class="d-inline-block"> {# this makes it so that line breaks are preferred at the point of the comma, not in the middle of the name #}
-                <a href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a><!-- remove space between tags
-             -->{% if not forloop.last %},{% endif %}
+                <a role="button" class="btn badge badge-light border border-primary"  href="{% url 'profile' lecturer.user.id %}">{{ lecturer }}</a>
               </span>
             {% endfor %}
           </h5>
@@ -31,105 +31,104 @@
       </div>
     </div>
   {% endif %}
-  <div class="card-body">
-    <div class="row justify-content-end">
-      {% if workshop.short_description %}
-        <div class="col-12 col-lg-6">
-          <blockquote class="blockquote">
-            {{ workshop.short_description }}
-          </blockquote>
-        <div class="mt-2 mb-3">Kategorie:
-          {% for category in workshop.category.all %}
-            <span class="badge badge-secondary">{{ category.name }}</span>
-          {% endfor %}
-        </div>
-        </div>
-      {% endif %}
-      <div class="col-12 col-sm-8 col-lg-4">
-        <div class="mt-2 mb-3">
-            <span class="d-inline-block w-100 mb-1 qualification-problems-button"
-                  {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
-                  {% if not workshop.page_content_is_public %}data-toggle="tooltip"
-                  data-placement="right"
-                  title="Strona warsztatów pojawi się wkrótce"{% endif %}
-            >
-              <a role="button"
-                 class="btn btn-dark btn-sm w-100 {% if not workshop.page_content_is_public %}disabled{% endif %}"
-                 href="{% url 'workshop_page' workshop.year.pk workshop.name %}"
-                 target="_blank">
-                 <i class="fas fa-info-circle"></i> Dowiedz się więcej
-              </a>
-            </span>
-          {% if workshop.is_qualifying %}
-            <span class="d-inline-block w-100 mb-1 qualification-problems-button"
-                  {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
-                  {% if not workshop.qualification_problems %}data-toggle="tooltip"
-                  data-placement="right"
-                  title="Zadania kwalifikacyjne pojawią się wkrótce"{% endif %}
-            >
-              <a role="button"
-                 class="btn btn-dark btn-sm w-100 {% if not workshop.qualification_problems %}disabled{% endif %}"
-                 href="{% url 'qualification_problems' workshop.year.pk workshop.name %}"
-                 target="_blank">
-                <i class="fas fa-tasks"></i> Zadania kwalifikacyjne
-              </a>
-            </span>
-
-            {% if workshop.can_access_solution_upload and workshop.are_solutions_editable %}
-              <span class="{% if not no_workshop_card_header %}d-none d-md-inline-block{% else %}d-inline-block{% endif %} w-100 mb-1 solutions-button"
-                    {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
-                    {% if not registered %}
-                      data-toggle="tooltip"
-                      data-placement="right"
-                      title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"
-                    {% endif %}
-              >
-                <a role="button"
-                   class="btn btn-primary btn-sm w-100 {% if not registered %}disabled{% endif %}"
-                   href="{% url 'workshop_my_solution' workshop.year.pk workshop.name %}">
-                  <i class="fas fa-paper-plane"></i> Prześlij<span class="d-none d-xl-inline"> rozwiązania</span>!
-                </a>
-              </span>
-            {% endif %}
-          {% else %}
-            <button type="button" class="btn btn-sm w-100 btn-outline-dark" disabled>
-              Na te warsztaty nie ma kwalifikacji. Nie liczą się do puli
-              wymaganych zgłoszeń.
-            </button>
-          {% endif %}
-        </div>
+  <div class="card-body d-flex flex-column">
+    <!-- Categories -->
+    <div class="mb-1">
+      {% for category in workshop.category.all %}
+        <span class="badge badge-light">
+          <i class="fas fa-tag"></i>
+          {{ category.name }}</span>
+      {% endfor %}
+    </div>
+  
+    <!-- Description -->
+    {% if workshop.short_description %}
+      <div class="card-text">
+        <blockquote class="blockquote workshop-short-description">
+          {{ workshop.short_description }}
+        </blockquote>
       </div>
-      <div class="col-12 col-sm-4 col-lg-2 text-center button-div {% if not no_workshop_card_header %}d-none d-sm-block{% endif %}">
+    {% endif %}
+
+    <!-- Learn more -->
+    {% if not no_workshop_card_header %}
+      <span class="d-inline-block w-100 mb-1 qualification-problems-button"
+            {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+            {% if not workshop.page_content_is_public %}data-toggle="tooltip"
+            data-placement="right"
+            title="Strona warsztatów pojawi się wkrótce"{% endif %}
+      >
+        <a role="button"
+          class="{% if not workshop.page_content_is_public %}disabled{% endif %}"
+          href="{% url 'workshop_page' workshop.year.pk workshop.name %}"
+          target="_blank">
+          <i class="fas fa-info-circle"></i> Dowiedz się więcej o tych warsztatach
+        </a>
+      </span>
+    {% endif %}
+
+    <!-- Qualification problems, solution upload, and registration -->
+    <div class="row m-0 mt-2">
+      <!-- Qualification problems and solution upload -->
+      <div class="col-12 col-md-6 d-flex flex-row flex-md-column flex-grow-1 gap-2 p-0 pb-2 pb-md-0 pr-md-2">
+        {% if workshop.is_qualifying %}
+          <span class="d-inline-block flex-grow-1 qualification-problems-button"
+                {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+                {% if not workshop.qualification_problems %}data-toggle="tooltip"
+                data-placement="right"
+                title="Zadania kwalifikacyjne pojawią się wkrótce"{% endif %}
+          >
+            <a role="button"
+              class="btn btn-outline-dark w-100 {% if not workshop.qualification_problems %}disabled{% endif %}"
+              href="{% url 'qualification_problems' workshop.year.pk workshop.name %}"
+              target="_blank">
+              <i class="fas fa-clipboard-check"></i> Zadania kwalifikacyjne
+            </a>
+          </span>
+
+          {% if workshop.can_access_solution_upload and workshop.are_solutions_editable %}
+            <span class="{% if not no_workshop_card_header %}d-none d-md-inline-block{% else %}d-inline-block{% endif %} flex-grow-1 solutions-button"
+                  {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
+                  {% if not registered %}
+                    data-toggle="tooltip"
+                    data-placement="right"
+                    title="Przed przesłaniem rozwiązań, zapisz się na warsztaty"
+                  {% endif %}
+            >
+              <a role="button"
+                class="btn btn-primary w-100 {% if not registered %}disabled{% endif %}"
+                href="{% url 'workshop_my_solution' workshop.year.pk workshop.name %}">
+                <i class="fas fa-paper-plane"></i> Prześlij<span class="d-none d-xl-inline"> rozwiązania</span>!
+              </a>
+            </span>
+          {% endif %}
+        {% else %}
+          <span>
+            <i class="fas fa-info-circle"></i>
+            Na te warsztaty nie ma kwalifikacji. Nie liczą się do puli
+            wymaganych zgłoszeń.
+          </span>
+        {% endif %}
+      </div>
+      <!-- Registration -->
+      <div class="col-12 col-md-6 d-flex p-0">
         {% if workshop.is_qualification_editable %}
           {% if registered %}
-            <div onclick="handle_registration_change('{{ workshop.name }}', false);"
-                 style="cursor: pointer;">
-              <button class="btn btn-warning btn-circle" type="button">
-                <i class="fas fa-minus"></i>
-              </button>
-              <br/>
-              <h5 class="text-default mt-3 mb-0">Wypisz się</h5>
-            </div>
+            <button class="btn btn-warning d-flex flex-row align-items-center justify-content-center flex-grow-1" type="button"
+            onclick="handle_registration_change('{{ workshop.name }}', false);">
+            <i class="fas fa-minus mr-2"></i>Wypisz się
+            </button>
           {% else %}
-            <div onclick="handle_registration_change('{{ workshop.name }}', true);"
-                 style="cursor: pointer;">
-              <button class="btn btn-success btn-circle" type="button">
-                <i class="fas fa-plus"></i>
-              </button>
-              <br/>
-              <h5 class="text-default mt-3 mb-0">Zapisz się</h5>
-            </div>
+            <button class="btn btn-success d-flex flex-row align-items-center justify-content-center flex-grow-1" type="button"
+            onclick="handle_registration_change('{{ workshop.name }}', true);">
+            <i class="fas fa-plus mr-2"></i> Zapisz się
+            </button>
           {% endif %}
         {% else %}
           {% if registered %}
-            <div>
-              <button class="btn btn-success btn-circle" type="button"
-                      disabled="disabled">
-                <i class="fas fa-check"></i>
-              </button>
-              <br/>
-              <h5 class="text-default mt-3 mb-0">Byłeś zapisany</h5>
-            </div>
+            <button class="btn btn-success d-flex flex-row align-items-center justify-content-center flex-grow-1" type="button" disabled="disabled">
+            Byłeś zapisany
+            </button>
           {% endif %}
         {% endif %}
       </div>

@@ -104,7 +104,7 @@ window.handle_registration_change = function(workshop_name_txt, register) {
         var elem = $('<div class="alert alert-danger fade"><a href="#" class="close" data-dismiss="alert">&times;</a>' +
                      '<strong>Error!</strong> <span></span></div>');
         elem.find('span').text(message);
-        $("#" + workshop_name_txt).after(elem); // add the error to the dom
+        $("#" + workshop_name_txt).find(".workshop-registration").append(elem); // add the error to the dom
         setTimeout(function() {
             elem.addClass('show');
         },10);
@@ -123,6 +123,7 @@ window.handle_registration_change = function(workshop_name_txt, register) {
                 window.location.href = json.redirect;
             }
             if (json.content) {
+                $("#" + workshop_name_txt + "-workshop-card").attr('data-registered', register ? 'True' : 'False'); 
                 $("#" + workshop_name_txt).replaceWith(json.content);
                 if (no_workshop_card_header) {
                     $("#" + workshop_name_txt).find('.card-header').replaceWith('');

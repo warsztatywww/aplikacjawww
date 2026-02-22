@@ -136,6 +136,7 @@ body {
 
 // Underline main header
 h1 {
+  padding-bottom: 0.5rem;
   border-bottom: 1px #777 solid;
 }
 
@@ -161,6 +162,14 @@ legend {
   border-bottom: 1px solid #e5e5e5;
 }
 
+
+.gap-1 {
+  gap: 0.25rem !important;
+}
+
+.gap-2 {
+  gap: 0.5rem !important;
+}
 
 
 /* TODO: everything below can probably be in its own file if I figure out how to get access to SCSS vars there */
@@ -203,6 +212,13 @@ legend {
   height: 50px;
   border-radius: 25px;
   color: white !important;
+}
+
+.btn-white {
+  background-color: white;
+}
+.btn-white:hover {
+  background-color: #f0f0f0;
 }
 
 /* Sticky footer styles */
