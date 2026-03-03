@@ -166,20 +166,27 @@ $(function () {
 
     // Facebook fix your sh*t (╯°□°)╯︵ ┻━┻
     function fixBrokenUnresponsiveFacebook() {
-        $('iframe').each(function () {
-            var url = $(this).attr('src');
-            if (url.indexOf('facebook.com/plugins/page.php') === -1)
+        $(".fb-page").each((_, wrapper) => {
+            const width = wrapper.offsetWidth + "px";
+            const height = wrapper.offsetHeight + "px";
+
+            // Sometimes facebook takes a while to load and leaves just text
+            if (wrapper.firstChild.tagName === undefined) {
                 return;
-            if ($(this).width() == 0 || $(this).height() == 0)
-                return;
-            url = url.replace(/width=([0-9]+)/, 'width=' + Math.round($(this).width()));
-            url = url.replace(/height=([0-9]+)/, 'height=' + Math.round($(this).height()));
-            if ($(this).attr('src') != url)
-                $(this).attr('src', url);
-        });
+            }
+
+            const span = wrapper.firstChild
+            const iframe = span.firstChild
+
+            span.style.width = width;
+            span.style.height = height;
+
+            iframe.style.width = width;
+            iframe.style.height = height;
+        })
     }
     fixBrokenUnresponsiveFacebook();
-    $(window).resize(fixBrokenUnresponsiveFacebook);
+    $(window).on("resize", () => fixBrokenUnresponsiveFacebook())
 
     // Make sure the year selector is always initially scrolled to the selected one
     function yearSelectorToCurrent() {
