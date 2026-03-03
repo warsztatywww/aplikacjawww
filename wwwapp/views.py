@@ -4,6 +4,7 @@ import json
 import mimetypes
 import os
 import sys
+import random # Used for shuffling the workshops on the program page
 from typing import Dict, Any, Optional
 from urllib.parse import urljoin
 
@@ -87,8 +88,10 @@ def program_view(request, year):
         has_results = False
 
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
-    context['workshops'] = [(workshop, (workshop in workshops_participating_in)) for workshop
-                            in workshops]
+    context['workshops'] = [(workshop, (workshop in workshops_participating_in)) for workshop in workshops]
+    # Shuffle the workshops to make the page more dynamic and encourage people to look through all of them, not just the first ones
+    random.shuffle(context['workshops']) 
+    context['categories'] = sorted(set(category.name for workshop in workshops for category in workshop.category.all()))
     context['has_results'] = has_results and year == Camp.current()
     context['is_registered'] = camp_participation is not None
     if year.is_qualification_editable():

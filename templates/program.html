@@ -25,13 +25,56 @@
       {% endif %}
 
       {% if workshops %}
+        {{ categories|json_script:"categories-data" }}
+        <!-- Filtering & search -->
+        <div class="card border mb-3">
+          <div class="card-body bg-light d-flex flex-column gap-2">
+            <div class="mb-2 text-primary"><i class="fas fa-filter"></i> Filtruj warsztaty</div>
+
+              <!-- Search by name -->
+              <div class="position-relative">
+                <i class="fas fa-search text-primary position-absolute" style="left: 1rem; top: 50%; transform: translateY(-50%);"></i>
+                <input class="form-control pl-5 pr-5 py-2 w-100" type="text" id="workshop-search-input" placeholder="Szukaj po nazwie lub opisie...">
+              </div>
+
+              <!-- Search by category tags -->
+              <div>
+                {% for category in categories %}
+                  <button class="btn btn-sm btn-white category-filter-btn" data-category="{{ category }}">
+                    {{ category }}
+                  </button>
+                {% endfor %}
+              </div>  
+
+              <!-- Additional filters -->
+              <div class="d-flex flex-row gap-1">
+                <button class="btn btn-sm btn-white" id="registered-filter-btn" data-filter="registered">
+                  <i class="fas fa-check"></i> Tylko zapisane
+                </button>
+                <button class="btn btn-sm btn-white" id="cancelled-filter-btn" data-filter="cancelled">
+                  <i class="fas fa-times"></i> Ukryj odwołane
+                </button>
+              </div>
+          </div>
+        </div>
+
+
         {% if not selected_year.is_program_finalized %}
-          <p class="alert alert-info">Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
+          <p class="text-info"><i class="fas fa-info-circle"></i> Aktualnie trwają zgłoszenia warsztatów. Poniższy program będzie się jeszcze zmieniał.</p>
         {% endif %}
 
+        <!-- Workshops list -->
+        <div>
         {% for workshop, registered in workshops %}
-          {% include "_programworkshop.html" %}
+          <div 
+          id="{{workshop.name}}-workshop-card"
+          class="mb-3 workshop-card"
+          data-categories="{% for c in workshop.category.all %}{{ c.name }}{% if not forloop.last %},{% endif %}{% endfor %}"
+          data-registered="{{ registered }}"
+          data-status="{{ workshop.status }}"
+          >{% include "_programworkshop.html" %}</div>
         {% endfor %}
+        </div>
       {% else %}
         <div class="w-100 text-center">
           <p class="p-4">Program nie jest jeszcze dostępny.</p>

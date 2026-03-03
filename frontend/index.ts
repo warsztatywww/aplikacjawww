@@ -33,6 +33,12 @@ import {
   faAddressBook,
   faInfoCircle,
   faHistory,
+  faClipboardCheck,
+  faTag,
+  faFilter,
+  faSearch,
+  faThLarge,
+  faTimes
 } from "@fortawesome/free-solid-svg-icons";
 library.add(
   faCheckCircle,
@@ -60,7 +66,13 @@ library.add(
   faTasks,
   faAddressBook,
   faInfoCircle,
-  faHistory
+  faHistory,
+  faClipboardCheck,
+  faTag,
+  faFilter,
+  faSearch,
+  faThLarge,
+  faTimes
 );
 dom.watch();
 
@@ -82,3 +94,4 @@ import "./js/ajax.requests.js";
 import "./js/warsztatywww.js";
 import "./js/datatables_config.js";
 import "./js/thing.js"; // ¯\_(ツ)_/¯
+import "./js/program_filters.js"
