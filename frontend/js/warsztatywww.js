@@ -1,4 +1,4 @@
-window.tinymce_local_file_picker = function(cb, value, meta) {
+window.tinymce_local_file_picker = function (cb, value, meta) {
     // https://www.tiny.cloud/docs/demo/file-picker/
     var input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -9,7 +9,7 @@ window.tinymce_local_file_picker = function(cb, value, meta) {
         var reader = new FileReader();
         reader.onload = function () {
             var id = 'blobid' + (new Date()).getTime();
-            var blobCache =  tinymce.activeEditor.editorUpload.blobCache;
+            var blobCache = tinymce.activeEditor.editorUpload.blobCache;
             var base64 = reader.result.split(',')[1];
             var blobInfo = blobCache.create(id, file, base64);
             blobCache.add(blobInfo);
@@ -25,7 +25,7 @@ function send_points(row, save_btn) {
     var all_inputs = row.find(':input').not('button');
     var editable_inputs = all_inputs.filter(':not([type=hidden])');
     var saved_values = {};
-    editable_inputs.each(function() {
+    editable_inputs.each(function () {
         saved_values[$(this).attr('name')] = $(this).val();
     });
     var qualified_mark = row.find('.qualified-mark');
@@ -46,26 +46,26 @@ function send_points(row, save_btn) {
     };
 
     mark_saved();
-    save_btn.click(function() {
+    save_btn.click(function () {
         var data = {};
-        all_inputs.each(function() {
+        all_inputs.each(function () {
             data[$(this).attr('name')] = $(this).val();
         });
         mark_saving();
         $.ajax({
             'url': '/savePoints/',
             'data': data,
-            'error': function(xhr, textStatus, errorThrown) {
+            'error': function (xhr, textStatus, errorThrown) {
                 mark_changed();
                 alert('Błąd: ' + errorThrown);
             },
             'method': 'POST',
-            'success': function(value) {
-                if(value.error) {
+            'success': function (value) {
+                if (value.error) {
                     mark_changed();
                     alert('Błąd:\n' + value.error);
                 } else {
-                    editable_inputs.each(function() {
+                    editable_inputs.each(function () {
                         saved_values[$(this).attr('name')] = value[$(this).attr('name')];
                         $(this).val(""); // For whatever reason, this is required to get the field to reformat with the correct comma. Don't ask.
                         $(this).val(saved_values[$(this).attr('name')]);
@@ -77,7 +77,7 @@ function send_points(row, save_btn) {
         });
     });
 
-    editable_inputs.each(function() {
+    editable_inputs.each(function () {
         $(this).on('change keyup mouseup', function () {
             if ($(this).val() != saved_values[$(this).attr('name')])
                 mark_changed();
@@ -85,15 +85,15 @@ function send_points(row, save_btn) {
     });
 }
 
-$('button.savePointsButton').each(function() {
+$('button.savePointsButton').each(function () {
     var save_btn = $(this);
     var row = $(save_btn.parents('tr'));
     send_points(row, save_btn);
 });
 
-window.handle_registration_change = function(workshop_name_txt, register) {
+window.handle_registration_change = function (workshop_name_txt, register) {
     var proper_url;
-    if(register) {
+    if (register) {
         proper_url = $("#" + workshop_name_txt).data('register');
     } else {
         proper_url = $("#" + workshop_name_txt).data('unregister');
@@ -102,20 +102,20 @@ window.handle_registration_change = function(workshop_name_txt, register) {
 
     function error(message) {
         var elem = $('<div class="alert alert-danger fade"><a href="#" class="close" data-dismiss="alert">&times;</a>' +
-                     '<strong>Error!</strong> <span></span></div>');
+            '<strong>Error!</strong> <span></span></div>');
         elem.find('span').text(message);
-        $("#" + workshop_name_txt).find(".workshop-registration").append(elem); // add the error to the dom
-        setTimeout(function() {
+        $("#" + workshop_name_txt).after(elem); // add the error to the dom
+        setTimeout(function () {
             elem.addClass('show');
-        },10);
+        }, 10);
     }
 
     $.ajax({
-        url : proper_url, // the endpoint
-        type : "POST", // http method
+        url: proper_url, // the endpoint
+        type: "POST", // http method
 
         // handle a successful response
-        success : function(json) {
+        success: function (json) {
             if (json.error) {
                 error(json.error);
             }
@@ -134,7 +134,7 @@ window.handle_registration_change = function(workshop_name_txt, register) {
                 $("#" + workshop_name_txt).find('[data-toggle="tooltip"]').tooltip();
             }
         },
-        error: function(xhr, errmsg, errcode) {
+        error: function (xhr, errmsg, errcode) {
             error('Wystąpił problem przy wysyłaniu danych (' + xhr.status + ': ' + errcode + ').');
         }
     });
@@ -145,7 +145,7 @@ $(function () {
     $('[data-toggle="popover"]').popover();
 
     // Automatically hide 'Saved successfully' alerts after 4 seconds
-    $(".alert-auto-dismiss").delay(4000).fadeTo(500, 0).slideUp(500, function(){
+    $(".alert-auto-dismiss").delay(4000).fadeTo(500, 0).slideUp(500, function () {
         $(this).remove();
     });
 
@@ -153,7 +153,7 @@ $(function () {
         var dates = null;
         if ($(x).data('start-date') && $(x).data('end-date')) {
             dates = [];
-            for(var date = moment($(x).data('start-date')); date <= moment($(x).data('end-date')); date.add(1, 'days'))
+            for (var date = moment($(x).data('start-date')); date <= moment($(x).data('end-date')); date.add(1, 'days'))
                 dates.push(date.toDate());
         }
         $(x).datetimepicker({
@@ -166,11 +166,11 @@ $(function () {
 
     // Facebook fix your sh*t (╯°□°)╯︵ ┻━┻
     function fixBrokenUnresponsiveFacebook() {
-        $('iframe').each(function() {
+        $('iframe').each(function () {
             var url = $(this).attr('src');
             if (url.indexOf('facebook.com/plugins/page.php') === -1)
                 return;
-            if($(this).width() == 0 || $(this).height() == 0)
+            if ($(this).width() == 0 || $(this).height() == 0)
                 return;
             url = url.replace(/width=([0-9]+)/, 'width=' + Math.round($(this).width()));
             url = url.replace(/height=([0-9]+)/, 'height=' + Math.round($(this).height()));
@@ -192,4 +192,37 @@ $(function () {
     }
     yearSelectorToCurrent();
     $(window).resize(yearSelectorToCurrent);
+});
+
+function dismissible(element) {
+    element.fadeTo(5000, 0).slideUp(500, function () {
+        $(this).remove();
+    })
+}
+
+document.getElementById('camp-interest-email-form')?.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var form = $(this);
+    var email = form.find('input[name="email"]').val();
+    $.ajax({
+        url: form.attr('action'),
+        method: 'POST',
+        data: { email: email },
+        success: function (json) {
+            const message = json.message;
+            const level = json.message_level;
+
+            const element = $(`<div class ="alert alert-${level}">${message}</div>`);
+            form.after(element);
+            dismissible(element);
+        },
+        error: function (xhr, textStatus, errorThrown) {
+            const element = $(`<div class="alert alert-danger">Wystąpił błąd</div>`);
+            form.after(element);
+            form.after(element);
+            element.fadeTo(5000, 0).slideUp(500, function () {
+                $(this).remove();
+            });
+        }
+    });
 });

@@ -259,3 +259,11 @@ nav.year-navigation .page-item {
 .popover {
     max-width: 100%;
 }
+
+.callout {
+  border: 1px solid $primary;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background-color: #fff5ef;
+  padding: 1rem;
+}
