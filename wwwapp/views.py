@@ -71,6 +71,19 @@ def redirect_to_view_for_latest_year(target_view_name):
         return redirect(url)
     return view
 
+def index_view(request):
+    context = {}
+    context['title'] = 'Wakacyjne Warsztaty Wielodyscyplinarne'
+
+
+    year = Camp.current()
+    camp_participation = request.user.user_profile.camp_participation_for(year) if request.user.is_authenticated else None
+    if year.is_qualification_editable():
+        camp_interest_email_form = CampInterestEmailForm(user=request.user, is_registered=camp_participation is not None, narrow=True)
+        camp_interest_email_form.helper.form_action = reverse('register_to_camp', args=[year.pk])
+        context['camp_interest_email_form'] = camp_interest_email_form
+
+    return render(request, 'index.html', context)
 
 def program_view(request, year):
     year = get_object_or_404(Camp, pk=year)
@@ -138,6 +151,7 @@ def filter_workshops_by_type(workshops, active_workshop_type):
     else:
         return [workshop for workshop in workshops if workshop.type == active_workshop_type]
 
+@require_POST
 def register_to_camp_view(request, year):
     year = get_object_or_404(Camp, pk=year)
 
@@ -161,12 +175,19 @@ def register_to_camp_view(request, year):
                 # We have no user with this email - add an unregistered user entry
                 _, created = year.interested_via_email.get_or_create(email=email)
         if created:
-            messages.info(request, 'Powiadomimy Cię, gdy rozpocznie się rejestracja', extra_tags='auto-dismiss')
+            message = 'Powiadomimy Cię, gdy rozpocznie się rejestracja'
+            message_level = "info"
         else:
-            messages.warning(request, 'Już znajdujesz się już na tegorocznej liście', extra_tags='auto-dismiss')
+            message = 'Już znajdujesz się na tegorocznej liście'
+            message_level = "warning"
+
+        return JsonResponse({
+            'message': message,
+            'message_level': message_level,
+        })
     else:
-        messages.error(request, form.errors.as_ul(), extra_tags='auto-dismiss danger')  # HACK: it should be alert-danger instead of alert-error
-    return redirect('program', year.pk)
+        return HttpResponseBadRequest(form.errors.as_json())
+
 
 
 def profile_view(request, user_id):
@@ -1157,7 +1178,6 @@ def as_article(name):
     return page
 
 
-index_view = as_article("index")
 template_for_workshop_page_view = as_article("template_for_workshop_page")
 
 

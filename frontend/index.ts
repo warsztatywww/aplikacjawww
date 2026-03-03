@@ -38,7 +38,10 @@ import {
   faFilter,
   faSearch,
   faThLarge,
-  faTimes
+  faTimes,
+  faCalendar,
+  faBell,
+  faLink,
 } from "@fortawesome/free-solid-svg-icons";
 library.add(
   faCheckCircle,
@@ -72,7 +75,10 @@ library.add(
   faFilter,
   faSearch,
   faThLarge,
-  faTimes
+  faTimes,
+  faCalendar,
+  faBell,
+  faLink
 );
 dom.watch();
 
