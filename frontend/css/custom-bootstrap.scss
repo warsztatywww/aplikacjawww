@@ -206,6 +206,26 @@ legend {
   }
 }
 
+/* Program - sticky filter bar */
+.sticky-filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+/* Program - smooth workshop card transitions */
+.workshop-card-animated {
+  transition: opacity 0.25s ease, max-height 0.3s ease;
+  opacity: 1;
+  overflow: hidden;
+}
+.workshop-card-animated.workshop-hidden {
+  opacity: 0;
+  max-height: 0 !important;
+  margin-bottom: 0 !important;
+  pointer-events: none;
+}
+
 /* Program */
 .btn-circle {
   width: 50px;
