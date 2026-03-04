@@ -65,17 +65,8 @@ module.exports = {
   },
   plugins: [
     new MiniCssExtractPlugin(),
-    new GoogleFontsPlugin({
-      fonts: [
-        {
-          family: "Open Sans",
-          variants: ["300", "400", "700"],
-          display: "swap",
-          subsets: ["latin-ext"],
-        },
-      ],
-      apiUrl: "https://gwfh.mranftl.com/api/fonts",
-    }),
+    // GoogleFontsPlugin disabled (no network access in dev environment)
+    // new GoogleFontsPlugin({...}),
     new MomentLocalesPlugin({
       localesToKeep: ["pl"],
     }),
