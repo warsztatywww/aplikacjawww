@@ -43,6 +43,10 @@ import {
   faBell,
   faLink,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDiscord
+} from "@fortawesome/free-brands-svg-icons";
+
 library.add(
   faCheckCircle,
   faTimesCircle,
@@ -78,7 +82,8 @@ library.add(
   faTimes,
   faCalendar,
   faBell,
-  faLink
+  faLink,
+  faDiscord
 );
 dom.watch();
 

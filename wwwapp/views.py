@@ -78,7 +78,8 @@ def index_view(request):
 
     year = Camp.current()
     camp_participation = request.user.user_profile.camp_participation_for(year) if request.user.is_authenticated else None
-    if year.is_qualification_editable():
+    workshops = year.workshops.filter(Q(status='Z') | Q(status='X'))
+    if year.is_qualification_editable() and len(workshops) == 0:
         camp_interest_email_form = CampInterestEmailForm(user=request.user, is_registered=camp_participation is not None, narrow=True)
         camp_interest_email_form.helper.form_action = reverse('register_to_camp', args=[year.pk])
         context['camp_interest_email_form'] = camp_interest_email_form

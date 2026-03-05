@@ -267,3 +267,13 @@ nav.year-navigation .page-item {
   background-color: #fff5ef;
   padding: 1rem;
 }
+
+@include media-breakpoint-up(md) {
+  .lg-table-md td {
+    padding: 0.75rem !important;
+  }
+}
+
+.table-align-middle td {
+  vertical-align: middle;
+}

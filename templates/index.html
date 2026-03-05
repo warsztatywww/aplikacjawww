@@ -23,7 +23,7 @@
 {% endif %}
 
 <div class="row mx-0 mt-4">
-    <div class="col-md-8 p-0 pr-md-4 pb-4 pb-md-0">
+    <div class="col-md-8 p-0 pr-md-4 pb-2 pb-md-0">
         <div>
             <p>
                 <span class="text-primary"><strong>Wakacyjne Warsztaty Wielodyscyplinarne</strong></span> to coroczne
@@ -44,7 +44,7 @@
         <div class="card mt-2">
             <div class="card-body">
                 <h4 class="card-title"><i class="fas fa-calendar text-primary"></i> Terminy WWW22 (2026)</h4>
-                <table class="table m-0">
+                <table class="table table-sm lg-table-md table-align-middle m-0">
                     <tbody>
                         <tr>
                             <td>do 31 marca</td>
@@ -65,7 +65,7 @@
                             <td>Informacja o kwalifikacji</td>
                         </tr>
                         <tr>
-                            <td>3 - 16 sierpnia</td>
+                            <td>3 &ndash; 16 sierpnia</td>
                             <td><strong>Warsztaty</strong>, odbywające się w <strong>Zabrzu</strong></td>
                         </tr>
                     </tbody>
@@ -74,15 +74,16 @@
         </div>
     </div>
     <div class="col-md-4 p-0">
-        <div class="card">
+        {% if camp_interest_email_form %}
+        <div class="card mb-2">
             <div class="card-body">
                 <h4 class="card-title"><i class="fas fa-bell text-primary"></i> Powiadomienia</h4>
                 {% crispy camp_interest_email_form %}
             </div>
         </div>
-        <div class="card mt-2">
-            <a href="https://discord.gg/hMcGkHX" class="btn btn-primary">Dołącz do naszego discorda!</a>
-        </div>
+        {% endif %}
+        <a href="https://discord.gg/hMcGkHX" class="btn btn-primary d-block"><i class="fab fa-discord"></i> Dołącz do naszego
+            Discorda!</a>
         <div class="card mt-2">
             <div class="fb-page" data-href="https://www.facebook.com/warsztatywww/" data-tabs="" data-width=""
                 data-height="" data-small-header="true" data-adapt-container-width="true" data-hide-cover="false"
@@ -96,7 +97,7 @@
         <div class="card mt-2">
             <div class="card-body">
                 <h4 class="card-title"><i class="fas fa-link text-primary"></i> Zobacz też </h4>
-                <ul class="">
+                <ul>
                     <li><a href="/gallery/">Zdjęcia z poprzednich edycji</a></li>
                     <li><a href="/article/historia/">Poprzednie warsztaty</a></li>
                     <li><a href="/article/drogowskaz/">Drogowskaz Pasjonata</a></li>

@@ -1,11 +1,15 @@
 import datetime
 
+from urllib.parse import urlencode
+
 import mock
 from django.contrib.auth.models import User
 from django.contrib.messages.api import get_messages
 from django.test.testcases import TestCase
 from django.test.utils import override_settings
 from django.urls import reverse
+
+from freezegun import freeze_time
 
 from wwwapp.models import WorkshopType, WorkshopCategory, Workshop, CampParticipant, Camp
 
@@ -329,3 +333,43 @@ class CampQualificationViews(TestCase):
         self.assertNotContains(response, '<span class="text-success"><i class="fas fa-check-circle"></i>')
         self.assertNotContains(response, '<span class="text-danger"><i class="fas fa-minus-circle"></i>')
         self.assertNotContains(response, '<span class="text-info">😞')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_register_to_camp(self):
+        response = self.client.post(
+            reverse('register_to_camp', args=[self.year_2020.pk]),
+            urlencode({'email': 'email@email.com'}),
+            content_type='application/x-www-form-urlencoded'
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(),
+                         {'message': 'Powiadomimy Cię, gdy rozpocznie się rejestracja', 
+                          'message_level': 'info'
+                         })
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_register_to_camp_twice(self):
+        self.client.post(
+            reverse('register_to_camp', args=[self.year_2020.pk]),
+            urlencode({'email': 'email@email.com'}),
+            content_type='application/x-www-form-urlencoded'
+            )
+        response = self.client.post(
+            reverse('register_to_camp', args=[self.year_2020.pk]),
+            urlencode({'email': 'email@email.com'}),
+            content_type='application/x-www-form-urlencoded'
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(),
+                         {'message': 'Już znajdujesz się na tegorocznej liście', 
+                          'message_level': 'warning'
+                         })
+
+    @freeze_time('2020-07-03 12:00:00')
+    def test_cannot_register_to_camp_after_camp_starts(self):
+        response = self.client.post(
+            reverse('register_to_camp', args=[self.year_2020.pk]),
+            urlencode({'email': 'email@email.com'}),
+            content_type='application/x-www-form-urlencoded'
+            )
+        self.assertEqual(response.status_code, 403)
