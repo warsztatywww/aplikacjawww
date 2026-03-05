@@ -208,6 +208,25 @@ class WorkshopQualificationViews(TestCase):
         self.assertContains(response, 'Byłeś zapisany')
 
     @freeze_time('2020-05-01 12:00:00')
+    def test_mail_notification_present_when_workshops_are_not_present(self):
+        Workshop.objects.all().delete()
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertContains(response, 'Powiadom mnie, gdy rozpocznie się rejestracja')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_mail_notification_present_when_workshops_are_not_present_and_user_logged_in(self):
+        Workshop.objects.all().delete()
+        self.client.force_login(self.participant_user)
+        CampParticipant.objects.create(user_profile=self.participant_user.user_profile, year=self.year_2020)
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertContains(response, 'Powiadomimy Cię, gdy rozpocznie się rejestracja')
+
+    @freeze_time('2020-05-01 12:00:00')
+    def test_mail_notification_not_present_when_workshops_are_present(self):
+        response = self.client.get(reverse('program', args=[2020]))
+        self.assertNotContains(response, 'Powiadom mnie, gdy rozpocznie się rejestracja')
+
+    @freeze_time('2020-05-01 12:00:00')
     def test_redirect_register_unauthenticated(self):
         # User not logged in, redirect to login
         response = self.client.post(reverse('register_to_workshop', args=[self.workshop.year.pk, self.workshop.name]))
