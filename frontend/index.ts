@@ -44,7 +44,8 @@ import {
   faLink,
 } from "@fortawesome/free-solid-svg-icons";
 import {
-  faDiscord
+  faDiscord,
+  faFacebook
 } from "@fortawesome/free-brands-svg-icons";
 
 library.add(
@@ -83,7 +84,8 @@ library.add(
   faCalendar,
   faBell,
   faLink,
-  faDiscord
+  faDiscord,
+  faFacebook
 );
 dom.watch();
 
