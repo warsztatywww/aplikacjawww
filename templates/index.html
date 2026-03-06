@@ -13,10 +13,10 @@
 {% if current_year.is_registration_open or current_year.are_proposals_open %}
 <div class="callout shadow mt-4">
     {% if current_year.is_registration_open %}
-    Dostępny jest <a href="/{{current_year.pk}}/program"><strong>program {{current_year}}</strong></a>. Zapisz się na
+    Dostępny jest <a href="{% url 'program' current_year.pk %}"><strong>program {{current_year}}</strong></a>. Zapisz się na
     warsztaty!
     {% else %}
-    Obecnie trwają zgłoszenia warsztatów. <a href="/{{current_year.pk}}/workshops/add"><strong>Zgłoś
+    Obecnie trwają zgłoszenia warsztatów. <a href="{% url 'workshops_add' current_year.pk %}"><strong>Zgłoś
             warsztaty!</strong></a>
     {% endif %}
 </div>
@@ -48,7 +48,7 @@
                     <tbody>
                         <tr>
                             <td>do 31 marca</td>
-                            <td><a href="/{{current_year.pk}}/workshops/add"><strong>Zgłoszenia warszatów</strong></a>
+                            <td><a href="{% url 'workshops_add' current_year.pk %}"><strong>Zgłoszenia warszatów</strong></a>
                             </td>
                         </tr>
                         <tr>
@@ -57,7 +57,7 @@
                         </tr>
                         <tr>
                             <td>do 31 maja</td>
-                            <td>Czas na rozwiązywanie <a href="/{{current_year.pk}}/program"><strong>zadań
+                            <td>Czas na rozwiązywanie <a href="{% url 'program' current_year.pk %}"><strong>zadań
                                         kwalifikacyjnych</strong></a> przez uczestników</td>
                         </tr>
                         <tr>
