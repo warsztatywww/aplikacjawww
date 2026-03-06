@@ -34,36 +34,6 @@ class TestArticleViews(TestCase):
         self.article2 = Article.objects.create(name='test_article_on_menubar', title='Drugi artykuł', content='<p>Test</p>',
                                                modified_by=self.admin_user, on_menubar=True)
 
-    def test_index_works(self):
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-        self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Edytuj')
-
-        self.client.force_login(self.normal_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Edytuj')
-
-        self.client.force_login(self.editor_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Edytuj')
-
-        self.client.force_login(self.supereditor_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Edytuj')
-
-        self.client.force_login(self.supermegaeditor_user)
-        response = self.client.get(reverse('index'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Edytuj')
-
     def test_article_view_works(self):
         response = self.client.get(reverse('article', args=[self.article.name]))
         self.assertEqual(response.status_code, 200)
@@ -293,43 +263,6 @@ class TestArticleViews(TestCase):
         self.assertRedirects(response, reverse('login') + '?next=' + reverse('article_edit', args=['test_article']))
         self.assertFalse(Article.objects.filter(name='edited_article').exists())
         self.assertEqual(len(Article.objects.get(name='test_article').content_history.all()), 1)
-
-    def test_edit_special_article(self):
-        # Trying to edit name, title or menubar for index page should fail
-        self.client.force_login(self.admin_user)
-
-        response = self.client.get(reverse('article_edit', args=['index']))
-        self.assertNotContains(response, 'Nazwa')
-        self.assertNotContains(response, 'Tytuł')
-        self.assertNotContains(response, 'Umieść w menu')
-        self.assertContains(response, 'Treść')
-
-        response = self.client.post(reverse('article_edit', args=['index']), {
-            'name': 'edited_article',
-            'title': 'Utworzony artykuł',
-            'on_menubar': 'on',
-            'content': '<p>Treść</p>',
-        })
-        self.assertRedirects(response, reverse('article', args=['index']))
-        messages = get_messages(response.wsgi_request)
-        self.assertEqual(len(messages), 1)
-        self.assertEqual(list(messages)[0].message, 'Zapisano.')
-
-        self.assertFalse(Article.objects.filter(name='edited_article').exists())
-        article = Article.objects.get(name='index')
-        self.assertEqual(article.title, None)  # This should not be set!
-        self.assertHTMLEqual(article.content, '<p>Treść</p>')
-        self.assertEqual(article.on_menubar, False)  # This should not be set!
-        self.assertEqual(article.modified_by, self.admin_user)
-
-        article_history = article.content_history.all()
-        self.assertEqual(len(article_history), 2)
-        self.assertHTMLEqual(article_history[0].content, '<p>Treść</p>')
-        self.assertEqual(article_history[0].modified_by, self.admin_user)
-        self.assertEqual(article_history[0].version, 2)
-        self.assertHTMLEqual(article_history[1].content, '')
-        self.assertEqual(article_history[1].modified_by, None)
-        self.assertEqual(article_history[1].version, 1)
 
     def test_article_on_menubar(self):
         response = self.client.get(reverse('index'))

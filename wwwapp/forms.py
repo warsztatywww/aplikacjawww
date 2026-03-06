@@ -549,18 +549,22 @@ class MailFilterForm(Form):
 class CampInterestEmailForm(Form):
     email = EmailField()
 
-    def __init__(self, *args, user: User = None, is_registered: bool = False, **kwargs):
+    def __init__(self, *args, user: User = None, is_registered: bool = False, narrow=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper(self)
         self.helper.form_show_labels = False
+        self.helper.form_id = 'camp-interest-email-form'
         if not is_registered:
             button = StrictButton('Powiadom mnie, gdy rozpocznie się rejestracja', type='submit', css_class='btn btn-primary btn-sm w-100')
         else:
             button = StrictButton('Powiadomimy Cię, gdy rozpocznie się rejestracja', type='submit', css_class='btn btn-primary btn-sm w-100', disabled=True)
+        
+        email_columns = 'col-12' if narrow else 'col-xl-6'
+        button_columns = 'col-12' if narrow else 'col-xl-4'
         self.helper.layout = Layout(
             Div(
-                Div(Field('email', placeholder='Twój adres e-mail'), css_class='col-xl-6'),
-                Div(FormActions(button), css_class='col-xl-4'),
+                Div(Field('email', placeholder='Twój adres e-mail'), css_class=email_columns),
+                Div(FormActions(button, css_class="m-0"), css_class=button_columns),
                 css_class='row justify-content-center'
             ),
         )

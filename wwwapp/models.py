@@ -97,6 +97,11 @@ class Camp(models.Model):
         else:
             return self.are_workshops_editable()
 
+    def is_registration_open(self) -> bool:
+        is_before_camp = self.start_date is None or datetime.datetime.now().date() < self.start_date
+        is_after_proposal_end = self.proposal_end_date is not None and datetime.datetime.now().date() > self.proposal_end_date
+        return self.are_workshops_editable() and is_before_camp and is_after_proposal_end
+
     def are_workshops_editable(self) -> bool:
         return self == Camp.current()
 

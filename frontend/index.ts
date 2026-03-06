@@ -38,8 +38,16 @@ import {
   faFilter,
   faSearch,
   faThLarge,
-  faTimes
+  faTimes,
+  faCalendar,
+  faBell,
+  faLink,
 } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDiscord,
+  faFacebook
+} from "@fortawesome/free-brands-svg-icons";
+
 library.add(
   faCheckCircle,
   faTimesCircle,
@@ -72,7 +80,12 @@ library.add(
   faFilter,
   faSearch,
   faThLarge,
-  faTimes
+  faTimes,
+  faCalendar,
+  faBell,
+  faLink,
+  faDiscord,
+  faFacebook
 );
 dom.watch();
 
