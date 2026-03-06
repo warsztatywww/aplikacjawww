@@ -45,5 +45,14 @@
       </td>
     </tr>
     {% endfor %}
+    {% if current_year.are_proposals_open %}
+      <tr><td colspan="2">
+        <a role="button"
+           class="btn btn-outline-primary btn-block"
+           href="{% url 'workshops_add' current_year.pk %}">
+          Zgłoś kolejne warsztaty! <i class="fas fa-plus"></i>
+        </a>
+      </td></tr>
+    {% endif %}
   </tbody>
 </table>
