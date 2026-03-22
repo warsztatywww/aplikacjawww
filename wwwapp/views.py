@@ -84,6 +84,12 @@ def index_view(request):
         camp_interest_email_form.helper.form_action = reverse('register_to_camp', args=[year.pk])
         context['camp_interest_email_form'] = camp_interest_email_form
 
+    camp_dates_article, _ = Article.objects.get_or_create(name='camp-dates')
+    bleach_args = get_bleach_default_options().copy()
+    camp_dates_safe = mark_safe(bleach.clean(camp_dates_article.content, **bleach_args))
+    context['camp_dates'] = camp_dates_safe
+    context['can_edit'] = request.user.has_perm('wwwapp.change_article')
+
     return render(request, 'index.html', context)
 
 def program_view(request, year):
