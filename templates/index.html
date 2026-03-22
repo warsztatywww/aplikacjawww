@@ -43,34 +43,13 @@
 
         <div class="card mt-2">
             <div class="card-body">
-                <h4 class="card-title"><i class="fas fa-calendar text-primary"></i> Terminy WWW22 (2026)</h4>
-                <table class="table table-sm lg-table-md table-align-middle m-0">
-                    <tbody>
-                        <tr>
-                            <td>do 31 marca</td>
-                            <td><a href="{% url 'workshops_add' current_year.pk %}"><strong>Zgłoszenia warszatów</strong></a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>do 19 kwietnia</td>
-                            <td>Pojawiają się strony warsztatów i zadania kwalifikacyjne</td>
-                        </tr>
-                        <tr>
-                            <td>do 31 maja</td>
-                            <td>Czas na rozwiązywanie <a href="{% url 'program' current_year.pk %}"><strong>zadań
-                                        kwalifikacyjnych</strong></a> przez uczestników</td>
-                        </tr>
-                        <tr>
-                            <td>16 czerwca</td>
-                            <td>Informacja o kwalifikacji</td>
-                        </tr>
-                        <tr>
-                            <td>3 &ndash; 16 sierpnia</td>
-                            <td><strong>Warsztaty</strong>, odbywające się w <strong>Zabrzu</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                {{ camp_dates }}
+                {% if can_edit %}
+                <a class="btn btn-outline-primary btn-sm" role="button" href="{% url 'article_edit' 'camp-dates' %}">
+                    Edytuj
+                </a>
+                {% endif %}
+                </div>
         </div>
     </div>
     <div class="col-md-4 p-0">
