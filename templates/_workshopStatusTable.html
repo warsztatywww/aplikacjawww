@@ -45,7 +45,7 @@
       </td>
     </tr>
     {% endfor %}
-    {% if current_year.are_proposals_open %}
+    {% if not selected_year.is_program_finalized %}
       <tr><td colspan="2">
         <a role="button"
            class="btn btn-outline-primary btn-block"
