@@ -45,14 +45,16 @@
       </td>
     </tr>
     {% endfor %}
-    {% if not selected_year.is_program_finalized %}
-      <tr><td colspan="2">
-        <a role="button"
-           class="btn btn-outline-primary btn-block"
-           href="{% url 'workshops_add' current_year.pk %}">
-          Zgłoś kolejne warsztaty! <i class="fas fa-plus"></i>
-        </a>
-      </td></tr>
+    {% if current_year %}
+      {% if not current_year.is_program_finalized %}
+        <tr><td colspan="2">
+          <a role="button"
+            class="btn btn-outline-primary btn-block"
+            href="{% url 'workshops_add' current_year.pk %}">
+            Zgłoś kolejne warsztaty! <i class="fas fa-plus"></i>
+          </a>
+        </td></tr>
+      {% endif %}
     {% endif %}
   </tbody>
 </table>
