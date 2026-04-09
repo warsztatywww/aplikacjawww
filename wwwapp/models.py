@@ -438,11 +438,17 @@ class WorkshopCategory(models.Model):
 
 
 class WorkshopType(models.Model):
-    year = models.ForeignKey(Camp, on_delete=models.PROTECT, editable=False)
+    year = models.ForeignKey(Camp, on_delete=models.PROTECT, editable=False, related_name='workshop_types')
     name = models.CharField(max_length=100, blank=False, null=False)
+
+    plural_name = models.CharField(max_length=100, blank=True)
+    description = models.TextField(max_length=1000, blank=True)
+    
+    order = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ('year', 'name',)
+        ordering = ['order']
 
     def __str__(self):
         return '%s: %s' % (self.year, self.name)

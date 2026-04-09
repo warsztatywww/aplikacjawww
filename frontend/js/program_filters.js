@@ -5,7 +5,11 @@ const searchInput = document.getElementById("workshop-search-input");
 const filterRegistedBtn = document.getElementById("registered-filter-btn");
 const hideCancelledBtn = document.getElementById("cancelled-filter-btn");
 
+const workshopTypeTabs = document.querySelectorAll(".workshop-type-tab");
+const workshopTypeDescriptions = document.querySelectorAll(".workshop-type-description");
+
 const filterState = {
+    workshopType: null,
     categories: new Set(),
     searchTerm: "",
     showRegisteredOnly: false,
@@ -14,9 +18,6 @@ const filterState = {
 
 function toggleButton(button) {
     button.classList.toggle("active");
-    button.classList.toggle("btn-dark");
-    button.classList.toggle("btn-white");
-
     return button.classList.contains("active");
 }
 
@@ -31,18 +32,41 @@ function filterWorkshops() {
         const workshopCategories = workshop.getAttribute("data-categories").split(",");
         const isRegistered = workshop.getAttribute("data-registered") === "True";
 
+        const matchesType = !filterState.workshopType || workshop.getAttribute("data-workshop-type") === filterState.workshopType;
         const matchesCategory = filterState.categories.size === 0 || workshopCategories.some(cat => filterState.categories.has(cat));
         const matchesRegistered = !filterState.showRegisteredOnly || isRegistered;
         const matchesSearch = searchTerm === "" || title.includes(searchTerm) || description.includes(searchTerm);
         const matchesCancelled = !filterState.hideCancelled || status !== "X";
 
-        if (matchesCategory && matchesRegistered && matchesSearch && matchesCancelled) {
-            workshop.style.display = "block";
+        if (matchesType && matchesCategory && matchesRegistered && matchesSearch && matchesCancelled) {
+            workshop.classList.remove("d-none");
         } else {
-            workshop.style.display = "none";
+            workshop.classList.add("d-none");
         }
     });
 }
+
+workshopTypeTabs?.forEach(tab => {
+    tab.addEventListener("click", () => {
+        const selectedType = tab.getAttribute("data-type");
+
+        if (filterState.workshopType !== selectedType) {
+            filterState.workshopType = selectedType;
+            workshopTypeTabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+        }
+
+        workshopTypeDescriptions.forEach(desc => {
+            if (desc.getAttribute("data-type") === selectedType) {
+                desc.classList.remove("d-none");
+            } else {
+                desc.classList.add("d-none");
+            }
+        });
+
+        filterWorkshops();
+    })
+});
 
 filterButtons?.forEach(button => {
     button.addEventListener("click", () => {

@@ -30,8 +30,8 @@ class Command(BaseCommand):
     NUM_OF_WORKSHOPS_PREVIOUS = 20  # Previous year workshops
     NUM_OF_WORKSHOPS_OLDEST = 10  # Oldest year workshops
     NUM_OF_ARTICLES = 2
-    NUM_OF_CATEGORIES = 2
-    NUM_OF_TYPES = 2
+    NUM_OF_CATEGORIES = 5
+    NUM_OF_TYPES = 3
     
     def add_arguments(self, parser):
         parser.add_argument(
@@ -170,7 +170,12 @@ class Command(BaseCommand):
     """
 
     def fake_type(self, year: Camp) -> WorkshopType:
-        c = WorkshopType(year=year, name=self.fake.word())
+        c = WorkshopType(
+            year=year, 
+            name=self.fake.word(),
+            plural_name=self.fake.word(),
+            description=self.fake.text(50),
+        )
         c.save()
         return c
 
@@ -276,8 +281,8 @@ class Command(BaseCommand):
         Create and configure a Camp object for the given year
         """
         camp, _ = Camp.objects.get_or_create(year=year_number)
-        camp.start_date = datetime.datetime(year_number, 7, 1)
-        camp.end_date = datetime.datetime(year_number, 8, 1)
+        camp.start_date = datetime.date(year_number, 7, 1)
+        camp.end_date = datetime.date(year_number, 8, 1)
         camp.save()
         camp.forms.add(self.form_userinfo)
         camp.form_question_arrival_date = self.question_start_date
