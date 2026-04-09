@@ -91,7 +91,7 @@ def program_view(request, year):
 
     
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
-    include_workshop_types(request, context, year, workshops)
+    include_workshop_types(context, year, workshops)
 
     context['workshops'] = [(workshop, (workshop in workshops_participating_in)) for workshop in workshops]
     # Shuffle the workshops to make the page more dynamic and encourage people to look through all of them, not just the first ones
@@ -109,21 +109,26 @@ def program_view(request, year):
     return render(request, 'program.html', context)
 
 
-def include_workshop_types(request, context, year, workshops):
+def include_workshop_types(context, year, workshops):
     workshop_types = list(year.workshop_types.all())
 
-    # Only display tabs and group by workshop types when all types have plural names defined
+    # Only display tabs and group by workshop types when all types have plural names defined, and there workshops to display
     use_workshop_types = all(workshop_type.plural_name != "" for workshop_type in workshop_types)
-    if not use_workshop_types:
+    if not use_workshop_types or not workshops:
         return
 
     workshop_counts = { workshop_type.name: 0  for workshop_type in workshop_types }
     for workshop in workshops:
         workshop_counts[workshop.type.name] += 1
 
-    active_workshop_type = year.workshop_types.first()
+    nonempty_workshop_types = [workshop_type for workshop_type in workshop_types if workshop_counts[workshop_type.name] > 0]
+
+    context['workshop_types'] = [ 
+        (workshop_type, workshop_counts[workshop_type.name]) for workshop_type in nonempty_workshop_types 
+        if workshop_counts[workshop_type.name] > 0
+    ] 
+    active_workshop_type = nonempty_workshop_types[0]
     context['active_workshop_type'] = active_workshop_type
-    context['workshop_types'] = [ (workshop_type, workshop_counts[workshop_type.name]) for workshop_type in workshop_types]
 
     return active_workshop_type
 

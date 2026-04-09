@@ -6,10 +6,11 @@ const filterRegistedBtn = document.getElementById("registered-filter-btn");
 const hideCancelledBtn = document.getElementById("cancelled-filter-btn");
 
 const workshopTypeTabs = document.querySelectorAll(".workshop-type-tab");
+const activeWorkshopType = document.querySelector(".workshop-type-tab.active")?.getAttribute("data-type") || null; 
 const workshopTypeDescriptions = document.querySelectorAll(".workshop-type-description");
 
 const filterState = {
-    workshopType: null,
+    workshopType: activeWorkshopType,
     categories: new Set(),
     searchTerm: "",
     showRegisteredOnly: false,
