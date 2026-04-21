@@ -259,3 +259,51 @@ nav.year-navigation .page-item {
 .popover {
     max-width: 100%;
 }
+.wwwtabs {
+  border-radius: 5px;
+}
+
+.workshop-type-tab {
+  color: $primary;
+  background-color: transparent;
+  flex-grow: 1;
+  text-align: center;
+  border-bottom: 2px solid rgba($primary, .5);
+}
+
+.workshop-type-tab:hover {
+  cursor: pointer;
+}
+
+.workshop-type-tab.active {
+  color: #3d2b1f;
+  background-color: #fff;
+  font-weight: 600;
+  border-bottom: 4px solid $primary;
+}
+
+.wwwtabs__count {
+  display: inline-block;
+  background: $primary;
+  color: $light;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  margin-left: 0.3rem;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.filter-btn {
+  background-color: transparent;
+  color: $primary;
+  border: 1px solid rgba($primary, .5);
+  border-radius: 10px;
+}
+
+.filter-btn.active {
+  background-color: $primary;
+  color: #fff;
+  border-color: $primary;
+}

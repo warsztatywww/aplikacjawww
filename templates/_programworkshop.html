@@ -31,7 +31,7 @@
       </div>
     </div>
   {% endif %}
-  <div class="card-body d-flex flex-column">
+  <div class="card-body d-flex flex-column pt-2">
     <!-- Categories -->
     <div class="mb-1">
       {% for category in workshop.category.all %}
@@ -51,7 +51,7 @@
     {% endif %}
 
     <!-- Learn more -->
-    {% if not no_workshop_card_header %}
+    {% if not no_workshop_card_header and workshop.page_content_is_public %}
       <span class="d-inline-block w-100 mb-1 qualification-problems-button"
             {# this wrapper span is here to allow the tooltip to work on a disabled element, see https://getbootstrap.com/docs/4.0/components/tooltips/#disabled-elements #}
             {% if not workshop.page_content_is_public %}data-toggle="tooltip"
@@ -62,7 +62,7 @@
           class="{% if not workshop.page_content_is_public %}disabled{% endif %}"
           href="{% url 'workshop_page' workshop.year.pk workshop.name %}"
           target="_blank">
-          <i class="fas fa-info-circle"></i> Dowiedz się więcej o tych warsztatach
+          <i class="fas fa-info-circle"></i> Dowiedz się więcej <span class="d-none d-sm-inline">o tych warsztatach</span>
         </a>
       </span>
     {% endif %}

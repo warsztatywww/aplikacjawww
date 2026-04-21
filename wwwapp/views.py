@@ -35,7 +35,7 @@ from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from .forms import ArticleForm, UserProfileForm, UserForm, \
     UserProfilePageForm, UserSecretNotesForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
     TinyMCEUpload, SolutionFileFormSet, SolutionForm, CampInterestEmailForm
-from .models import Article, UserProfile, Workshop, WorkshopParticipant, \
+from .models import Article, UserProfile, Workshop, WorkshopType, WorkshopParticipant, \
     CampParticipant, ResourceYearPermission, Camp, Solution, CampInterestEmail
 from .templatetags.wwwtags import qualified_mark
 
@@ -77,6 +77,8 @@ def program_view(request, year):
 
     context = {}
     context['title'] = 'Program %s' % str(year)
+    context['selected_year'] = year
+
 
     camp_participation = request.user.user_profile.camp_participation_for(year) if request.user.is_authenticated else None
     if camp_participation:
@@ -87,21 +89,54 @@ def program_view(request, year):
         workshops_participating_in = set()
         has_results = False
 
+    
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
+    include_workshop_types(context, year, workshops)
+
     context['workshops'] = [(workshop, (workshop in workshops_participating_in)) for workshop in workshops]
     # Shuffle the workshops to make the page more dynamic and encourage people to look through all of them, not just the first ones
     random.shuffle(context['workshops']) 
+
     context['categories'] = sorted(set(category.name for workshop in workshops for category in workshop.category.all()))
     context['has_results'] = has_results and year == Camp.current()
     context['is_registered'] = camp_participation is not None
+
     if year.is_qualification_editable():
         camp_interest_email_form = CampInterestEmailForm(user=request.user, is_registered=camp_participation is not None)
         camp_interest_email_form.helper.form_action = reverse('register_to_camp', args=[year.pk])
         context['camp_interest_email_form'] = camp_interest_email_form
 
-    context['selected_year'] = year
     return render(request, 'program.html', context)
 
+
+def include_workshop_types(context, year, workshops):
+    workshop_types = list(year.workshop_types.all())
+
+    # Only display tabs and group by workshop types when all types have plural names defined, and there workshops to display
+    use_workshop_types = all(workshop_type.plural_name != "" for workshop_type in workshop_types)
+    if not use_workshop_types or not workshops:
+        return
+
+    workshop_counts = { workshop_type.name: 0  for workshop_type in workshop_types }
+    for workshop in workshops:
+        workshop_counts[workshop.type.name] += 1
+
+    nonempty_workshop_types = [workshop_type for workshop_type in workshop_types if workshop_counts[workshop_type.name] > 0]
+
+    context['workshop_types'] = [ 
+        (workshop_type, workshop_counts[workshop_type.name]) for workshop_type in nonempty_workshop_types 
+        if workshop_counts[workshop_type.name] > 0
+    ] 
+    active_workshop_type = nonempty_workshop_types[0]
+    context['active_workshop_type'] = active_workshop_type
+
+    return active_workshop_type
+
+def filter_workshops_by_type(workshops, active_workshop_type):
+    if active_workshop_type is None:
+        return workshops
+    else:
+        return [workshop for workshop in workshops if workshop.type == active_workshop_type]
 
 def register_to_camp_view(request, year):
     year = get_object_or_404(Camp, pk=year)

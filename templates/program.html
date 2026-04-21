@@ -5,7 +5,7 @@
 
 {% block content %}
     <article>
-      <h1 class="row">
+      <h2 class="row mt-4">
         <span class="col-12 col-md-9">{{ title }}</span>
         {% if selected_year == current_year %}
         <span class="col-12 col-md-3 d-none d-md-inline-block"
@@ -19,18 +19,46 @@
           </a>
         </span>
         {% endif %}
-      </h1>
+      </h2>
       {% if has_results %}
         <p class="alert alert-info">Twoje rozwiązania zostały ocenione! Sprawdź wyniki w zakładce <a href="{% url 'mydata_status' %}">kwalifikacja</a>.</p>
       {% endif %}
 
       {% if workshops %}
         {{ categories|json_script:"categories-data" }}
+
+        <!-- Workshop type tabs -->
+        {% if workshop_types %}
+          <nav class="wwwtabs mb-3 d-flex flex-row" id="workshop-types-tabs" role="tablist">
+            {% for wtype, workshop_count in workshop_types %}
+            <div class="workshop-type-tab p-2 justify-content-center align-items-center {% if wtype == active_workshop_type %}active{% endif %} d-flex flex-column flex-sm-row"
+              role="tab"
+              data-type="{{ wtype.name }}">
+              {% if wtype.icon %}<i class="{{ wtype.icon }}"></i> {% endif %}
+              {{ wtype.plural_name.title }}
+              <div>
+                <span class="wwwtabs__count">
+                {{ workshop_count }}
+                </span>
+              </div>
+            </div>
+            {% endfor %}
+          </nav>
+          {% for wtype, workshop_count in workshop_types %}
+            <div class="workshop-type-description {% if wtype != active_workshop_type %}d-none{% endif %}"
+              data-type="{{ wtype.name }}">
+              {% if wtype.description %}
+                  <p>
+                    {{ wtype.description }}
+                  </p>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+
         <!-- Filtering & search -->
         <div class="card border mb-3">
-          <div class="card-body bg-light d-flex flex-column gap-2">
-            <div class="mb-2 text-primary"><i class="fas fa-filter"></i> Filtruj warsztaty</div>
-
+          <div class="card-body d-flex flex-column gap-2">
               <!-- Search by name -->
               <div class="position-relative">
                 <i class="fas fa-search text-primary position-absolute" style="left: 1rem; top: 50%; transform: translateY(-50%);"></i>
@@ -38,9 +66,9 @@
               </div>
 
               <!-- Search by category tags -->
-              <div>
+              <div class="d-flex flex-row gap-1 flex-wrap">
                 {% for category in categories %}
-                  <button class="btn btn-sm btn-white category-filter-btn" data-category="{{ category }}">
+                  <button class="btn btn-sm category-filter-btn filter-btn" data-category="{{ category }}">
                     {{ category }}
                   </button>
                 {% endfor %}
@@ -48,10 +76,10 @@
 
               <!-- Additional filters -->
               <div class="d-flex flex-row gap-1">
-                <button class="btn btn-sm btn-white" id="registered-filter-btn" data-filter="registered">
+                <button class="btn btn-sm filter-btn" id="registered-filter-btn" data-filter="registered">
                   <i class="fas fa-check"></i> Tylko zapisane
                 </button>
-                <button class="btn btn-sm btn-white" id="cancelled-filter-btn" data-filter="cancelled">
+                <button class="btn btn-sm filter-btn" id="cancelled-filter-btn" data-filter="cancelled">
                   <i class="fas fa-times"></i> Ukryj odwołane
                 </button>
               </div>
@@ -68,8 +96,9 @@
         {% for workshop, registered in workshops %}
           <div 
           id="{{workshop.name}}-workshop-card"
-          class="mb-3 workshop-card"
+          class="mb-3 workshop-card {% if active_workshop_type and workshop.type != active_workshop_type %}d-none{% endif %}"
           data-categories="{% for c in workshop.category.all %}{{ c.name }}{% if not forloop.last %},{% endif %}{% endfor %}"
+          data-workshop-type="{{ workshop.type.name }}"
           data-registered="{{ registered }}"
           data-status="{{ workshop.status }}"
           >{% include "_programworkshop.html" %}</div>
