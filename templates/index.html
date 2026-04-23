@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% load crispy_forms_tags %}
+{% load static crispy_forms_tags %}
 
 {% block content %}
 <div id="fb-root"></div>
@@ -8,7 +8,7 @@
     src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v25.0&appId=1522345984699744"></script>
 
 <div class="mt-4">
-    <img src="/static/images/main-page-banner.jpg" alt="Warsztaty" class="w-full h-full object-cover" />
+    <img src="{% static 'images/main-page-banner.jpg' %}" alt="Warsztaty" class="w-full h-full object-cover" />
 </div>
 {% if current_year.is_registration_open or current_year.are_proposals_open %}
 <div class="callout shadow mt-4">
