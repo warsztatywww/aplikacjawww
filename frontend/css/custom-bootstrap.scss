@@ -307,3 +307,21 @@ nav.year-navigation .page-item {
   color: #fff;
   border-color: $primary;
 }
+
+.callout {
+  border: 1px solid $primary;
+  border-left-width: 4px;
+  border-radius: 4px;
+  background-color: #fff5ef;
+  padding: 1rem;
+}
+
+@include media-breakpoint-up(md) {
+  .lg-table-md td {
+    padding: 0.75rem !important;
+  }
+}
+
+.table-align-middle td {
+  vertical-align: middle;
+}
