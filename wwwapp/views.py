@@ -84,7 +84,7 @@ def index_view(request):
         camp_interest_email_form.helper.form_action = reverse('register_to_camp', args=[year.pk])
         context['camp_interest_email_form'] = camp_interest_email_form
 
-    camp_dates_article, _ = Article.objects.get_or_create(name='camp-dates')
+    camp_dates_article, _ = Article.objects.get_or_create(name='camp_dates')
     bleach_args = get_bleach_default_options().copy()
     camp_dates_safe = mark_safe(bleach.clean(camp_dates_article.content, **bleach_args))
     context['camp_dates'] = camp_dates_safe

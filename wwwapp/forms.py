@@ -140,6 +140,7 @@ class ArticleForm(ModelForm):
     # and they are not supposed to ever have a title in the database or be placed on the menubar
     SPECIAL_ARTICLES = {
         'index': 'Strona główna',
+        'camp_dates': 'Terminy warsztatów',
         'template_for_workshop_page': 'Szablon strony warsztatów'
     }
 
