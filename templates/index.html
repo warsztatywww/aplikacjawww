@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% load static crispy_forms_tags %}
+
+{% block content %}
+<div id="fb-root"></div>
+<script async defer crossorigin="anonymous"
+    src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v25.0&appId=1522345984699744"></script>
+
+<div class="mt-4">
+    <img src="{% static 'images/main-page-banner.jpg' %}" alt="Warsztaty" class="w-full h-full object-cover" />
+</div>
+{% if current_year.is_registration_open or current_year.are_proposals_open %}
+<div class="callout shadow mt-4">
+    {% if current_year.is_registration_open %}
+    Dostępny jest <a href="{% url 'program' current_year.pk %}"><strong>program {{current_year}}</strong></a>. Zapisz się na
+    warsztaty!
+    {% else %}
+    Obecnie trwają zgłoszenia warsztatów. <a href="{% url 'workshops_add' current_year.pk %}"><strong>Zgłoś
+            warsztaty!</strong></a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="row mx-0 mt-4">
+    <div class="col-md-8 p-0 pr-md-4 pb-2 pb-md-0">
+        <div>
+            <p>
+                <span class="text-primary"><strong>Wakacyjne Warsztaty Wielodyscyplinarne</strong></span> to coroczne
+                wydarzenie przeznaczone dla zdolnych licealistów
+                zainteresowanych <strong>matematyką, informatyką, fizyką, astronomią lub biologią</strong>. Zajęcia
+                prowadzi grupa
+                zaprzyjaźnionych studentów z całej Polski pod patronatem Uniwersytetu Warszawskiego.
+
+            </p>
+            <p>
+                Chętnych do współpracy zapraszamy do działu <a href="/article/dla-prowadzacych/"><strong>dla
+                        prowadzących</strong></a>.
+                Chętnych do wzięcia udziału kierujemy do działu <a href="/article/dla-uczestnikow/"><strong>dla
+                        uczestników</strong></a>.
+            </p>
+        </div>
+
+        <div class="card mt-2">
+            <div class="card-body">
+                {{ camp_dates }}
+                {% if can_edit %}
+                <a class="btn btn-outline-primary btn-sm" role="button" href="{% url 'article_edit' 'camp_dates' %}">
+                    Edytuj
+                </a>
+                {% endif %}
+                </div>
+        </div>
+    </div>
+    <div class="col-md-4 p-0">
+        {% if camp_interest_email_form %}
+        <div class="card mb-2">
+            <div class="card-body">
+                <h4 class="card-title"><i class="fas fa-bell text-primary"></i> Powiadomienia</h4>
+                {% crispy camp_interest_email_form %}
+            </div>
+        </div>
+        {% endif %}
+        <a href="https://discord.gg/hMcGkHX" class="btn btn-primary d-block"><i class="fab fa-discord"></i> Dołącz do
+            naszego
+            Discorda!</a>
+        <div class="card mt-2">
+            <div class="fb-page" data-href="https://www.facebook.com/warsztatywww" data-tabs="" data-width=""
+                data-height="" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false"
+                data-show-facepile="false">
+                <blockquote cite="https://www.facebook.com/warsztatywww" class="fb-xfbml-parse-ignore">
+                    <a href="https://www.facebook.com/warsztatywww" class="d-block align-middle">
+                        <i class="fab fa-facebook"></i> Wakacyjne Warsztaty Wielodyscyplinarne</a>
+                </blockquote>
+            </div>
+        </div>
+
+        <div class="card mt-2">
+            <div class="card-body">
+                <h4 class="card-title"><i class="fas fa-link text-primary"></i> Zobacz też </h4>
+                <ul>
+                    <li><a href="/gallery/">Zdjęcia z poprzednich edycji</a></li>
+                    <li><a href="/article/historia/">Poprzednie warsztaty</a></li>
+                    <li><a href="/article/drogowskaz/">Drogowskaz Pasjonata</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="mt-4">
+    <h3 class="card-title"><i class="fas fa-info-circle text-primary"></i> O Warsztatach</h3>
+
+    <p>
+        Każdy uczestnik Warsztatów może wybrać kilka spośród kilkunastu propozycji kilkudniowych bloków zajęć. Zajęcia
+        odbywają się w małych grupach i mają charakter warsztatowy. Obok wykładów bardzo istotna jest część praktyczna -
+        rozwiązywanie zadań, pisanie programów. Wieczorami można uczestniczyć w "luźnych" wykładach i prezentacjach,
+        niezwiązanych z żadnym blokiem zajęć, i poruszających różne ciekawe tematy z, ale również spoza, zakresu nauk
+        ścisłych - lub samemu wygłosić taki wykład! A pozanaukowo - integracja, gry i zabawy; dla chętnych
+        przeprowadzamy przyspieszony kurs brydża i go, bardziej zaawansowani gracze mogą spróbować swoich sił w
+        turnieju, a każdy może zagrać w seta, rpg, planszówki, czy pośpiewać ogniskowe piosenki.
+    </p>
+
+    <p>
+        W związku z Warsztatami powstał <a href="/article/drogowskaz/">Drogowskaz Pasjonata</a> - <strong> poradnik dla
+            młodych zdolnych licealistów</strong>, którzy chcą
+        rozwijać swoje talenty (niezależnie czy byli/będą na WWW czy nie). Tekst polecamy zarówno powyższym, jak i
+        osobom, które mają z nimi styczność (rodzice, nauczyciele, tutorzy).
+    </p>
+
+    <p>
+        Zachęcamy również do lektury: <a href="/article/en-indie-camp-for-hs-geeks/">An independent camp for high school
+            geeks</a> - tekst po angielsku o tym, co to są Wakacyjne
+        Warsztaty Wielodyscyplinarne, co jest w nich szczególnego i jak tę wiedzę można wykorzystać.
+    </p>
+
+    <p>
+        Chętnych do prowadzenia zajęć zachęcamy do zapoznania się z <a href="/article/dla-prowadzacych/">informacjami
+            dla prowadzących</a>.
+    </p>
+</div>
+
+{% endblock %}
