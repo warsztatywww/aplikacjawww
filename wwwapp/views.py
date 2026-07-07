@@ -977,7 +977,9 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
         workshop_data = {'wid': workshop.id,
                          'name': workshop.title,
                          'lecturers': [lect.id for lect in
-                                       workshop.lecturer.all()]}
+                                       workshop.lecturer.all()],
+                         'type': workshop.type.name     
+                                       }
         for lecturer in workshop.lecturer.all():
             if lecturer not in participant_profiles_raw:
                 lecturer_profiles_raw.add(lecturer)
