@@ -973,13 +973,19 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
     lecturer_profiles_raw = set()
     workshop_ids = set()
     workshops = []
-    for workshop in Workshop.objects.filter(status='Z', year=year):
-        workshop_data = {'wid': workshop.id,
-                         'name': workshop.title,
-                         'lecturers': [lect.id for lect in
-                                       workshop.lecturer.all()],
-                         'type': workshop.type.name     
-                                       }
+    queryset = (
+        Workshop.objects
+        .filter(status='Z', year=year)
+        .select_related('type')
+        .prefetch_related('lecturer')
+    )
+    for workshop in queryset:
+        workshop_data = {
+            'wid': workshop.id,
+            'name': workshop.title,
+            'lecturers': [lect.id for lect in workshop.lecturer.all()],
+            'type': workshop.type.name     
+        }
         for lecturer in workshop.lecturer.all():
             if lecturer not in participant_profiles_raw:
                 lecturer_profiles_raw.add(lecturer)
