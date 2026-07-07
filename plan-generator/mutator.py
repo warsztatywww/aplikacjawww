@@ -14,7 +14,7 @@ class PlanMutator:
 
     def swap_random_workshops(self, plan: Plan) -> Plan:
         new_plan = copy.deepcopy(plan)
-        w1, w2 = random.sample(self.camp_info.workshop_ids, 2)
+        w1, w2 = random.sample(self.camp_info.workshop_ids(), 2)
         b1 = get_workshop_block(plan, w1)
         b2 = get_workshop_block(plan, w2)
         if b1 != b2:
@@ -24,7 +24,7 @@ class PlanMutator:
 
     def move_random_workshop(self, plan: Plan) -> Plan:
         new_plan = copy.deepcopy(plan)
-        w1 = random.choice(list(self.camp_info.workshop_ids))
+        w1 = random.choice(self.camp_info.workshop_ids())
         b1 = get_workshop_block(plan, w1)
         b2 = random.choice(list(plan.keys()))
         if b2 != b1:
