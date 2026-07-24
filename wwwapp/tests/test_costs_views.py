@@ -432,6 +432,11 @@ class CostAdministrationViewsTests(TestCase):
             status=Invoice.Status.APPROVED,
             first_item_amount=Decimal('6.00'),
         )
+        self.processed_invoice = self.create_invoice(
+            document_number='FV/processed', internal_number='WWW_2027_FP_0002',
+            status=Invoice.Status.PROCESSED,
+            camp=self.other_camp,
+        )
         CostItem.objects.create(
             invoice=self.split_invoice,
             amount=Decimal('4.00'),
@@ -568,6 +573,32 @@ class CostAdministrationViewsTests(TestCase):
         self.assertRedirects(response, reverse('costs_admin'))
         self.approved_invoice.refresh_from_db()
         self.assertEqual(self.approved_invoice.status, Invoice.Status.PROCESSED)
+
+    def test_processed_invoice_cannot_be_edited_or_reverted(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            reverse('costs_invoice_edit', args=[self.processed_invoice.pk]),
+            {
+                'document_number': 'FV/processed',
+                'issue_date': '2026-07-24',
+                'amount': '10.00',
+                'invoice_type': Invoice.Type.KSEF,
+                'description': 'Cost administration test',
+                'cost_items-TOTAL_FORMS': '1',
+                'cost_items-INITIAL_FORMS': '1',
+                'cost_items-MIN_NUM_FORMS': '0',
+                'cost_items-MAX_NUM_FORMS': '1000',
+                'cost_items-0-id': self.processed_invoice.cost_items.get().pk,
+                'cost_items-0-workshop': '',
+                'cost_items-0-amount': '10.00',
+                'cost_items-0-category': CostItem.Category.REGULAR_PURCHASES,
+            },
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.processed_invoice.refresh_from_db()
+        self.assertEqual(self.processed_invoice.status, Invoice.Status.PROCESSED)
 
     def test_malformed_invoice_ids_return_bad_request(self):
         malformed_data = {'invoice_ids': ['not-an-invoice-id']}

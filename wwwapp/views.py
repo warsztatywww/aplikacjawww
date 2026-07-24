@@ -173,8 +173,11 @@ def costs_invoice_edit_view(request, invoice_id):
         pk=invoice_id,
         user=request.user,
         camp=camp,
-        status__in=(Invoice.Status.RECEIVED, Invoice.Status.REJECTED),
     )
+    if invoice.status not in (Invoice.Status.RECEIVED, Invoice.Status.REJECTED):
+        if request.method == 'POST':
+            raise PermissionDenied
+        return HttpResponseNotFound()
     invoice_form = InvoiceForm(request.POST or None, request.FILES or None, instance=invoice)
     formset = CostItemFormSet(request.POST or None, instance=invoice)
     invoice_form_is_valid = invoice_form.is_valid()
