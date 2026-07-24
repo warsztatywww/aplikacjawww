@@ -590,6 +590,14 @@ class InvoiceForm(ModelForm):
             'invoice_type',
             'description',
         ]
+        labels = {
+            'attachment': 'Załącznik',
+            'document_number': 'Numer dokumentu',
+            'issue_date': 'Data wystawienia',
+            'amount': 'Kwota',
+            'invoice_type': 'Typ dokumentu',
+            'description': 'Opis',
+        }
 
     def clean_attachment(self):
         attachment = self.cleaned_data['attachment']
@@ -619,6 +627,11 @@ class CostItemForm(ModelForm):
     class Meta:
         model = CostItem
         fields = ['workshop', 'amount', 'category']
+        labels = {
+            'workshop': 'Warsztat',
+            'amount': 'Kwota',
+            'category': 'Kategoria',
+        }
 
     def __init__(self, *args, camp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -667,6 +680,7 @@ class SettlementDetailsForm(ModelForm):
     class Meta:
         model = SettlementDetails
         fields = ['account_number']
+        labels = {'account_number': 'Numer rachunku bankowego'}
 
     def __init__(self, *args, user, camp, **kwargs):
         self.user = user
@@ -674,6 +688,19 @@ class SettlementDetailsForm(ModelForm):
         if 'instance' not in kwargs:
             kwargs['instance'] = SettlementDetails.objects.filter(user=user, camp=camp).first()
         super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.include_media = False
+        self.helper.layout = Layout(
+            'account_number',
+            FormActions(
+                StrictButton(
+                    'Zapisz',
+                    type='submit',
+                    css_class='btn-outline-primary btn-lg mx-1 my-3',
+                ),
+                css_class='text-right',
+            ),
+        )
 
     def save(self, commit=True):
         details = super().save(commit=False)

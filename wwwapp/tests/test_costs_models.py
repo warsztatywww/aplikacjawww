@@ -1,11 +1,14 @@
+import os
 from decimal import Decimal
 from threading import Barrier, Thread
+from tempfile import TemporaryDirectory
 
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db import close_old_connections
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase, TransactionTestCase, override_settings
 
 from wwwapp.models import (
     Camp,
@@ -13,6 +16,7 @@ from wwwapp.models import (
     Invoice,
     Reimbursement,
     SettlementDetails,
+    UploadStorage,
     Workshop,
     WorkshopType,
 )
@@ -129,6 +133,33 @@ class CostModelTests(TestCase):
                         invoice_data=self.data,
                         cost_items_data=[self.item],
                     )
+
+    def test_replacing_an_attachment_deletes_the_old_upload_after_commit(self):
+        with TemporaryDirectory() as upload_root, override_settings(SENDFILE_ROOT=upload_root):
+            field = Invoice._meta.get_field('attachment')
+            original_storage = field.storage
+            field.storage = UploadStorage()
+            try:
+                self.invoice.attachment.storage = field.storage
+                self.invoice.attachment.save('old.pdf', ContentFile(b'%PDF-old'), save=True)
+                old_path = self.invoice.attachment.path
+                self.assertTrue(os.path.exists(old_path))
+
+                with self.captureOnCommitCallbacks(execute=True):
+                    updated_invoice = update_invoice(
+                        invoice=self.invoice,
+                        user=self.user,
+                        invoice_data={
+                            **self.data,
+                            'attachment': ContentFile(b'%PDF-new', name='new.pdf'),
+                        },
+                        cost_items_data=[self.item],
+                    )
+
+                self.assertFalse(os.path.exists(old_path))
+                self.assertTrue(os.path.exists(updated_invoice.attachment.path))
+            finally:
+                field.storage = original_storage
 
     def test_create_requires_settlement_details(self):
         user_without_details = User.objects.create_user(username='no-details')

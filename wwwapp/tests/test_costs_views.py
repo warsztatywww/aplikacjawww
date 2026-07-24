@@ -269,6 +269,45 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertRedirects(response, reverse('costs_settlement_details'))
 
+    def test_settlement_details_submission_saves_account(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_settlement_details'),
+            {'account_number': 'PL61109010140000071219812874'},
+        )
+
+        self.assertRedirects(response, reverse('costs_mine'))
+        self.assertEqual(
+            SettlementDetails.objects.get(user=self.user, camp=self.camp).account_number,
+            'PL61109010140000071219812874',
+        )
+
+    def test_cost_forms_render_polish_labels_and_submit_control(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        invoice_response = self.client.get(reverse('costs_invoice_add'))
+        settlement_response = self.client.get(reverse('costs_settlement_details'))
+
+        for label in (
+            'Załącznik',
+            'Numer dokumentu',
+            'Data wystawienia',
+            'Kwota',
+            'Typ dokumentu',
+            'Opis',
+            'Warsztat',
+            'Kategoria',
+        ):
+            self.assertContains(invoice_response, label)
+        self.assertContains(settlement_response, 'Numer rachunku bankowego')
+        self.assertContains(settlement_response, 'Zapisz')
+
     def test_invoice_add_creates_invoice_with_a_cost_item(self):
         SettlementDetails.objects.create(
             user=self.user,
@@ -320,8 +359,28 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_approved_and_processed_invoices_cannot_be_edited(self):
+        self.client.force_login(self.user)
+
+        for status in (Invoice.Status.APPROVED, Invoice.Status.PROCESSED):
+            with self.subTest(status=status):
+                self.invoice.status = status
+                self.invoice.save()
+
+                response = self.client.get(reverse('costs_invoice_edit', args=[self.invoice.pk]))
+
+                self.assertEqual(response.status_code, 404)
+
     @patch('wwwapp.views.sendfile', return_value=HttpResponse())
-    def test_only_owner_or_all_costs_permission_can_get_attachment(self, sendfile_response):
+    def test_owner_can_get_attachment(self, _sendfile_response):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_invoice_attachment', args=[self.invoice.pk]))
+
+        self.assertEqual(response.status_code, 200)
+
+    @patch('wwwapp.views.sendfile', return_value=HttpResponse())
+    def test_only_all_costs_permission_can_get_another_users_attachment(self, _sendfile_response):
         self.client.force_login(self.other_user)
 
         response = self.client.get(reverse('costs_invoice_attachment', args=[self.invoice.pk]))

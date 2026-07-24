@@ -91,6 +91,7 @@ def update_invoice(*, invoice, user, invoice_data, cost_items_data):
     _validate_settlement_details(user=invoice.user, camp=invoice.camp)
     items = _build_cost_items(cost_items_data=cost_items_data)
     _validate_cost_item_total(items=items, amount=invoice_data.get('amount'))
+    old_attachment_name = invoice.attachment.name
 
     for field, value in _invoice_values(invoice_data).items():
         setattr(invoice, field, value)
@@ -100,6 +101,8 @@ def update_invoice(*, invoice, user, invoice_data, cost_items_data):
         invoice.admin_changed_by = None
     invoice.full_clean()
     invoice.save()
+    if old_attachment_name and invoice.attachment.name != old_attachment_name:
+        transaction.on_commit(lambda: invoice.attachment.storage.delete(old_attachment_name))
     invoice.cost_items.all().delete()
     _save_cost_items(invoice=invoice, items=items)
     return invoice
