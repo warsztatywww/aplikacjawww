@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 from django.urls import reverse
+from django.db.models import Prefetch
 
 from wwwapp.models import Camp, UserProfile, Workshop
 from wwwforms.models import FormQuestionAnswer
@@ -28,9 +29,12 @@ class TableProjection:
 
 def participant_projection(camp):
     """Return the participant table, excluding accepted lecturers."""
+    participation_queryset = camp.participants.prefetch_related(
+        'workshop_participation__solution', 'workshop_participation__workshop')
     participants = UserProfile.objects.filter(camp_participation__year=camp).exclude(
         lecturer_workshops__in=Workshop.objects.filter(
-            year=camp, status=Workshop.STATUS_ACCEPTED)).select_related('user').distinct()
+            year=camp, status=Workshop.STATUS_ACCEPTED)).select_related('user').prefetch_related(
+                Prefetch('camp_participation', queryset=participation_queryset)).distinct()
     questions = _questions(camp)
     columns = _person_columns(questions, include_participation=True)
     rows = tuple(_person_row(profile, camp, questions, True) for profile in participants)
@@ -105,7 +109,8 @@ def _person_columns(questions, include_participation):
 
 
 def _person_row(profile, camp, questions, include_participation):
-    participation = profile.camp_participation.filter(year=camp).first()
+    participation = next((item for item in profile.camp_participation.all()
+                          if item.year_id == camp.pk), None)
     birth = _birth_date(camp, profile)
     adult = '-' if birth is None else _yes_no(camp.start_date >= birth.replace(year=birth.year + 18))
     values = [_profile_cell(profile), TableCell(adult), TableCell(profile.get_gender_display()),
