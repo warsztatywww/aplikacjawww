@@ -84,9 +84,11 @@ def _create_invoice(*, user, camp, invoice_data, cost_items_data):
 def update_invoice(*, invoice, user, invoice_data, cost_items_data):
     """Replace editable invoice data and item allocation atomically."""
     invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
+    if invoice.user_id != user.pk:
+        raise ValidationError('Fakturę może edytować wyłącznie użytkownik, który ją dodał.')
     if invoice.status not in (Invoice.Status.RECEIVED, Invoice.Status.REJECTED):
-        raise ValidationError('Only received or rejected invoices can be edited.')
-    _validate_settlement_details(user=user, camp=invoice.camp)
+        raise ValidationError('Można edytować tylko faktury otrzymane lub odrzucone.')
+    _validate_settlement_details(user=invoice.user, camp=invoice.camp)
     items = _build_cost_items(cost_items_data=cost_items_data)
     _validate_cost_item_total(items=items, amount=invoice_data.get('amount'))
 
@@ -106,7 +108,9 @@ def update_invoice(*, invoice, user, invoice_data, cost_items_data):
 @transaction.atomic
 def transition_invoices(*, invoices, target_status, changed_by):
     """Move all selected invoices to one valid next status, or none of them."""
-    locked = list(invoices.select_for_update().prefetch_related('cost_items'))
+    locked = list(
+        invoices.select_for_update().select_related('user', 'camp').prefetch_related('cost_items'),
+    )
     if any(not _can_transition(invoice.status, target_status) for invoice in locked):
         raise ValidationError('Co najmniej jedna faktura nie może przejść do wybranego stanu.')
     for invoice in locked:
@@ -139,7 +143,7 @@ def pending_total_for(*, user, camp):
 
 def invoice_csv_rows(*, invoices):
     """Yield one stable export dictionary per cost item."""
-    for invoice in invoices.select_related('user').prefetch_related('cost_items__workshop'):
+    for invoice in invoices.select_related('user', 'camp').prefetch_related('cost_items__workshop'):
         for item in invoice.cost_items.all():
             row = {
                 'internal_number': invoice.internal_number,
@@ -166,7 +170,7 @@ def _invoice_values(invoice_data):
 def _build_cost_items(*, cost_items_data):
     items = [CostItem(**_cost_item_values(item)) for item in cost_items_data]
     if not items:
-        raise ValidationError('Invoice must contain at least one cost item.')
+        raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
     for item in items:
         item.full_clean(exclude=['invoice'])
     return items
@@ -181,7 +185,7 @@ def _cost_item_values(item):
 def _validate_cost_item_total(*, items, amount):
     total = sum((item.amount for item in items), Decimal('0.00'))
     if amount is None or total != amount:
-        raise ValidationError('Cost item total must exactly equal the invoice amount.')
+        raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
 
 
 def _save_cost_items(*, invoice, items):
@@ -194,13 +198,13 @@ def _save_cost_items(*, invoice, items):
 def _validate_settlement_details(*, user, camp):
     details = SettlementDetails.objects.filter(user=user, camp=camp).first()
     if details is None or not details.account_number.strip():
-        raise ValidationError('Settlement account details are required for this camp.')
+        raise ValidationError('Dane rachunku bankowego dla tego obozu są wymagane.')
 
 
 def _validate_invoice_items(*, invoice):
     items = list(invoice.cost_items.all())
     if not items:
-        raise ValidationError('Invoice must contain at least one cost item.')
+        raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
     _validate_cost_item_total(items=items, amount=invoice.amount)
 
 

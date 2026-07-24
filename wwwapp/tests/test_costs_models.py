@@ -32,11 +32,17 @@ class CostModelTests(TestCase):
         self.camp = Camp.objects.get()
         self.other_camp = Camp.objects.create(year=2027)
         self.user = User.objects.create_user(username='user')
+        self.other_user = User.objects.create_user(username='other-user')
         self.admin = User.objects.create_user(username='admin')
         SettlementDetails.objects.create(
             user=self.user,
             camp=self.camp,
             account_number='PL61109010140000071219812874',
+        )
+        SettlementDetails.objects.create(
+            user=self.other_user,
+            camp=self.camp,
+            account_number='PL27114020040000300201355387',
         )
         self.invoice = Invoice.objects.create(
             user=self.user,
@@ -98,6 +104,74 @@ class CostModelTests(TestCase):
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, Invoice.Status.RECEIVED)
 
+    def test_update_rejects_a_different_same_camp_user(self):
+        with self.assertRaises(ValidationError):
+            update_invoice(
+                invoice=self.invoice,
+                user=self.other_user,
+                invoice_data=self.data,
+                cost_items_data=[self.item],
+            )
+
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.description, 'Materiały do warsztatów')
+
+    def test_update_rejects_approved_and_processed_invoices(self):
+        for status in (Invoice.Status.APPROVED, Invoice.Status.PROCESSED):
+            with self.subTest(status=status):
+                self.invoice.status = status
+                self.invoice.save()
+
+                with self.assertRaises(ValidationError):
+                    update_invoice(
+                        invoice=self.invoice,
+                        user=self.user,
+                        invoice_data=self.data,
+                        cost_items_data=[self.item],
+                    )
+
+    def test_create_requires_settlement_details(self):
+        user_without_details = User.objects.create_user(username='no-details')
+
+        with self.assertRaises(ValidationError):
+            create_invoice(
+                user=user_without_details,
+                camp=self.camp,
+                invoice_data=self.data,
+                cost_items_data=[self.item],
+            )
+
+    def test_create_rejects_blank_settlement_account(self):
+        SettlementDetails.objects.filter(user=self.other_user, camp=self.camp).update(
+            account_number=' ',
+        )
+
+        with self.assertRaises(ValidationError):
+            create_invoice(
+                user=self.other_user,
+                camp=self.camp,
+                invoice_data=self.data,
+                cost_items_data=[self.item],
+            )
+
+    def test_create_requires_at_least_one_cost_item(self):
+        with self.assertRaises(ValidationError):
+            create_invoice(
+                user=self.user,
+                camp=self.camp,
+                invoice_data=self.data,
+                cost_items_data=[],
+            )
+
+    def test_create_requires_cost_items_to_match_invoice_total(self):
+        with self.assertRaises(ValidationError):
+            create_invoice(
+                user=self.user,
+                camp=self.camp,
+                invoice_data=self.data,
+                cost_items_data=[{**self.item, 'amount': Decimal('9.99')}],
+            )
+
     def test_batch_transition_rolls_back_when_one_invoice_is_ineligible(self):
         received = create_invoice(
             user=self.user,
@@ -123,6 +197,45 @@ class CostModelTests(TestCase):
 
         received.refresh_from_db()
         self.assertEqual(received.status, Invoice.Status.RECEIVED)
+
+    def test_transition_allows_only_the_defined_state_graph(self):
+        allowed = {
+            (Invoice.Status.RECEIVED, Invoice.Status.APPROVED),
+            (Invoice.Status.RECEIVED, Invoice.Status.REJECTED),
+            (Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+            (Invoice.Status.APPROVED, Invoice.Status.REJECTED),
+        }
+
+        for index, source in enumerate(Invoice.Status.values):
+            for target in Invoice.Status.values:
+                with self.subTest(source=source, target=target):
+                    invoice = self._invoice_with_status(source, index)
+                    if (source, target) in allowed:
+                        transition_invoices(
+                            invoices=Invoice.objects.filter(pk=invoice.pk),
+                            target_status=target,
+                            changed_by=self.admin,
+                        )
+                        invoice.refresh_from_db()
+                        self.assertEqual(invoice.status, target)
+                    else:
+                        with self.assertRaises(ValidationError):
+                            transition_invoices(
+                                invoices=Invoice.objects.filter(pk=invoice.pk),
+                                target_status=target,
+                                changed_by=self.admin,
+                            )
+
+    def _invoice_with_status(self, status, index):
+        invoice = create_invoice(
+            user=self.user,
+            camp=self.camp,
+            invoice_data={**self.data, 'document_number': f'FV/{index + 10}/2026'},
+            cost_items_data=[self.item],
+        )
+        invoice.status = status
+        invoice.save()
+        return invoice
 
     def test_balance_and_pending_totals_use_the_expected_statuses(self):
         self.invoice.status = Invoice.Status.REJECTED
@@ -239,4 +352,4 @@ class InvoiceSequenceConcurrencyTests(TransactionTestCase):
             thread.join()
 
         self.assertEqual(errors, [])
-        self.assertEqual(numbers, ['WWW_2030_FP_0001', 'WWW_2030_FP_0002'])
+        self.assertEqual(set(numbers), {'WWW_2030_FP_0001', 'WWW_2030_FP_0002'})
