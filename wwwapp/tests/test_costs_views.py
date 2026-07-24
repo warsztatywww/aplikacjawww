@@ -726,7 +726,8 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             Decimal('40.00'),
         )
         self.assertEqual(
-            response.context['category_percentages'][CostItem.Category.WORKSHOPS], Decimal('80.00'),
+            response.context['category_percentages'][CostItem.Category.WORKSHOPS],
+            Decimal('80.00'),
         )
 
     def test_statistics_default_to_approved_and_processed_items(self):
@@ -756,11 +757,23 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         workshop_item = self.approved_invoice.cost_items.get()
         workshop_item.workshop = workshop
         workshop_item.save()
-        self.create_invoice(
-            amount=Decimal('15.00'),
-            status=Invoice.Status.RECEIVED,
+        other_category_invoice = self.create_invoice(
+            amount=Decimal('5.00'),
+            status=Invoice.Status.APPROVED,
+            category=CostItem.Category.OUTINGS,
+        )
+        other_category_invoice.cost_items.update(workshop=workshop)
+        camp_context_invoice = self.create_invoice(
+            amount=Decimal('7.00'),
+            status=Invoice.Status.APPROVED,
             category=CostItem.Category.WORKSHOPS,
         )
+        processed_invoice = self.create_invoice(
+            amount=Decimal('11.00'),
+            status=Invoice.Status.PROCESSED,
+            category=CostItem.Category.WORKSHOPS,
+        )
+        processed_invoice.cost_items.update(workshop=workshop)
         self.client.force_login(self.statistics_user)
 
         response = self.client.get(
@@ -774,6 +787,20 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         )
 
         self.assertEqual(response.context['total'], Decimal('30.00'))
+
+    def test_statistics_render_empty_chart_for_no_matching_items(self):
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(
+            reverse('costs_statistics'),
+            {
+                'camp': self.camp.pk,
+                'category': CostItem.Category.OUTINGS,
+            },
+        )
+
+        self.assertFalse(response.context['has_statistics_data'])
+        self.assertContains(response, 'Brak danych do wyświetlenia wykresu.')
 
     def test_statistics_require_permission(self):
         self.client.force_login(self.recipient)

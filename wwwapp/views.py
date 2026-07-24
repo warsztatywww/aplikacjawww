@@ -334,7 +334,10 @@ def costs_reimbursements_view(request):
         'users': User.objects.order_by('username'),
         'selected_user': selected_user,
         'reimbursement_form': form,
-        'reimbursements': reimbursements.filter(camp=camp).order_by('-executed_date', '-created_at'),
+        'reimbursements': reimbursements.filter(camp=camp).order_by(
+            '-executed_date',
+            '-created_at',
+        ),
         'balance_before': balance_before,
         'balance_after': balance_after,
     })
@@ -407,7 +410,8 @@ def costs_statistics_view(request):
         'category_percentages': category_percentages,
         'category_rows': category_rows,
         'total': total,
-        'pie_gradient': _pie_gradient(category_rows),
+        'has_statistics_data': bool(total),
+        'pie_gradient': _pie_gradient(category_rows) if total else None,
     })
     return render(request, 'costs_statistics.html', context)
 

@@ -9,7 +9,9 @@
           <label for="statistics-camp">Obóz</label>
           <select id="statistics-camp" name="camp" class="form-control">
             {% for camp in camps %}
-              <option value="{{ camp.pk }}"{% if camp == selected_camp %} selected{% endif %}>{{ camp }}</option>
+              <option value="{{ camp.pk }}"{% if camp == selected_camp %} selected{% endif %}>
+                {{ camp }}
+              </option>
             {% endfor %}
           </select>
         </div>
@@ -18,7 +20,9 @@
           <select id="statistics-status" name="status" class="form-control">
             <option value="">Zatwierdzone i przetworzone</option>
             {% for value, label in status_choices %}
-              <option value="{{ value }}"{% if value == selected_status %} selected{% endif %}>{{ label }}</option>
+              <option value="{{ value }}"{% if value == selected_status %} selected{% endif %}>
+                {{ label }}
+              </option>
             {% endfor %}
           </select>
         </div>
@@ -27,7 +31,9 @@
           <select id="statistics-category" name="category" class="form-control">
             <option value="">Wszystkie</option>
             {% for value, label in category_choices %}
-              <option value="{{ value }}"{% if value == selected_category %} selected{% endif %}>{{ label }}</option>
+              <option value="{{ value }}"{% if value == selected_category %} selected{% endif %}>
+                {{ label }}
+              </option>
             {% endfor %}
           </select>
         </div>
@@ -35,8 +41,12 @@
           <label for="statistics-context">Kontekst</label>
           <select id="statistics-context" name="context" class="form-control">
             <option value="">Obóz i warsztaty</option>
-            <option value="camp"{% if selected_context == 'camp' %} selected{% endif %}>Obóz</option>
-            <option value="workshop"{% if selected_context == 'workshop' %} selected{% endif %}>Warsztaty</option>
+            <option value="camp"{% if selected_context == 'camp' %} selected{% endif %}>
+              Obóz
+            </option>
+            <option value="workshop"{% if selected_context == 'workshop' %} selected{% endif %}>
+              Warsztaty
+            </option>
           </select>
         </div>
       </div>
@@ -44,8 +54,13 @@
     </form>
 
     <p>Łącznie: {{ total }} zł</p>
-    <div role="img" aria-label="Wykres kołowy wydatków według kategorii"
-         style="width: 14rem; height: 14rem; border-radius: 50%; background: {{ pie_gradient }};"></div>
+    {% if has_statistics_data %}
+      <div role="img" aria-label="Wykres kołowy wydatków według kategorii"
+           style="width: 14rem; height: 14rem; border-radius: 50%;
+                  background: {{ pie_gradient }};"></div>
+    {% else %}
+      <p class="text-muted" role="status">Brak danych do wyświetlenia wykresu.</p>
+    {% endif %}
     <table class="table mt-3">
       <caption>Wydatki według kategorii</caption>
       <thead>
