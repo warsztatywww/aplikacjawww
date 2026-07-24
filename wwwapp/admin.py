@@ -11,7 +11,8 @@ from django.http.request import HttpRequest
 import wwwforms.models
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
-    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail
+    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail, \
+    CampGoogleSheetsIntegration
 
 admin.site.unregister(User)
 
@@ -38,6 +39,18 @@ class CampParticipantInline(admin.TabularInline):
     model = CampParticipant
     extra = 0
     show_change_link = True
+
+
+class CampGoogleSheetsIntegrationInline(admin.StackedInline):
+    model = CampGoogleSheetsIntegration
+    extra = 0
+    max_num = 1
+    fields = ('spreadsheet_id', 'enabled', 'participants_sheet_id', 'lecturers_sheet_id',
+              'workshops_sheet_id', 'dirty', 'next_sync_at', 'claimed_at', 'attempt_count',
+              'last_attempt_at', 'last_success_at', 'last_error')
+    readonly_fields = ('participants_sheet_id', 'lecturers_sheet_id', 'workshops_sheet_id',
+                       'dirty', 'next_sync_at', 'claimed_at', 'attempt_count', 'last_attempt_at',
+                       'last_success_at', 'last_error')
 
 
 class WorkshopParticipantInline(admin.TabularInline):
@@ -90,7 +103,8 @@ class WorkshopTypeAdminInline(admin.TabularInline):
 
 class CampAdmin(admin.ModelAdmin):
     model = Camp
-    inlines = [WorkshopTypeAdminInline, WorkshopCategoryAdminInline]
+    inlines = [WorkshopTypeAdminInline, WorkshopCategoryAdminInline,
+               CampGoogleSheetsIntegrationInline]
 
     fieldsets = (
         (None, {
