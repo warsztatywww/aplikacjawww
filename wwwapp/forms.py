@@ -23,8 +23,9 @@ from django.conf import settings
 from django.contrib.staticfiles.storage import staticfiles_storage
 
 from .templatetags.wwwtags import qualified_mark
-from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, CampParticipant, WorkshopParticipant, Camp, Solution, SolutionFile
+from .models import Article, Camp, CampParticipant, CostItem, Invoice, Reimbursement, \
+    SettlementDetails, Solution, SolutionFile, UserProfile, Workshop, WorkshopCategory, \
+    WorkshopParticipant, WorkshopType
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -567,3 +568,160 @@ class CampInterestEmailForm(Form):
         if user and user.is_authenticated:
             self.fields['email'].initial = user.email
             self.fields['email'].disabled = True
+
+
+class InvoiceForm(ModelForm):
+    """Validate an invoice attachment before it is stored."""
+
+    MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
+    ATTACHMENT_TYPES = {
+        '.pdf': ('application/pdf', b'%PDF-'),
+        '.jpg': ('image/jpeg', b'\xff\xd8\xff'),
+        '.jpeg': ('image/jpeg', b'\xff\xd8\xff'),
+    }
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'attachment',
+            'document_number',
+            'issue_date',
+            'amount',
+            'invoice_type',
+            'description',
+        ]
+
+    def clean_attachment(self):
+        attachment = self.cleaned_data['attachment']
+        if not hasattr(attachment, 'content_type'):
+            return attachment
+
+        suffix = os.path.splitext(attachment.name)[1].lower()
+        expected = self.ATTACHMENT_TYPES.get(suffix)
+        if expected is None:
+            raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
+        expected_content_type, signature = expected
+        if attachment.content_type != expected_content_type:
+            raise ValidationError('Typ MIME załącznika nie odpowiada jego rozszerzeniu.')
+        if attachment.size > self.MAX_ATTACHMENT_SIZE:
+            raise ValidationError('Załącznik nie może być większy niż 50 MiB.')
+
+        header = attachment.read(len(signature))
+        attachment.seek(0)
+        if not header.startswith(signature):
+            raise ValidationError('Załącznik nie ma poprawnej sygnatury pliku.')
+        return attachment
+
+
+class CostItemForm(ModelForm):
+    """Edit one allocation of an invoice total."""
+
+    class Meta:
+        model = CostItem
+        fields = ['workshop', 'amount', 'category']
+
+    def __init__(self, *args, camp, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['workshop'].queryset = Workshop.objects.filter(year=camp)
+
+
+class BaseCostItemInlineFormSet(BaseInlineFormSet):
+    """Require a complete, camp-scoped allocation of the invoice amount."""
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['camp'] = self.instance.camp
+        return kwargs
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        items = [
+            form.cleaned_data
+            for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+        ]
+        if not items:
+            raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
+
+        total = sum((item['amount'] for item in items), Decimal('0.00'))
+        if total != self.instance.amount:
+            raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
+
+
+CostItemFormSet = inlineformset_factory(
+    Invoice,
+    CostItem,
+    form=CostItemForm,
+    formset=BaseCostItemInlineFormSet,
+    extra=1,
+    can_delete=True,
+)
+
+
+class SettlementDetailsForm(ModelForm):
+    """Store a participant's bank account for one camp."""
+
+    class Meta:
+        model = SettlementDetails
+        fields = ['account_number']
+
+    def __init__(self, *args, user, camp, **kwargs):
+        self.user = user
+        self.camp = camp
+        if 'instance' not in kwargs:
+            kwargs['instance'] = SettlementDetails.objects.filter(user=user, camp=camp).first()
+        super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        details = super().save(commit=False)
+        details.user = self.user
+        details.camp = self.camp
+        if commit:
+            details.save()
+        return details
+
+
+class ReimbursementForm(ModelForm):
+    """Register a reimbursement with the account used at registration time."""
+
+    class Meta:
+        model = Reimbursement
+        fields = ['amount', 'type', 'comment', 'executed_date']
+
+    def __init__(self, *args, user, camp, registered_by, **kwargs):
+        self.user = user
+        self.camp = camp
+        self.registered_by = registered_by
+        self.account_number_snapshot = None
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        details = SettlementDetails.objects.filter(user=self.user, camp=self.camp).first()
+        if details is None or not details.account_number.strip():
+            raise ValidationError('Dane rachunku bankowego dla tego obozu są wymagane.')
+        self.account_number_snapshot = details.account_number
+        return cleaned_data
+
+    def save(self, commit=True):
+        reimbursement = super().save(commit=False)
+        reimbursement.user = self.user
+        reimbursement.camp = self.camp
+        reimbursement.registered_by = self.registered_by
+        reimbursement.account_number_snapshot = self.account_number_snapshot
+        if commit:
+            reimbursement.save()
+        return reimbursement
+
+
+class CostFilterForm(Form):
+    """Provide optional invoice administration filters."""
+
+    camp = ModelChoiceField(label='Obóz', queryset=Camp.objects.all(), required=False)
+    user = ModelChoiceField(label='Użytkownik', queryset=User.objects.all(), required=False)
+    status = ChoiceField(label='Status', choices=Invoice.Status.choices, required=False)
+    invoice_type = ChoiceField(label='Typ dokumentu', choices=Invoice.Type.choices, required=False)
+    category = ChoiceField(label='Kategoria', choices=CostItem.Category.choices, required=False)
