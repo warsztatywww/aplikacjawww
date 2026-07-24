@@ -2,6 +2,7 @@ import datetime
 import os
 import threading
 import urllib.parse
+from decimal import Decimal
 from typing import Set, Optional
 
 from django.conf import settings
@@ -577,6 +578,127 @@ class Workshop(models.Model):
         Should the workshop be publicly visible? (accepted or cancelled)
         """
         return self.status == 'Z' or self.status == 'X'
+
+
+class InvoiceSequence(models.Model):
+    camp = models.OneToOneField(Camp, on_delete=models.PROTECT, related_name='invoice_sequence')
+    last_allocated = models.PositiveIntegerField(default=0)
+
+
+class Invoice(models.Model):
+    class Status(models.TextChoices):
+        RECEIVED = 'RECEIVED', 'Otrzymana'
+        APPROVED = 'APPROVED', 'Zatwierdzona'
+        PROCESSED = 'PROCESSED', 'Przetworzona'
+        REJECTED = 'REJECTED', 'Odrzucona'
+
+    class Type(models.TextChoices):
+        KSEF = 'KSEF', 'KSeF'
+        OUTSIDE_KSEF = 'OUTSIDE_KSEF', 'Poza KSeF'
+        RECEIPT_WITH_NIP = 'RECEIPT_WITH_NIP', 'Paragon z NIP'
+        NON_ACCOUNTING_RECEIPT = 'NON_ACCOUNTING_RECEIPT', 'Paragon nieksięgowy'
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='invoices')
+    camp = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='invoices')
+    attachment = models.FileField(upload_to='invoices', storage=UploadStorage())
+    document_number = models.CharField(max_length=255)
+    issue_date = models.DateField()
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    invoice_type = models.CharField(max_length=24, choices=Type.choices)
+    description = models.TextField(max_length=1000)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.RECEIVED)
+    internal_number = models.CharField(max_length=30, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    admin_changed_at = models.DateTimeField(null=True, blank=True)
+    admin_changed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='admin_changed_invoices',
+    )
+
+    class Meta:
+        permissions = (
+            ('view_all_costs', 'Can view all costs'),
+            ('approve_costs', 'Can approve or reject costs'),
+            ('export_costs', 'Can export costs'),
+            ('process_costs', 'Can process costs'),
+            ('register_reimbursements', 'Can register reimbursements'),
+            ('view_cost_statistics', 'Can view cost statistics'),
+        )
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Invoices cannot be deleted')
+
+
+class CostItem(models.Model):
+    class Category(models.TextChoices):
+        WORKSHOPS = 'WORKSHOPS', 'Warsztaty'
+        OUTINGS = 'OUTINGS', 'Wyjścia'
+        LUNCHES = 'LUNCHES', 'Obiady'
+        BREAKFASTS = 'BREAKFASTS', 'Śniadania'
+        REGULAR_PURCHASES = 'REGULAR_PURCHASES', 'Zakupy stałe'
+        SUPPORTING_AND_TECHNICAL_MATERIALS = (
+            'SUPPORTING_AND_TECHNICAL_MATERIALS',
+            'Materiały pomocnicze i techniczne',
+        )
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='cost_items')
+    workshop = models.ForeignKey(
+        Workshop,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='cost_items',
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    category = models.CharField(max_length=36, choices=Category.choices)
+
+    def clean(self):
+        super().clean()
+        if self.workshop_id and self.invoice_id and self.workshop.year_id != self.invoice.camp_id:
+            raise ValidationError({'workshop': 'Workshop must belong to the invoice camp'})
+
+
+class SettlementDetails(models.Model):
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='settlement_details')
+    camp = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='settlement_details')
+    account_number = models.CharField(max_length=34)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'camp')
+
+
+class Reimbursement(models.Model):
+    class Type(models.TextChoices):
+        ASSOCIATION = 'ASSOCIATION', 'Stowarzyszenie'
+        OTHER = 'OTHER', 'Inne'
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='reimbursements')
+    camp = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='reimbursements')
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    type = models.CharField(max_length=11, choices=Type.choices)
+    comment = models.TextField(max_length=1000, blank=True)
+    executed_date = models.DateField()
+    registered_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='registered_reimbursements')
+    account_number = models.CharField(max_length=34)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class WorkshopParticipantManager(models.Manager):
