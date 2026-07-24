@@ -199,6 +199,23 @@ class SettlementAndReimbursementFormTests(TestCase):
         reimbursement = form.save()
         self.assertEqual(reimbursement.account_number_snapshot, 'PL61109010140000071219812874')
 
+    def test_reimbursement_form_uses_polish_labels(self):
+        form = ReimbursementForm(
+            user=self.user,
+            camp=self.camp,
+            registered_by=self.registered_by,
+        )
+
+        self.assertEqual(
+            {name: field.label for name, field in form.fields.items()},
+            {
+                'amount': 'Kwota',
+                'type': 'Typ zwrotu',
+                'comment': 'Komentarz',
+                'executed_date': 'Data wykonania',
+            },
+        )
+
 
 class OwnCostsViewsTests(TestCase):
     def setUp(self):
@@ -315,6 +332,22 @@ class OwnCostsViewsTests(TestCase):
             self.assertContains(invoice_response, label)
         self.assertContains(settlement_response, 'Numer rachunku bankowego')
         self.assertContains(settlement_response, 'Zapisz')
+
+    def test_invoice_add_renders_dynamic_cost_item_formset(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_invoice_add'))
+
+        self.assertContains(response, 'id="cost-item-forms"')
+        self.assertContains(response, 'id="cost-item-empty-form"')
+        self.assertContains(response, 'name="cost_items-__prefix__-amount"')
+        self.assertContains(response, 'id="add-cost-item"')
+        self.assertContains(response, 'data-sync-invoice-amount')
 
     def test_invoice_add_creates_invoice_with_a_cost_item(self):
         SettlementDetails.objects.create(
@@ -525,6 +558,16 @@ class CostAdministrationViewsTests(TestCase):
                 choices = response.context['filter_form'].fields[field_name].choices
                 self.assertEqual(choices[0], ('', 'Wszystkie'))
 
+    def test_administration_links_to_protected_invoice_attachments(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin'))
+
+        self.assertContains(
+            response,
+            reverse('costs_invoice_attachment', args=[self.received_invoice.pk]),
+        )
+
     def test_approval_transition_requires_approval_permission(self):
         self.client.force_login(self.csv_user)
 
@@ -726,9 +769,21 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
 
         reimbursement = Reimbursement.objects.get()
         self.assertEqual(reimbursement.account_number_snapshot, self.details.account_number)
-        self.assertEqual(response.context['balance_before'], Decimal('30.00'))
-        self.assertEqual(response.context['balance_after'], Decimal('-10.00'))
-        self.assertContains(response, 'przekracza saldo')
+        expected_url = (
+            f"{reverse('costs_reimbursements')}?user_id={self.recipient.pk}"
+        )
+        self.assertRedirects(response, expected_url, fetch_redirect_response=False)
+
+        follow_response = self.client.get(expected_url)
+
+        self.assertEqual(follow_response.context['balance_before'], Decimal('30.00'))
+        self.assertEqual(follow_response.context['balance_after'], Decimal('-10.00'))
+        self.assertContains(follow_response, 'przekracza saldo')
+        self.assertEqual(Reimbursement.objects.count(), 1)
+
+        self.client.get(expected_url)
+
+        self.assertEqual(Reimbursement.objects.count(), 1)
 
     def test_reimbursements_require_registration_permission(self):
         self.client.force_login(self.recipient)

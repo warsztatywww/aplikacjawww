@@ -24,6 +24,7 @@
             <th scope="col">Użytkownik</th>
             <th scope="col">Kwota</th>
             <th scope="col">Status</th>
+            <th scope="col">Załącznik</th>
           </tr>
         </thead>
         <tbody>
@@ -35,9 +36,12 @@
               <td>{{ invoice.user }}</td>
               <td>{{ invoice.amount }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
+              <td>
+                <a href="{% url 'costs_invoice_attachment' invoice.pk %}">Pobierz</a>
+              </td>
             </tr>
           {% empty %}
-            <tr><td colspan="6">Brak faktur spełniających kryteria.</td></tr>
+            <tr><td colspan="7">Brak faktur spełniających kryteria.</td></tr>
           {% endfor %}
         </tbody>
       </table>

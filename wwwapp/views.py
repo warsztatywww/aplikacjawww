@@ -315,6 +315,13 @@ def costs_reimbursements_view(request):
     if user_id:
         selected_user = get_object_or_404(User, pk=user_id)
         balance_before = balance_for(user=selected_user, camp=camp)
+        reimbursement_balances = request.session.pop('reimbursement_balances', None)
+        if (
+            reimbursement_balances
+            and reimbursement_balances['user_id'] == selected_user.pk
+        ):
+            balance_before = Decimal(reimbursement_balances['before'])
+            balance_after = Decimal(reimbursement_balances['after'])
         form = ReimbursementForm(
             request.POST or None,
             user=selected_user,
@@ -327,6 +334,13 @@ def costs_reimbursements_view(request):
             messages.success(request, 'Zarejestrowano zwrot kosztów.', extra_tags='auto-dismiss')
             if reimbursement.amount > balance_before:
                 messages.warning(request, 'Kwota zwrotu przekracza saldo.')
+            request.session['reimbursement_balances'] = {
+                'user_id': selected_user.pk,
+                'before': str(balance_before),
+                'after': str(balance_after),
+            }
+            redirect_url = reverse('costs_reimbursements')
+            return redirect(f'{redirect_url}?user_id={selected_user.pk}')
     elif request.method == 'POST':
         messages.error(request, 'Wybierz użytkownika do rozliczenia.')
 

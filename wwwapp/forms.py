@@ -717,6 +717,12 @@ class ReimbursementForm(ModelForm):
     class Meta:
         model = Reimbursement
         fields = ['amount', 'type', 'comment', 'executed_date']
+        labels = {
+            'amount': 'Kwota',
+            'type': 'Typ zwrotu',
+            'comment': 'Komentarz',
+            'executed_date': 'Data wykonania',
+        }
 
     def __init__(self, *args, user, camp, registered_by, **kwargs):
         self.user = user

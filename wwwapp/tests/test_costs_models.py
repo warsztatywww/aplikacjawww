@@ -94,6 +94,12 @@ class CostModelTests(TestCase):
     def test_reimbursement_uses_an_account_number_snapshot(self):
         self.assertIsNotNone(Reimbursement._meta.get_field('account_number_snapshot'))
 
+    def test_invoice_queryset_deletion_is_prohibited(self):
+        with self.assertRaises(ValidationError):
+            Invoice.objects.filter(pk=self.invoice.pk).delete()
+
+        self.assertTrue(Invoice.objects.filter(pk=self.invoice.pk).exists())
+
     def test_rejected_invoice_becomes_received_when_edited(self):
         self.invoice.status = Invoice.Status.REJECTED
         self.invoice.save()
@@ -330,9 +336,34 @@ class CostModelTests(TestCase):
             ),
         )
         self.assertEqual(rows[0]['internal_number'], invoice.internal_number)
+        self.assertEqual(rows[0]['document_number'], invoice.document_number)
         self.assertEqual(rows[0]['item_amount'], Decimal('10.00'))
         self.assertEqual(rows[0]['context_type'], 'camp')
         self.assertEqual(rows[1]['category'], CostItem.Category.OUTINGS)
+
+    def test_invoice_csv_rows_escape_formula_leading_user_text(self):
+        CostItem.objects.create(
+            invoice=self.invoice,
+            amount=self.invoice.amount,
+            category=CostItem.Category.OUTINGS,
+        )
+        self.invoice.description = '+description'
+        self.invoice.save(update_fields=['description'])
+        self.user.username = '-username'
+        self.user.save(update_fields=['username'])
+
+        for formula_prefix in ('=', '+', '-', '@'):
+            with self.subTest(formula_prefix=formula_prefix):
+                self.invoice.document_number = f'{formula_prefix}formula'
+                self.invoice.save(update_fields=['document_number'])
+
+                row = next(
+                    invoice_csv_rows(invoices=Invoice.objects.filter(pk=self.invoice.pk)),
+                )
+
+                self.assertEqual(row['document_number'], f"'{formula_prefix}formula")
+                self.assertEqual(row['description'], "'+description")
+                self.assertEqual(row['user'], "'-username")
 
 
 class InvoiceSequenceConcurrencyTests(TransactionTestCase):

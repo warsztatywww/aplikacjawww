@@ -64,7 +64,8 @@ are `internal_number`, `document_number`, `issue_date`, `user`,
 `invoice_type`, `status`, `invoice_amount`, `category`, `context_type`,
 `context_id`, `context_name`, `item_amount`, and `description`. With no
 selection it exports approved invoices; selecting invoices exports only the
-selected records.
+selected records. Text beginning with `=`, `+`, `-`, or `@` is escaped so
+spreadsheet applications do not interpret user-supplied values as formulas.
 
 Reimbursements record the selected recipient's current account number as an
 immutable snapshot. A recipient's balance is approved and processed invoice

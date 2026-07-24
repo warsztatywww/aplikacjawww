@@ -589,6 +589,13 @@ class InvoiceSequence(models.Model):
     last_allocated = models.PositiveIntegerField(default=0)
 
 
+class InvoiceQuerySet(models.QuerySet):
+    """Prevent invoices from being removed through bulk operations."""
+
+    def delete(self):
+        raise ValidationError('Invoices cannot be deleted')
+
+
 class Invoice(models.Model):
     class Status(models.TextChoices):
         RECEIVED = 'RECEIVED', 'Otrzymana'
@@ -626,6 +633,8 @@ class Invoice(models.Model):
         on_delete=models.PROTECT,
         related_name='admin_changed_invoices',
     )
+
+    objects = InvoiceQuerySet.as_manager()
 
     class Meta:
         permissions = (

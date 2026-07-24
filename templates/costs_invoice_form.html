@@ -10,14 +10,73 @@
 
       <h2>Pozycje kosztowe</h2>
       {{ formset.management_form }}
-      {% for form in formset %}
-        <fieldset>
+      <div id="cost-item-forms">
+        {% for form in formset %}
+        <fieldset{% if forloop.first and formset.initial_form_count == 0 %}
+          data-sync-invoice-amount{% endif %}>
           {{ form.non_field_errors }}
           {{ form.as_p }}
         </fieldset>
-      {% endfor %}
+        {% endfor %}
+      </div>
+      <template id="cost-item-empty-form">
+        <fieldset>
+          {{ formset.empty_form.as_p }}
+        </fieldset>
+      </template>
+      <button class="btn btn-secondary mb-3" id="add-cost-item" type="button">
+        Dodaj pozycję
+      </button>
 
       <button class="btn btn-primary" type="submit">Zapisz</button>
     </form>
   </article>
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script>
+    (() => {
+      const forms = document.getElementById('cost-item-forms');
+      const emptyForm = document.getElementById('cost-item-empty-form');
+      const addButton = document.getElementById('add-cost-item');
+      const totalForms = document.getElementById('id_cost_items-TOTAL_FORMS');
+      const invoiceAmount = document.getElementById('id_amount');
+      if (!forms || !emptyForm || !addButton || !totalForms) {
+        return;
+      }
+
+      const syncContainer = forms.querySelector('[data-sync-invoice-amount]');
+      const itemAmount = syncContainer
+        ? syncContainer.querySelector('input[name$="-amount"]')
+        : null;
+      let syncAmount = Boolean(
+        invoiceAmount
+        && itemAmount
+        && (!itemAmount.value || itemAmount.value === invoiceAmount.value)
+      );
+      if (syncAmount) {
+        itemAmount.value = invoiceAmount.value;
+        itemAmount.addEventListener('input', () => {
+          syncAmount = false;
+        });
+        invoiceAmount.addEventListener('input', () => {
+          if (syncAmount) {
+            itemAmount.value = invoiceAmount.value;
+          }
+        });
+      }
+
+      addButton.addEventListener('click', () => {
+        if (syncAmount) {
+          itemAmount.value = invoiceAmount.value;
+          syncAmount = false;
+        }
+        const formIndex = Number.parseInt(totalForms.value, 10);
+        const markup = emptyForm.innerHTML.replace(/__prefix__/g, String(formIndex));
+        forms.insertAdjacentHTML('beforeend', markup);
+        totalForms.value = String(formIndex + 1);
+      });
+    })();
+  </script>
 {% endblock %}

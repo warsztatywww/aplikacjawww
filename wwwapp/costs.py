@@ -163,7 +163,13 @@ def invoice_csv_rows(*, invoices):
                 'item_amount': item.amount,
                 'description': invoice.description,
             }
-            yield {field: row[field] for field in CSV_FIELDS}
+            yield {field: _escape_csv_formula(row[field]) for field in CSV_FIELDS}
+
+
+def _escape_csv_formula(value):
+    if isinstance(value, str) and value.startswith(('=', '+', '-', '@')):
+        return f"'{value}"
+    return value
 
 
 def _invoice_values(invoice_data):

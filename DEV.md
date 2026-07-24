@@ -37,13 +37,17 @@ Invoice state transitions are `RECEIVED → APPROVED|REJECTED`,
 `PROCESSED` is terminal. The edit route returns 403 for a processed or
 approved owner's POST, preventing an attempted resubmission from changing or
 reverting it; non-editable GETs and other users' invoices remain unavailable.
+Both instance and queryset deletion are prohibited so invoices remain in the
+financial audit trail.
 
 `invoice_csv_rows()` exports one row per item and includes either workshop or
-camp context fields. `balance_for()` subtracts reimbursement amounts from
-approved and processed invoice totals, while `pending_total_for()` reports
-received invoices. Reimbursements retain an account-number snapshot taken
-when registered. Statistics aggregate `CostItem` rows, which makes split
-invoices contribute exactly their allocated amounts.
+camp context fields. Formula-leading text is prefixed with an apostrophe before
+CSV output so spreadsheet applications treat it as data. `balance_for()`
+subtracts reimbursement amounts from approved and processed invoice totals,
+while `pending_total_for()` reports received invoices. Reimbursements retain
+an account-number snapshot taken when registered. Statistics aggregate
+`CostItem` rows, which makes split invoices contribute exactly their allocated
+amounts.
 
 ## Cost routes and access control
 
