@@ -131,6 +131,12 @@
             <li class="nav-item dropdown">
               <a class="nav-link" href="{% url 'mydata_status' %}">Kwalifikacja</a>
             </li>
+
+            {% if user.is_authenticated %}
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'costs_mine' %}">Moje koszty</a>
+            </li>
+            {% endif %}
           </ul>
 
           <div class="my-2 my-lg-0">

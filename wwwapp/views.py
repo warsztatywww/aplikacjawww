@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import SuspiciousOperation
+from django.core.exceptions import SuspiciousOperation, ValidationError
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q, QuerySet, Exists, OuterRef
 from django.db.models.query import Prefetch
@@ -32,12 +32,39 @@ from django_bleach.utils import get_bleach_default_options
 from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
-from .forms import ArticleForm, UserProfileForm, UserForm, \
-    UserProfilePageForm, UserSecretNotesForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
-    TinyMCEUpload, SolutionFileFormSet, SolutionForm, CampInterestEmailForm
-from .models import Article, UserProfile, Workshop, WorkshopType, WorkshopParticipant, \
-    CampParticipant, ResourceYearPermission, Camp, Solution, CampInterestEmail
-from .templatetags.wwwtags import qualified_mark
+from wwwapp.costs import balance_for, create_invoice, pending_total_for, update_invoice
+from wwwapp.forms import (
+    ArticleForm,
+    CampInterestEmailForm,
+    CostItemFormSet,
+    InvoiceForm,
+    SettlementDetailsForm,
+    SolutionFileFormSet,
+    SolutionForm,
+    TinyMCEUpload,
+    UserCoverLetterForm,
+    UserForm,
+    UserProfileForm,
+    UserProfilePageForm,
+    UserSecretNotesForm,
+    WorkshopForm,
+    WorkshopParticipantPointsForm,
+)
+from wwwapp.models import (
+    Article,
+    Camp,
+    CampInterestEmail,
+    CampParticipant,
+    Invoice,
+    ResourceYearPermission,
+    SettlementDetails,
+    Solution,
+    UserProfile,
+    Workshop,
+    WorkshopParticipant,
+    WorkshopType,
+)
+from wwwapp.templatetags.wwwtags import qualified_mark
 
 
 def get_context(request):
@@ -60,6 +87,129 @@ def get_context(request):
     context['current_year'] = Camp.current()
 
     return context
+
+
+def _has_settlement_details(*, user, camp):
+    details = SettlementDetails.objects.filter(user=user, camp=camp).first()
+    return details is not None and bool(details.account_number.strip())
+
+
+@login_required
+def costs_mine_view(request):
+    camp = Camp.current()
+    invoices = Invoice.objects.filter(user=request.user, camp=camp).order_by('-created_at')
+    context = get_context(request)
+    context.update({
+        'title': 'Moje koszty',
+        'invoices': invoices,
+        'confirmed_total': balance_for(user=request.user, camp=camp),
+        'pending_total': pending_total_for(user=request.user, camp=camp),
+    })
+    return render(request, 'costs_mine.html', context)
+
+
+@login_required
+def costs_settlement_details_view(request):
+    camp = Camp.current()
+    form = SettlementDetailsForm(request.POST or None, user=request.user, camp=camp)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Zapisano dane rachunku.', extra_tags='auto-dismiss')
+        return redirect('costs_mine')
+
+    context = get_context(request)
+    context.update({'title': 'Dane do rozliczeń', 'form': form})
+    return render(request, 'form.html', context)
+
+
+@login_required
+def costs_invoice_add_view(request):
+    camp = Camp.current()
+    if not _has_settlement_details(user=request.user, camp=camp):
+        messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
+        return redirect('costs_settlement_details')
+
+    invoice_form = InvoiceForm(request.POST or None, request.FILES or None)
+    formset = CostItemFormSet(request.POST or None, instance=Invoice(camp=camp))
+    invoice_form_is_valid = invoice_form.is_valid()
+    if invoice_form_is_valid:
+        formset.instance.amount = invoice_form.cleaned_data['amount']
+    if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
+        try:
+            create_invoice(
+                user=request.user,
+                camp=camp,
+                invoice_data=invoice_form.cleaned_data,
+                cost_items_data=_cost_items_data(formset),
+            )
+        except ValidationError as error:
+            invoice_form.add_error(None, error)
+        else:
+            messages.success(request, 'Dodano fakturę.', extra_tags='auto-dismiss')
+            return redirect('costs_mine')
+
+    return _render_invoice_form(request, invoice_form, formset, 'Dodaj fakturę')
+
+
+@login_required
+def costs_invoice_edit_view(request, invoice_id):
+    camp = Camp.current()
+    invoice = get_object_or_404(
+        Invoice,
+        pk=invoice_id,
+        user=request.user,
+        camp=camp,
+        status__in=(Invoice.Status.RECEIVED, Invoice.Status.REJECTED),
+    )
+    invoice_form = InvoiceForm(request.POST or None, request.FILES or None, instance=invoice)
+    formset = CostItemFormSet(request.POST or None, instance=invoice)
+    invoice_form_is_valid = invoice_form.is_valid()
+    if invoice_form_is_valid:
+        formset.instance.amount = invoice_form.cleaned_data['amount']
+    if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
+        try:
+            update_invoice(
+                invoice=invoice,
+                user=request.user,
+                invoice_data=invoice_form.cleaned_data,
+                cost_items_data=_cost_items_data(formset),
+            )
+        except ValidationError as error:
+            invoice_form.add_error(None, error)
+        else:
+            messages.success(request, 'Zapisano fakturę.', extra_tags='auto-dismiss')
+            return redirect('costs_mine')
+
+    return _render_invoice_form(request, invoice_form, formset, 'Edytuj fakturę')
+
+
+@login_required
+def costs_invoice_attachment_view(request, invoice_id):
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
+    if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
+        return HttpResponseNotFound()
+
+    mimetype, encoding = mimetypes.guess_type(invoice.attachment.path)
+    return sendfile(
+        request,
+        invoice.attachment.path,
+        mimetype=mimetype or 'application/octet-stream',
+        encoding=encoding,
+    )
+
+
+def _cost_items_data(formset):
+    return [
+        form.cleaned_data
+        for form in formset.forms
+        if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+    ]
+
+
+def _render_invoice_form(request, invoice_form, formset, title):
+    context = get_context(request)
+    context.update({'title': title, 'invoice_form': invoice_form, 'formset': formset})
+    return render(request, 'costs_invoice_form.html', context)
 
 
 def redirect_to_view_for_latest_year(target_view_name):

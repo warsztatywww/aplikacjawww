@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <article>
+    <header><h1>{{ title }}</h1></header>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      {{ invoice_form.non_field_errors }}
+      {{ invoice_form.as_p }}
+
+      <h2>Pozycje kosztowe</h2>
+      {{ formset.management_form }}
+      {% for form in formset %}
+        <fieldset>
+          {{ form.non_field_errors }}
+          {{ form.as_p }}
+        </fieldset>
+      {% endfor %}
+
+      <button class="btn btn-primary" type="submit">Zapisz</button>
+    </form>
+  </article>
+{% endblock %}

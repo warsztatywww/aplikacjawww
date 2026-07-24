@@ -31,6 +31,23 @@ urlpatterns = [
     path('me/cover_letter/', views.mydata_cover_letter_view, name='mydata_cover_letter'),
     path('me/status/', views.mydata_status_view, name='mydata_status'),
     path('me/forms/', views.mydata_forms_view, name='mydata_forms'),
+    path('costs/', views.costs_mine_view, name='costs_mine'),
+    path(
+        'costs/settlement-details/',
+        views.costs_settlement_details_view,
+        name='costs_settlement_details',
+    ),
+    path('costs/invoices/add/', views.costs_invoice_add_view, name='costs_invoice_add'),
+    path(
+        'costs/invoices/<int:invoice_id>/edit/',
+        views.costs_invoice_edit_view,
+        name='costs_invoice_edit',
+    ),
+    path(
+        'costs/invoices/<int:invoice_id>/attachment/',
+        views.costs_invoice_attachment_view,
+        name='costs_invoice_attachment',
+    ),
     path('forms/', wwwforms_views.form_list_view, name='form_list'),
     path('forms/<slug:name>/', wwwforms_views.form_view, name='form'),
     path('forms/<slug:name>/results/', wwwforms_views.form_results_view, name='form_results'),

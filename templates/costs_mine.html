@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <article>
+    <header class="d-flex justify-content-between align-items-center mt-3">
+      <h1>{{ title }}</h1>
+      <a class="btn btn-primary" href="{% url 'costs_invoice_add' %}">Dodaj fakturę</a>
+    </header>
+
+    <p>
+      Potwierdzone: {{ confirmed_total }} zł<br>
+      Oczekujące: {{ pending_total }} zł
+    </p>
+    <p><a href="{% url 'costs_settlement_details' %}">Dane rachunku bankowego</a></p>
+
+    {% if invoices %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Numer</th>
+            <th>Data</th>
+            <th>Kwota</th>
+            <th>Status</th>
+            <th>Załącznik</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+            <tr>
+              <td>
+                {% if invoice.status == 'RECEIVED' or invoice.status == 'REJECTED' %}
+                  <a href="{% url 'costs_invoice_edit' invoice.pk %}">{{ invoice.document_number }}</a>
+                {% else %}
+                  {{ invoice.document_number }}
+                {% endif %}
+              </td>
+              <td>{{ invoice.issue_date }}</td>
+              <td>{{ invoice.amount }} zł</td>
+              <td>{{ invoice.get_status_display }}</td>
+              <td><a href="{% url 'costs_invoice_attachment' invoice.pk %}">Pobierz</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>Nie dodano jeszcze faktur.</p>
+    {% endif %}
+  </article>
+{% endblock %}
