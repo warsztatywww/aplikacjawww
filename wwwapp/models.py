@@ -117,6 +117,35 @@ class Camp(models.Model):
             return Camp.objects.latest()
 
 
+class CampGoogleSheetsIntegration(models.Model):
+    """Operational state for publishing one camp's administration tables."""
+
+    camp = models.OneToOneField(Camp, on_delete=models.CASCADE,
+                                related_name='google_sheets_integration')
+    spreadsheet_id = models.CharField(max_length=200)
+    enabled = models.BooleanField(default=False)
+    participants_sheet_id = models.BigIntegerField(null=True, blank=True)
+    lecturers_sheet_id = models.BigIntegerField(null=True, blank=True)
+    workshops_sheet_id = models.BigIntegerField(null=True, blank=True)
+    dirty = models.BooleanField(default=False)
+    next_sync_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    claimed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    claim_token = models.UUIDField(null=True, blank=True)
+    attempt_count = models.PositiveIntegerField(default=0)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    last_success_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=2000, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['enabled', 'dirty', 'next_sync_at']),
+            models.Index(fields=['claimed_at']),
+        ]
+
+    def __str__(self):
+        return 'Google Sheets for %s' % self.camp
+
+
 def cache_latest_camp_middleware(get_response):
     def middleware(request):
         _latest_camp.v = Camp.objects.latest()
