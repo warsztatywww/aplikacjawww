@@ -16,6 +16,8 @@ python-dateutil==2.8.2
 Faker==11.3.0
 psycopg2-binary==2.9.3
 django-phonenumber-field[phonenumbers]==6.0.0
+google-api-python-client==2.198.0
+google-auth==2.56.0
 
 mock==4.0.3
 freezegun==1.1.0

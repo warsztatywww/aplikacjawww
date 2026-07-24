@@ -34,7 +34,7 @@ INSTALLED_APPS = (
     'django_bleach',
     'tinymce',
     'wwwforms',
-    'wwwapp',
+    'wwwapp.apps.WwwappConfig',
     'django_cleanup',
     'imagekit',
     'gallery',
