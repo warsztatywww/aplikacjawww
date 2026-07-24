@@ -581,7 +581,11 @@ class Workshop(models.Model):
 
 
 class InvoiceSequence(models.Model):
-    camp = models.OneToOneField(Camp, on_delete=models.PROTECT, related_name='invoice_sequence')
+    camp = models.OneToOneField(
+        Camp,
+        on_delete=models.PROTECT,
+        related_name='invoice_sequence',
+    )
     last_allocated = models.PositiveIntegerField(default=0)
 
 
@@ -666,13 +670,25 @@ class CostItem(models.Model):
 
     def clean(self):
         super().clean()
-        if self.workshop_id and self.invoice_id and self.workshop.year_id != self.invoice.camp_id:
+        if (
+            self.workshop_id
+            and self.invoice_id
+            and self.workshop.year_id != self.invoice.camp_id
+        ):
             raise ValidationError({'workshop': 'Workshop must belong to the invoice camp'})
 
 
 class SettlementDetails(models.Model):
-    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='settlement_details')
-    camp = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='settlement_details')
+    user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='settlement_details',
+    )
+    camp = models.ForeignKey(
+        Camp,
+        on_delete=models.PROTECT,
+        related_name='settlement_details',
+    )
     account_number = models.CharField(max_length=34)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -697,7 +713,7 @@ class Reimbursement(models.Model):
     comment = models.TextField(max_length=1000, blank=True)
     executed_date = models.DateField()
     registered_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='registered_reimbursements')
-    account_number = models.CharField(max_length=34)
+    account_number_snapshot = models.CharField(max_length=34)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

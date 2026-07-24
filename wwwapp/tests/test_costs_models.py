@@ -5,7 +5,15 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.test import TestCase
 
-from wwwapp.models import Camp, CostItem, Invoice, SettlementDetails, Workshop, WorkshopType
+from wwwapp.models import (
+    Camp,
+    CostItem,
+    Invoice,
+    Reimbursement,
+    SettlementDetails,
+    Workshop,
+    WorkshopType,
+)
 
 
 class CostModelTests(TestCase):
@@ -47,3 +55,6 @@ class CostModelTests(TestCase):
         with self.assertRaises(IntegrityError):
             SettlementDetails.objects.create(user=self.user, camp=self.camp,
                                              account_number='PL27114020040000300201355387')
+
+    def test_reimbursement_uses_an_account_number_snapshot(self):
+        self.assertIsNotNone(Reimbursement._meta.get_field('account_number_snapshot'))

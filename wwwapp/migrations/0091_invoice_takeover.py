@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('type', models.CharField(choices=[('ASSOCIATION', 'Stowarzyszenie'), ('OTHER', 'Inne')], max_length=11)),
                 ('comment', models.TextField(blank=True, max_length=1000)),
                 ('executed_date', models.DateField()),
-                ('account_number', models.CharField(max_length=34)),
+                ('account_number_snapshot', models.CharField(max_length=34)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('camp', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='reimbursements', to='wwwapp.camp')),
                 ('registered_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='registered_reimbursements', to=settings.AUTH_USER_MODEL)),
