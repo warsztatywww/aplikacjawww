@@ -1,3 +1,4 @@
+import csv
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -22,6 +23,13 @@ from wwwapp.models import (
     Workshop,
     WorkshopType,
 )
+
+
+CSV_HEADER = [
+    'internal_number', 'document_number', 'issue_date', 'user', 'invoice_type', 'status',
+    'invoice_amount', 'category', 'context_type', 'context_id', 'context_name', 'item_amount',
+    'description',
+]
 
 
 class InvoiceFormTests(TestCase):
@@ -389,3 +397,144 @@ class OwnCostsViewsTests(TestCase):
         self.other_user.user_permissions.add(Permission.objects.get(codename='view_all_costs'))
         response = self.client.get(reverse('costs_invoice_attachment', args=[self.invoice.pk]))
         self.assertEqual(response.status_code, 200)
+
+
+class CostAdministrationViewsTests(TestCase):
+    def setUp(self):
+        Camp.objects.all().update(year=2026)
+        self.camp = Camp.objects.get()
+        self.other_camp = Camp.objects.create(year=2027)
+        self.owner = User.objects.create_user(username='cost-owner')
+        self.admin = User.objects.create_user(username='cost-admin')
+        self.csv_user = User.objects.create_user(username='cost-csv')
+        self.process_user = User.objects.create_user(username='cost-process')
+        self.approve_permission = Permission.objects.get(codename='approve_costs')
+        self.view_permission = Permission.objects.get(codename='view_all_costs')
+        self.export_permission = Permission.objects.get(codename='export_costs')
+        self.process_permission = Permission.objects.get(codename='process_costs')
+        self.admin.user_permissions.add(self.view_permission, self.approve_permission)
+        self.csv_user.user_permissions.add(self.view_permission, self.export_permission)
+        self.process_user.user_permissions.add(self.view_permission, self.process_permission)
+        self.received_invoice = self.create_invoice(
+            document_number='FV/received', internal_number='WWW_2026_FP_0001',
+        )
+        self.approved_invoice = self.create_invoice(
+            document_number='FV/approved', internal_number='WWW_2026_FP_0002',
+            status=Invoice.Status.APPROVED,
+        )
+        self.split_invoice = self.create_invoice(
+            document_number='FV/split', internal_number='WWW_2026_FP_0003',
+            status=Invoice.Status.APPROVED,
+        )
+        CostItem.objects.create(
+            invoice=self.split_invoice,
+            amount=Decimal('4.00'),
+            category=CostItem.Category.OUTINGS,
+        )
+
+    def create_invoice(self, *, document_number, internal_number, status=Invoice.Status.RECEIVED):
+        invoice = Invoice.objects.create(
+            user=self.owner,
+            camp=self.camp,
+            attachment='invoices/cost.pdf',
+            document_number=document_number,
+            issue_date='2026-07-24',
+            amount=Decimal('10.00'),
+            invoice_type=Invoice.Type.KSEF,
+            description='Cost administration test',
+            internal_number=internal_number,
+            status=status,
+        )
+        CostItem.objects.create(
+            invoice=invoice,
+            amount=Decimal('10.00'),
+            category=CostItem.Category.REGULAR_PURCHASES,
+        )
+        return invoice
+
+    def test_administration_requires_view_permission(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('costs_admin'))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_administration_filters_invoices_by_category_and_status(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse('costs_admin'),
+            {'status': Invoice.Status.APPROVED, 'category': CostItem.Category.OUTINGS},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['invoices']), [self.split_invoice])
+
+    def test_approval_transition_requires_approval_permission(self):
+        self.client.force_login(self.csv_user)
+
+        response = self.client.post(
+            reverse('costs_admin_transition'),
+            {'invoice_ids': [self.received_invoice.pk], 'status': Invoice.Status.APPROVED},
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.received_invoice.refresh_from_db()
+        self.assertEqual(self.received_invoice.status, Invoice.Status.RECEIVED)
+
+    def test_batch_transition_rolls_back_when_any_invoice_cannot_transition(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse('costs_admin_transition'),
+            {
+                'invoice_ids': [self.received_invoice.pk, self.approved_invoice.pk],
+                'status': Invoice.Status.APPROVED,
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.received_invoice.refresh_from_db()
+        self.assertEqual(self.received_invoice.status, Invoice.Status.RECEIVED)
+
+    def test_processed_transition_requires_processing_permission(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse('costs_admin_transition'),
+            {'invoice_ids': [self.approved_invoice.pk], 'status': Invoice.Status.PROCESSED},
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_default_csv_exports_only_approved_invoice_cost_items(self):
+        self.client.force_login(self.csv_user)
+
+        response = self.client.post(reverse('costs_csv_export'))
+        rows = list(csv.reader(response.content.decode().splitlines()))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(rows[0], CSV_HEADER)
+        self.assertEqual(len(rows), 4)
+        self.assertNotIn(self.received_invoice.internal_number, [row[0] for row in rows[1:]])
+
+    def test_selected_csv_exports_only_selected_invoice_cost_items(self):
+        self.client.force_login(self.csv_user)
+
+        response = self.client.post(
+            reverse('costs_csv_export'), {'invoice_ids': [self.split_invoice.pk]},
+        )
+        rows = list(csv.reader(response.content.decode().splitlines()))
+
+        self.assertEqual(rows[0], CSV_HEADER)
+        self.assertEqual(len(rows), 3)
+        self.assertEqual({row[0] for row in rows[1:]}, {self.split_invoice.internal_number})
+
+    def test_csv_export_does_not_mutate_invoice_status(self):
+        self.client.force_login(self.csv_user)
+
+        response = self.client.post(reverse('costs_csv_export'))
+
+        self.assertEqual(response.status_code, 200)
+        self.approved_invoice.refresh_from_db()
+        self.assertEqual(self.approved_invoice.status, Invoice.Status.APPROVED)

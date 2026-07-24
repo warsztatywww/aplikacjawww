@@ -1,3 +1,4 @@
+import csv
 import datetime
 import hashlib
 import json
@@ -15,7 +16,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import SuspiciousOperation, ValidationError
+from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Q, QuerySet, Exists, OuterRef
 from django.db.models.query import Prefetch
@@ -32,10 +33,19 @@ from django_bleach.utils import get_bleach_default_options
 from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
-from wwwapp.costs import balance_for, create_invoice, pending_total_for, update_invoice
+from wwwapp.costs import (
+    CSV_FIELDS,
+    balance_for,
+    create_invoice,
+    invoice_csv_rows,
+    pending_total_for,
+    transition_invoices,
+    update_invoice,
+)
 from wwwapp.forms import (
     ArticleForm,
     CampInterestEmailForm,
+    CostFilterForm,
     CostItemFormSet,
     InvoiceForm,
     SettlementDetailsForm,
@@ -196,6 +206,87 @@ def costs_invoice_attachment_view(request, invoice_id):
         mimetype=mimetype or 'application/octet-stream',
         encoding=encoding,
     )
+
+
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_admin_view(request):
+    filter_form = CostFilterForm(request.GET or None)
+    invoices = Invoice.objects.select_related('camp', 'user').prefetch_related('cost_items')
+    if filter_form.is_valid():
+        filters = filter_form.cleaned_data
+        if filters['camp']:
+            invoices = invoices.filter(camp=filters['camp'])
+        if filters['status']:
+            invoices = invoices.filter(status=filters['status'])
+        if filters['user']:
+            invoices = invoices.filter(user=filters['user'])
+        if filters['invoice_type']:
+            invoices = invoices.filter(invoice_type=filters['invoice_type'])
+        if filters['category']:
+            invoices = invoices.filter(cost_items__category=filters['category']).distinct()
+    context = get_context(request)
+    context.update({
+        'title': 'Administracja kosztami',
+        'filter_form': filter_form,
+        'invoices': invoices.order_by('-created_at'),
+        'can_approve_costs': request.user.has_perm('wwwapp.approve_costs'),
+        'can_export_costs': request.user.has_perm('wwwapp.export_costs'),
+        'can_process_costs': request.user.has_perm('wwwapp.process_costs'),
+    })
+    return render(request, 'costs_admin.html', context)
+
+
+@require_POST
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_admin_transition_view(request):
+    target_status = request.POST.get('status')
+    if target_status in (Invoice.Status.APPROVED, Invoice.Status.REJECTED):
+        required_permission = 'wwwapp.approve_costs'
+    elif target_status == Invoice.Status.PROCESSED:
+        required_permission = 'wwwapp.process_costs'
+    else:
+        return HttpResponseBadRequest('Nieprawidłowy docelowy status faktury.')
+    if not request.user.has_perm(required_permission):
+        raise PermissionDenied
+
+    invoice_ids = request.POST.getlist('invoice_ids')
+    if not invoice_ids:
+        return HttpResponseBadRequest('Wybierz co najmniej jedną fakturę.')
+    invoices = Invoice.objects.filter(pk__in=invoice_ids)
+    if invoices.count() != len(set(invoice_ids)):
+        return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
+    try:
+        transition_invoices(
+            invoices=invoices,
+            target_status=target_status,
+            changed_by=request.user,
+        )
+    except ValidationError as error:
+        return HttpResponseBadRequest('; '.join(error.messages))
+    messages.success(request, 'Zmieniono status wybranych faktur.', extra_tags='auto-dismiss')
+    return redirect('costs_admin')
+
+
+@require_POST
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+@permission_required('wwwapp.export_costs', raise_exception=True)
+def costs_csv_export_view(request):
+    invoice_ids = request.POST.getlist('invoice_ids')
+    invoices = Invoice.objects.all()
+    if invoice_ids:
+        invoices = invoices.filter(pk__in=invoice_ids)
+    else:
+        invoices = invoices.filter(status=Invoice.Status.APPROVED)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="koszty.csv"'
+    writer = csv.DictWriter(response, fieldnames=CSV_FIELDS)
+    writer.writeheader()
+    writer.writerows(invoice_csv_rows(invoices=invoices.order_by('pk')))
+    return response
 
 
 def _cost_items_data(formset):

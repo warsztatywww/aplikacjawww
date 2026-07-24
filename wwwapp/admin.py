@@ -11,7 +11,8 @@ from django.http.request import HttpRequest
 import wwwforms.models
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
-    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail
+    CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail, \
+    CostItem, Invoice, Reimbursement, SettlementDetails
 
 admin.site.unregister(User)
 
@@ -234,3 +235,31 @@ admin.site.register(CampInterestEmail)
 admin.site.register(Solution, SolutionAdmin)
 
 admin.site.register(ResourceYearPermission)
+
+
+class NoDeleteAdmin(admin.ModelAdmin):
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(NoDeleteAdmin):
+    list_display = ('internal_number', 'document_number', 'user', 'camp', 'amount', 'status')
+    list_filter = ('camp', 'status', 'invoice_type')
+    readonly_fields = ('internal_number', 'created_at', 'updated_at', 'admin_changed_at', 'admin_changed_by')
+
+
+@admin.register(CostItem)
+class CostItemAdmin(NoDeleteAdmin):
+    list_display = ('invoice', 'category', 'workshop', 'amount')
+    list_filter = ('category',)
+
+
+@admin.register(SettlementDetails)
+class SettlementDetailsAdmin(NoDeleteAdmin):
+    readonly_fields = ('created_at', 'updated_at')
+
+
+@admin.register(Reimbursement)
+class ReimbursementAdmin(NoDeleteAdmin):
+    readonly_fields = ('registered_by', 'account_number_snapshot', 'created_at')

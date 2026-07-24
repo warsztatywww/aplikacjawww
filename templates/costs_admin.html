@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <article>
+    <h1 class="mt-3">{{ title }}</h1>
+    <form method="get" class="mb-3">
+      <div class="form-row">
+        {% for field in filter_form %}
+          <div class="col-md-4">{{ field|as_crispy_field }}</div>
+        {% endfor %}
+      </div>
+      <button class="btn btn-secondary" type="submit">Filtruj</button>
+    </form>
+
+    <form method="post">
+      {% csrf_token %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Wybór</th>
+            <th scope="col">Numer</th>
+            <th scope="col">Obóz</th>
+            <th scope="col">Użytkownik</th>
+            <th scope="col">Kwota</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+            <tr>
+              <td><input type="checkbox" name="invoice_ids" value="{{ invoice.pk }}"></td>
+              <td>{{ invoice.internal_number }}</td>
+              <td>{{ invoice.camp }}</td>
+              <td>{{ invoice.user }}</td>
+              <td>{{ invoice.amount }} zł</td>
+              <td>{{ invoice.get_status_display }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">Brak faktur spełniających kryteria.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if can_approve_costs %}
+        <button class="btn btn-success" formaction="{% url 'costs_admin_transition' %}" name="status" value="APPROVED" type="submit">Zatwierdź</button>
+        <button class="btn btn-danger" formaction="{% url 'costs_admin_transition' %}" name="status" value="REJECTED" type="submit">Odrzuć</button>
+      {% endif %}
+      {% if can_process_costs %}
+        <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' %}" name="status" value="PROCESSED" type="submit">Oznacz jako przetworzone</button>
+      {% endif %}
+      {% if can_export_costs %}
+        <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' %}" type="submit">Eksportuj CSV</button>
+      {% endif %}
+    </form>
+  </article>
+{% endblock %}

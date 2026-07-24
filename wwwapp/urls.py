@@ -32,6 +32,13 @@ urlpatterns = [
     path('me/status/', views.mydata_status_view, name='mydata_status'),
     path('me/forms/', views.mydata_forms_view, name='mydata_forms'),
     path('costs/', views.costs_mine_view, name='costs_mine'),
+    path('costs/admin/', views.costs_admin_view, name='costs_admin'),
+    path(
+        'costs/admin/transition/',
+        views.costs_admin_transition_view,
+        name='costs_admin_transition',
+    ),
+    path('costs/admin/export/', views.costs_csv_export_view, name='costs_csv_export'),
     path(
         'costs/settlement-details/',
         views.costs_settlement_details_view,
