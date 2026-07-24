@@ -6,9 +6,12 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.db.models.base import Model
 from django.forms.models import BaseInlineFormSet
+from django.core.exceptions import ValidationError
 from django.http.request import HttpRequest
 
 import wwwforms.models
+from wwwapp.sheets.google import GoogleSheetsAccessError, GoogleSheetsClient
+from wwwapp.sheets.queue import request_sync_after_commit
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
     CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail, \
@@ -51,6 +54,24 @@ class CampGoogleSheetsIntegrationInline(admin.StackedInline):
     readonly_fields = ('participants_sheet_id', 'lecturers_sheet_id', 'workshops_sheet_id',
                        'dirty', 'next_sync_at', 'claimed_at', 'attempt_count', 'last_attempt_at',
                        'last_success_at', 'last_error')
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        parent_clean = formset.clean
+
+        def clean(instance):
+            parent_clean(instance)
+            for form in instance.forms:
+                if not form.cleaned_data or form.cleaned_data.get('DELETE'):
+                    continue
+                if form.cleaned_data.get('enabled'):
+                    try:
+                        GoogleSheetsClient.from_environment().validate_spreadsheet(
+                            form.cleaned_data['spreadsheet_id'])
+                    except (GoogleSheetsAccessError, ValidationError) as error:
+                        form.add_error('spreadsheet_id', str(error))
+        formset.clean = clean
+        return formset
 
 
 class WorkshopParticipantInline(admin.TabularInline):
@@ -123,6 +144,26 @@ class CampAdmin(admin.ModelAdmin):
             form.base_fields['form_question_arrival_date'].queryset = form.base_fields['form_question_arrival_date'].queryset.filter(form__in=obj.forms.all(), data_type=wwwforms.models.FormQuestion.TYPE_DATE)
             form.base_fields['form_question_departure_date'].queryset = form.base_fields['form_question_departure_date'].queryset.filter(form__in=obj.forms.all(), data_type=wwwforms.models.FormQuestion.TYPE_DATE)
         return form
+
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in formset.deleted_objects:
+            instance.delete()
+        for instance in instances:
+            enabled_before = instance.pk and CampGoogleSheetsIntegration.objects.get(pk=instance.pk).enabled
+            instance.save()
+            if instance.enabled:
+                client = GoogleSheetsClient.from_environment()
+                for tab_name in ('Uczestnicy', 'Prowadzący', 'Warsztaty'):
+                    client.ensure_managed_sheet(instance, tab_name)
+                request_sync_after_commit([instance.camp_id])
+            elif enabled_before:
+                instance.dirty = False
+                instance.next_sync_at = None
+                instance.claimed_at = None
+                instance.claim_token = None
+                instance.save(update_fields=['dirty', 'next_sync_at', 'claimed_at', 'claim_token'])
+        formset.save_m2m()
 
 
 admin.site.register(Camp, CampAdmin)
