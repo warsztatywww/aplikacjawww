@@ -632,3 +632,152 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.approved_invoice.refresh_from_db()
         self.assertEqual(self.approved_invoice.status, Invoice.Status.APPROVED)
+
+
+class ReimbursementAndStatisticsViewsTests(TestCase):
+    def setUp(self):
+        Camp.objects.all().update(year=2026)
+        self.camp = Camp.objects.get()
+        self.recipient = User.objects.create_user(username='reimbursement-recipient')
+        self.reimbursement_user = User.objects.create_user(username='reimbursement-user')
+        self.statistics_user = User.objects.create_user(username='statistics-user')
+        self.reimbursement_user.user_permissions.add(
+            Permission.objects.get(codename='register_reimbursements'),
+        )
+        self.statistics_user.user_permissions.add(
+            Permission.objects.get(codename='view_cost_statistics'),
+        )
+        self.details = SettlementDetails.objects.create(
+            user=self.recipient,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.approved_invoice = self.create_invoice(
+            amount=Decimal('30.00'),
+            status=Invoice.Status.APPROVED,
+        )
+        self.over_balance_post = {
+            'user_id': self.recipient.pk,
+            'amount': '40.00',
+            'type': Reimbursement.Type.ASSOCIATION,
+            'comment': 'Transfer',
+            'executed_date': '2026-07-24',
+        }
+
+    def create_invoice(
+        self,
+        *,
+        amount,
+        status,
+        camp=None,
+        category=CostItem.Category.WORKSHOPS,
+    ):
+        invoice = Invoice.objects.create(
+            user=self.recipient,
+            camp=camp or self.camp,
+            attachment='invoices/statistics.pdf',
+            document_number=f'FV/{Invoice.objects.count() + 1}/2026',
+            issue_date='2026-07-24',
+            amount=amount,
+            invoice_type=Invoice.Type.KSEF,
+            description='Statistics test',
+            internal_number=f'WWW_2026_FP_{Invoice.objects.count() + 1:04d}',
+            status=status,
+        )
+        CostItem.objects.create(invoice=invoice, amount=amount, category=category)
+        return invoice
+
+    def test_reimbursement_saves_account_snapshot_and_warns_above_balance(self):
+        self.client.force_login(self.reimbursement_user)
+
+        response = self.client.post(reverse('costs_reimbursements'), self.over_balance_post)
+
+        reimbursement = Reimbursement.objects.get()
+        self.assertEqual(reimbursement.account_number_snapshot, self.details.account_number)
+        self.assertEqual(response.context['balance_before'], Decimal('30.00'))
+        self.assertEqual(response.context['balance_after'], Decimal('-10.00'))
+        self.assertContains(response, 'przekracza saldo')
+
+    def test_reimbursements_require_registration_permission(self):
+        self.client.force_login(self.recipient)
+
+        response = self.client.get(reverse('costs_reimbursements'))
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_statistics_sum_split_cost_items_once(self):
+        split_invoice = self.create_invoice(
+            amount=Decimal('20.00'),
+            status=Invoice.Status.PROCESSED,
+            category=CostItem.Category.REGULAR_PURCHASES,
+        )
+        split_invoice.cost_items.update(amount=Decimal('10.00'))
+        CostItem.objects.create(
+            invoice=split_invoice,
+            amount=Decimal('10.00'),
+            category=CostItem.Category.WORKSHOPS,
+        )
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(reverse('costs_statistics'), {'camp': self.camp.pk})
+
+        self.assertEqual(
+            response.context['category_totals'][CostItem.Category.WORKSHOPS],
+            Decimal('40.00'),
+        )
+        self.assertEqual(
+            response.context['category_percentages'][CostItem.Category.WORKSHOPS], Decimal('80.00'),
+        )
+
+    def test_statistics_default_to_approved_and_processed_items(self):
+        self.create_invoice(
+            amount=Decimal('100.00'),
+            status=Invoice.Status.RECEIVED,
+            category=CostItem.Category.OUTINGS,
+        )
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(reverse('costs_statistics'), {'camp': self.camp.pk})
+
+        self.assertEqual(response.context['total'], Decimal('30.00'))
+        self.assertEqual(
+            response.context['category_totals'][CostItem.Category.OUTINGS],
+            Decimal('0.00'),
+        )
+
+    def test_statistics_filter_by_category_status_and_context(self):
+        workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')
+        workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='statistics-workshop',
+            title='Statistics workshop',
+        )
+        workshop_item = self.approved_invoice.cost_items.get()
+        workshop_item.workshop = workshop
+        workshop_item.save()
+        self.create_invoice(
+            amount=Decimal('15.00'),
+            status=Invoice.Status.RECEIVED,
+            category=CostItem.Category.WORKSHOPS,
+        )
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(
+            reverse('costs_statistics'),
+            {
+                'camp': self.camp.pk,
+                'status': Invoice.Status.APPROVED,
+                'category': CostItem.Category.WORKSHOPS,
+                'context': 'workshop',
+            },
+        )
+
+        self.assertEqual(response.context['total'], Decimal('30.00'))
+
+    def test_statistics_require_permission(self):
+        self.client.force_login(self.recipient)
+
+        response = self.client.get(reverse('costs_statistics'))
+
+        self.assertEqual(response.status_code, 403)

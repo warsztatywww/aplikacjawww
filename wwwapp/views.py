@@ -6,6 +6,7 @@ import mimetypes
 import os
 import sys
 import random # Used for shuffling the workshops on the program page
+from decimal import Decimal
 from typing import Dict, Any, Optional
 from urllib.parse import urljoin
 
@@ -18,7 +19,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Q, QuerySet, Exists, OuterRef
+from django.db.models import Q, QuerySet, Exists, OuterRef, Sum
 from django.db.models.query import Prefetch
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
 from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
@@ -48,6 +49,7 @@ from wwwapp.forms import (
     CostFilterForm,
     CostItemFormSet,
     InvoiceForm,
+    ReimbursementForm,
     SettlementDetailsForm,
     SolutionFileFormSet,
     SolutionForm,
@@ -66,6 +68,8 @@ from wwwapp.models import (
     CampInterestEmail,
     CampParticipant,
     Invoice,
+    CostItem,
+    Reimbursement,
     ResourceYearPermission,
     SettlementDetails,
     Solution,
@@ -293,6 +297,136 @@ def costs_csv_export_view(request):
     writer.writeheader()
     writer.writerows(invoice_csv_rows(invoices=invoices.order_by('pk')))
     return response
+
+
+@login_required
+@permission_required('wwwapp.register_reimbursements', raise_exception=True)
+def costs_reimbursements_view(request):
+    """Show reimbursement history and register a payment for a participant."""
+    camp = Camp.current()
+    selected_user = None
+    form = None
+    balance_before = None
+    balance_after = None
+    user_id = request.POST.get('user_id') or request.GET.get('user_id')
+    if user_id:
+        selected_user = get_object_or_404(User, pk=user_id)
+        balance_before = balance_for(user=selected_user, camp=camp)
+        form = ReimbursementForm(
+            request.POST or None,
+            user=selected_user,
+            camp=camp,
+            registered_by=request.user,
+        )
+        if request.method == 'POST' and form.is_valid():
+            reimbursement = form.save()
+            balance_after = balance_for(user=selected_user, camp=camp)
+            messages.success(request, 'Zarejestrowano zwrot kosztów.', extra_tags='auto-dismiss')
+            if reimbursement.amount > balance_before:
+                messages.warning(request, 'Kwota zwrotu przekracza saldo.')
+    elif request.method == 'POST':
+        messages.error(request, 'Wybierz użytkownika do rozliczenia.')
+
+    reimbursements = Reimbursement.objects.select_related('user', 'camp', 'registered_by')
+    context = get_context(request)
+    context.update({
+        'title': 'Zwroty kosztów',
+        'users': User.objects.order_by('username'),
+        'selected_user': selected_user,
+        'reimbursement_form': form,
+        'reimbursements': reimbursements.filter(camp=camp).order_by('-executed_date', '-created_at'),
+        'balance_before': balance_before,
+        'balance_after': balance_after,
+    })
+    return render(request, 'costs_reimbursements.html', context)
+
+
+@login_required
+@permission_required('wwwapp.view_cost_statistics', raise_exception=True)
+def costs_statistics_view(request):
+    """Summarize cost-item totals for the selected financial-report filters."""
+    camp = Camp.current()
+    if request.GET.get('camp'):
+        camp = get_object_or_404(Camp, pk=request.GET['camp'])
+
+    items = CostItem.objects.filter(invoice__camp=camp)
+    status = request.GET.get('status')
+    if status in Invoice.Status.values:
+        items = items.filter(invoice__status=status)
+    else:
+        status = ''
+        items = items.filter(
+            invoice__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+        )
+    category = request.GET.get('category')
+    if category in CostItem.Category.values:
+        items = items.filter(category=category)
+    else:
+        category = ''
+    item_context = request.GET.get('context')
+    if item_context == 'workshop':
+        items = items.filter(workshop__isnull=False)
+    elif item_context == 'camp':
+        items = items.filter(workshop__isnull=True)
+    else:
+        item_context = ''
+
+    totals_by_category = {
+        row['category']: row['total']
+        for row in items.values('category').annotate(total=Sum('amount'))
+    }
+    category_totals = {
+        value: totals_by_category.get(value, Decimal('0.00'))
+        for value, _label in CostItem.Category.choices
+    }
+    total = sum(category_totals.values(), Decimal('0.00'))
+    category_percentages = {
+        value: _percentage(part=amount, whole=total)
+        for value, amount in category_totals.items()
+    }
+    category_rows = [
+        {
+            'value': value,
+            'label': label,
+            'total': category_totals[value],
+            'percentage': category_percentages[value],
+        }
+        for value, label in CostItem.Category.choices
+    ]
+    context = get_context(request)
+    context.update({
+        'title': 'Statystyki kosztów',
+        'camps': Camp.objects.order_by('-year'),
+        'selected_camp': camp,
+        'selected_status': status,
+        'selected_category': category,
+        'selected_context': item_context,
+        'category_choices': CostItem.Category.choices,
+        'status_choices': Invoice.Status.choices,
+        'category_totals': category_totals,
+        'category_percentages': category_percentages,
+        'category_rows': category_rows,
+        'total': total,
+        'pie_gradient': _pie_gradient(category_rows),
+    })
+    return render(request, 'costs_statistics.html', context)
+
+
+def _percentage(*, part, whole):
+    if not whole:
+        return Decimal('0.00')
+    return (part / whole * 100).quantize(Decimal('0.01'))
+
+
+def _pie_gradient(category_rows):
+    colors = ('#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997')
+    start = Decimal('0.00')
+    segments = []
+    for row, color in zip(category_rows, colors):
+        end = start + row['percentage']
+        segments.append(f'{color} {start}% {end}%')
+        start = end
+    return f"conic-gradient({', '.join(segments)})"
 
 
 def _parse_invoice_ids(invoice_ids):

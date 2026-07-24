@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <article>
+    <h1 class="mt-3">{{ title }}</h1>
+    <form method="get" class="mb-3">
+      <label for="reimbursement-user">Użytkownik</label>
+      <select id="reimbursement-user" name="user_id" class="form-control">
+        <option value="">Wybierz użytkownika</option>
+        {% for user in users %}
+          <option value="{{ user.pk }}"{% if user == selected_user %} selected{% endif %}>
+            {{ user.get_full_name|default:user.username }}
+          </option>
+        {% endfor %}
+      </select>
+      <button class="btn btn-secondary mt-2" type="submit">Wybierz</button>
+    </form>
+
+    {% if selected_user %}
+      <h2>Nowy zwrot dla {{ selected_user }}</h2>
+      <p>Saldo przed zwrotem: {{ balance_before }} zł</p>
+      {% if balance_after is not None %}
+        <p>Saldo po zwrocie: {{ balance_after }} zł</p>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="user_id" value="{{ selected_user.pk }}">
+        {{ reimbursement_form|crispy }}
+        <button class="btn btn-primary" type="submit">Zarejestruj zwrot</button>
+      </form>
+    {% endif %}
+
+    <h2 class="mt-4">Historia zwrotów</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Data wykonania</th>
+          <th scope="col">Użytkownik</th>
+          <th scope="col">Kwota</th>
+          <th scope="col">Typ</th>
+          <th scope="col">Rachunek</th>
+          <th scope="col">Zarejestrował(a)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reimbursement in reimbursements %}
+          <tr>
+            <td>{{ reimbursement.executed_date }}</td>
+            <td>{{ reimbursement.user }}</td>
+            <td>{{ reimbursement.amount }} zł</td>
+            <td>{{ reimbursement.get_type_display }}</td>
+            <td>{{ reimbursement.account_number_snapshot }}</td>
+            <td>{{ reimbursement.registered_by }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Brak zarejestrowanych zwrotów.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+{% endblock %}

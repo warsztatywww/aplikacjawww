@@ -32,6 +32,8 @@ urlpatterns = [
     path('me/status/', views.mydata_status_view, name='mydata_status'),
     path('me/forms/', views.mydata_forms_view, name='mydata_forms'),
     path('costs/', views.costs_mine_view, name='costs_mine'),
+    path('costs/reimbursements/', views.costs_reimbursements_view, name='costs_reimbursements'),
+    path('costs/statistics/', views.costs_statistics_view, name='costs_statistics'),
     path('costs/admin/', views.costs_admin_view, name='costs_admin'),
     path(
         'costs/admin/transition/',
