@@ -66,11 +66,18 @@ class GoogleSheetsClient:
         values = [[column.header for column in projection.columns]] + rows
         metadata = self.validate_spreadsheet(spreadsheet_id)
         sheet = next(item for item in metadata['sheets'] if item['properties']['sheetId'] == sheet_id)
-        title = sheet['properties']['title']
+        title = sheet['properties']['title'].replace("'", "''")
+        range_name = "'%s'" % title
+        self.service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={'requests': [{'repeatCell': {
+                'range': {'sheetId': sheet_id},
+                'cell': {'userEnteredFormat': {}},
+                'fields': 'userEnteredFormat'}}]}).execute()
         self.service.spreadsheets().values().clear(
-            spreadsheetId=spreadsheet_id, range="'%s'" % title, body={}).execute()
+            spreadsheetId=spreadsheet_id, range=range_name, body={}).execute()
         self.service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id, range="'%s'!A1" % title,
+            spreadsheetId=spreadsheet_id, range='%s!A1' % range_name,
             valueInputOption='USER_ENTERED', body={'values': values}).execute()
 
     def _backup_name(self, tab_name, sheets):

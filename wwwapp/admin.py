@@ -1,7 +1,7 @@
 from typing import Optional
 
 from adminsortable2.admin import SortableAdminMixin
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from django.db.models.base import Model
@@ -151,11 +151,29 @@ class CampAdmin(admin.ModelAdmin):
             instance.delete()
         for instance in instances:
             enabled_before = instance.pk and CampGoogleSheetsIntegration.objects.get(pk=instance.pk).enabled
+            enable_requested = instance.enabled
+            if enable_requested:
+                instance.enabled = False
             instance.save()
             if instance.enabled:
                 client = GoogleSheetsClient.from_environment()
                 for tab_name in ('Uczestnicy', 'Prowadzący', 'Warsztaty'):
                     client.ensure_managed_sheet(instance, tab_name)
+                request_sync_after_commit([instance.camp_id])
+            elif enable_requested:
+                try:
+                    client = GoogleSheetsClient.from_environment()
+                    client.validate_spreadsheet(instance.spreadsheet_id)
+                    for tab_name in ('Uczestnicy', 'Prowadzący', 'Warsztaty'):
+                        client.ensure_managed_sheet(instance, tab_name)
+                except Exception as error:
+                    instance.last_error = '%s: %s' % (error.__class__.__name__, error)
+                    instance.save(update_fields=['enabled', 'last_error'])
+                    messages.error(request, instance.last_error)
+                    continue
+                instance.enabled = True
+                instance.last_error = ''
+                instance.save(update_fields=['enabled', 'last_error'])
                 request_sync_after_commit([instance.camp_id])
             elif enabled_before:
                 instance.dirty = False

@@ -40,7 +40,7 @@ def claim_due_integrations(now):
             dirty=True,
             next_sync_at__lte=now,
         ).filter(Q(claimed_at__isnull=True) | Q(claimed_at__lt=stale_before))
-        for integration in due:
+        for integration in due[:1]:
             integration.claim_token = uuid4()
             integration.claimed_at = now
             integration.last_attempt_at = now

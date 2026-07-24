@@ -5,7 +5,7 @@ from django.db.models.signals import m2m_changed, post_delete, post_save, pre_de
 from django.dispatch import receiver
 
 from wwwapp.models import (Camp, CampInterestEmail, CampParticipant, Solution, UserProfile,
-                           Workshop, WorkshopParticipant)
+                           Workshop, WorkshopCategory, WorkshopParticipant, WorkshopType)
 from wwwapp.sheets.queue import request_sync_after_commit
 from wwwforms.models import Form, FormQuestion, FormQuestionAnswer, FormQuestionOption
 
@@ -14,6 +14,8 @@ def _camp_ids(instance):
     if isinstance(instance, Camp):
         return [instance.pk]
     if isinstance(instance, Workshop):
+        return [instance.year_id]
+    if isinstance(instance, (WorkshopCategory, WorkshopType)):
         return [instance.year_id]
     if isinstance(instance, CampParticipant):
         return [instance.year_id]
@@ -58,8 +60,9 @@ def _capture_delete_camps(sender, instance, **kwargs):
     instance._sheets_camp_ids = set(_camp_ids(instance)) | set(_form_instance_camp_ids(instance))
 
 
-for _model in (Camp, CampInterestEmail, CampParticipant, Workshop, WorkshopParticipant, Solution,
-               UserProfile, User, Form, FormQuestion, FormQuestionOption, FormQuestionAnswer):
+for _model in (Camp, CampInterestEmail, CampParticipant, Workshop, WorkshopCategory,
+               WorkshopParticipant, WorkshopType, Solution, UserProfile, User, Form, FormQuestion,
+               FormQuestionOption, FormQuestionAnswer):
     pre_delete.connect(_capture_delete_camps, sender=_model,
                        dispatch_uid='sheets-capture-%s' % _model.__name__)
     post_save.connect(_schedule, sender=_model, dispatch_uid='sheets-save-%s' % _model.__name__)

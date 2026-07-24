@@ -26,6 +26,8 @@ class Command(BaseCommand):
             for claim in claims:
                 publish_integration(claim.pk, claim.claim_token)
             if options['once']:
+                if claims:
+                    continue
                 return
             if not claims:
                 time.sleep(options['sleep_seconds'])
