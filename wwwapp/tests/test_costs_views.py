@@ -638,6 +638,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
     def setUp(self):
         Camp.objects.all().update(year=2026)
         self.camp = Camp.objects.get()
+        self.other_camp = Camp.objects.create(year=2025)
         self.recipient = User.objects.create_user(username='reimbursement-recipient')
         self.reimbursement_user = User.objects.create_user(username='reimbursement-user')
         self.statistics_user = User.objects.create_user(username='statistics-user')
@@ -774,6 +775,23 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             category=CostItem.Category.WORKSHOPS,
         )
         processed_invoice.cost_items.update(workshop=workshop)
+        other_workshop_type = WorkshopType.objects.create(
+            year=self.other_camp,
+            name='Other statistics type',
+        )
+        other_workshop = Workshop.objects.create(
+            year=self.other_camp,
+            type=other_workshop_type,
+            name='other-statistics-workshop',
+            title='Other statistics workshop',
+        )
+        other_camp_invoice = self.create_invoice(
+            amount=Decimal('13.00'),
+            status=Invoice.Status.APPROVED,
+            camp=self.other_camp,
+            category=CostItem.Category.WORKSHOPS,
+        )
+        other_camp_invoice.cost_items.update(workshop=other_workshop)
         self.client.force_login(self.statistics_user)
 
         response = self.client.get(
