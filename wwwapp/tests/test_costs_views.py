@@ -430,7 +430,7 @@ class CostAdministrationViewsTests(TestCase):
         self.split_invoice = self.create_invoice(
             document_number='FV/split', internal_number='WWW_2026_FP_0003',
             status=Invoice.Status.APPROVED,
-            amount=Decimal('6.00'),
+            first_item_amount=Decimal('6.00'),
         )
         CostItem.objects.create(
             invoice=self.split_invoice,
@@ -445,6 +445,7 @@ class CostAdministrationViewsTests(TestCase):
         internal_number,
         amount=Decimal('10.00'),
         camp=None,
+        first_item_amount=None,
         invoice_type=Invoice.Type.KSEF,
         status=Invoice.Status.RECEIVED,
         user=None,
@@ -463,7 +464,7 @@ class CostAdministrationViewsTests(TestCase):
         )
         CostItem.objects.create(
             invoice=invoice,
-            amount=amount,
+            amount=first_item_amount or amount,
             category=CostItem.Category.REGULAR_PURCHASES,
         )
         return invoice
@@ -581,6 +582,17 @@ class CostAdministrationViewsTests(TestCase):
 
         self.assertEqual(transition_response.status_code, 400)
         self.assertEqual(export_response.status_code, 400)
+
+    def test_oversized_numeric_invoice_id_returns_bad_request(self):
+        oversized_data = {'invoice_ids': ['9' * 100]}
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse('costs_admin_transition'),
+            {**oversized_data, 'status': Invoice.Status.APPROVED},
+        )
+
+        self.assertEqual(response.status_code, 400)
 
     def test_default_csv_exports_only_approved_invoice_cost_items(self):
         self.client.force_login(self.csv_user)

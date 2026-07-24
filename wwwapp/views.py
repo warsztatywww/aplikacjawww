@@ -296,9 +296,18 @@ def costs_csv_export_view(request):
 
 
 def _parse_invoice_ids(invoice_ids):
-    if any(not invoice_id.isdecimal() or int(invoice_id) < 1 for invoice_id in invoice_ids):
-        return None
-    return [int(invoice_id) for invoice_id in invoice_ids]
+    parsed_ids = []
+    for invoice_id in invoice_ids:
+        try:
+            parsed_id = int(invoice_id)
+        except (TypeError, ValueError):
+            return None
+        if not isinstance(invoice_id, str) or not invoice_id.isdecimal():
+            return None
+        if parsed_id < 1 or parsed_id > 2_147_483_647:
+            return None
+        parsed_ids.append(parsed_id)
+    return parsed_ids
 
 
 def _cost_items_data(formset):
