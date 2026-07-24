@@ -99,12 +99,14 @@ def _person_columns(questions, include_participation):
     headers = ['Imię i nazwisko', 'Pełnoletni', 'Płeć', 'Email', 'Szkoła', 'Rok Matury']
     if include_participation:
         headers += ['Punkty', 'L.zap.', 'L.rozw.', 'L.spr.rozw.', 'L.zak.', 'List?', 'Status']
-    headers += ['Skąd wiesz o WWW?']
+    headers += ['Poprzednie edycje', 'Skąd wiesz o WWW?']
     seen = {}
     for question in questions:
         base = '%s: %s' % (question.form.title, question.title)
         seen[base] = seen.get(base, 0) + 1
         headers.append(base if seen[base] == 1 else '%s (%s)' % (base, seen[base]))
+        if question.data_type == 'P':
+            headers.append('%s: Data urodzenia' % question.form.title)
     return tuple(TableColumn(header) for header in headers)
 
 
@@ -125,10 +127,15 @@ def _person_row(profile, camp, questions, include_participation):
                    TableCell(participation.accepted_workshop_count if participation else 0),
                    TableCell(_yes_no(len(participation.cover_letter) > 50) if participation else '-'),
                    TableCell(participation.get_status_display() if participation and participation.status else 'Brak')]
-    values.append(TableCell(profile.how_do_you_know_about))
+    past_participation = ', '.join(str(item['year']) for item in profile.all_participation_data())
+    values.extend((TableCell(past_participation), TableCell(profile.how_do_you_know_about)))
     answers = {answer.question_id: answer for answer in FormQuestionAnswer.objects.filter(
         user=profile.user, question__in=questions)}
-    values.extend(TableCell(answers.get(question.pk).value if question.pk in answers else '') for question in questions)
+    for question in questions:
+        answer = answers.get(question.pk)
+        values.append(TableCell(answer.value if answer else ''))
+        if question.data_type == 'P':
+            values.append(TableCell(answer.pesel_extract_date() if answer else ''))
     return tuple(values)
 
 
