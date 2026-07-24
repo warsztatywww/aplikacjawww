@@ -415,6 +415,11 @@ class CostAdministrationViewsTests(TestCase):
         self.admin.user_permissions.add(self.view_permission, self.approve_permission)
         self.csv_user.user_permissions.add(self.view_permission, self.export_permission)
         self.process_user.user_permissions.add(self.view_permission, self.process_permission)
+        SettlementDetails.objects.create(
+            user=self.owner,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
         self.received_invoice = self.create_invoice(
             document_number='FV/received', internal_number='WWW_2026_FP_0001',
         )
@@ -425,6 +430,7 @@ class CostAdministrationViewsTests(TestCase):
         self.split_invoice = self.create_invoice(
             document_number='FV/split', internal_number='WWW_2026_FP_0003',
             status=Invoice.Status.APPROVED,
+            amount=Decimal('6.00'),
         )
         CostItem.objects.create(
             invoice=self.split_invoice,
@@ -432,22 +438,32 @@ class CostAdministrationViewsTests(TestCase):
             category=CostItem.Category.OUTINGS,
         )
 
-    def create_invoice(self, *, document_number, internal_number, status=Invoice.Status.RECEIVED):
+    def create_invoice(
+        self,
+        *,
+        document_number,
+        internal_number,
+        amount=Decimal('10.00'),
+        camp=None,
+        invoice_type=Invoice.Type.KSEF,
+        status=Invoice.Status.RECEIVED,
+        user=None,
+    ):
         invoice = Invoice.objects.create(
-            user=self.owner,
-            camp=self.camp,
+            user=user or self.owner,
+            camp=camp or self.camp,
             attachment='invoices/cost.pdf',
             document_number=document_number,
             issue_date='2026-07-24',
-            amount=Decimal('10.00'),
-            invoice_type=Invoice.Type.KSEF,
+            amount=amount,
+            invoice_type=invoice_type,
             description='Cost administration test',
             internal_number=internal_number,
             status=status,
         )
         CostItem.objects.create(
             invoice=invoice,
-            amount=Decimal('10.00'),
+            amount=amount,
             category=CostItem.Category.REGULAR_PURCHASES,
         )
         return invoice
@@ -469,6 +485,39 @@ class CostAdministrationViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context['invoices']), [self.split_invoice])
+
+    def test_administration_filters_invoices_by_camp_user_and_type(self):
+        other_owner = User.objects.create_user(username='other-cost-owner')
+        other_invoice = self.create_invoice(
+            camp=self.other_camp,
+            document_number='FV/other',
+            internal_number='WWW_2027_FP_0001',
+            invoice_type=Invoice.Type.OUTSIDE_KSEF,
+            user=other_owner,
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse('costs_admin'),
+            {
+                'camp': self.other_camp.pk,
+                'user': other_owner.pk,
+                'invoice_type': Invoice.Type.OUTSIDE_KSEF,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context['invoices']), [other_invoice])
+
+    def test_filter_choices_include_polish_all_option(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin'))
+
+        for field_name in ('status', 'invoice_type', 'category'):
+            with self.subTest(field_name=field_name):
+                choices = response.context['filter_form'].fields[field_name].choices
+                self.assertEqual(choices[0], ('', 'Wszystkie'))
 
     def test_approval_transition_requires_approval_permission(self):
         self.client.force_login(self.csv_user)
@@ -507,6 +556,32 @@ class CostAdministrationViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_processing_transition_processes_approved_invoice(self):
+        self.client.force_login(self.process_user)
+
+        response = self.client.post(
+            reverse('costs_admin_transition'),
+            {'invoice_ids': [self.approved_invoice.pk], 'status': Invoice.Status.PROCESSED},
+        )
+
+        self.assertRedirects(response, reverse('costs_admin'))
+        self.approved_invoice.refresh_from_db()
+        self.assertEqual(self.approved_invoice.status, Invoice.Status.PROCESSED)
+
+    def test_malformed_invoice_ids_return_bad_request(self):
+        malformed_data = {'invoice_ids': ['not-an-invoice-id']}
+        self.client.force_login(self.admin)
+
+        transition_response = self.client.post(
+            reverse('costs_admin_transition'),
+            {**malformed_data, 'status': Invoice.Status.APPROVED},
+        )
+        self.client.force_login(self.csv_user)
+        export_response = self.client.post(reverse('costs_csv_export'), malformed_data)
+
+        self.assertEqual(transition_response.status_code, 400)
+        self.assertEqual(export_response.status_code, 400)
+
     def test_default_csv_exports_only_approved_invoice_cost_items(self):
         self.client.force_login(self.csv_user)
 
@@ -529,6 +604,13 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(rows[0], CSV_HEADER)
         self.assertEqual(len(rows), 3)
         self.assertEqual({row[0] for row in rows[1:]}, {self.split_invoice.internal_number})
+
+    def test_csv_export_requires_export_permission(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(reverse('costs_csv_export'))
+
+        self.assertEqual(response.status_code, 403)
 
     def test_csv_export_does_not_mutate_invoice_status(self):
         self.client.force_login(self.csv_user)

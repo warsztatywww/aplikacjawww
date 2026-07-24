@@ -749,6 +749,18 @@ class CostFilterForm(Form):
 
     camp = ModelChoiceField(label='Obóz', queryset=Camp.objects.all(), required=False)
     user = ModelChoiceField(label='Użytkownik', queryset=User.objects.all(), required=False)
-    status = ChoiceField(label='Status', choices=Invoice.Status.choices, required=False)
-    invoice_type = ChoiceField(label='Typ dokumentu', choices=Invoice.Type.choices, required=False)
-    category = ChoiceField(label='Kategoria', choices=CostItem.Category.choices, required=False)
+    status = ChoiceField(
+        label='Status',
+        choices=(('', 'Wszystkie'), *Invoice.Status.choices),
+        required=False,
+    )
+    invoice_type = ChoiceField(
+        label='Typ dokumentu',
+        choices=(('', 'Wszystkie'), *Invoice.Type.choices),
+        required=False,
+    )
+    category = ChoiceField(
+        label='Kategoria',
+        choices=(('', 'Wszystkie'), *CostItem.Category.choices),
+        required=False,
+    )

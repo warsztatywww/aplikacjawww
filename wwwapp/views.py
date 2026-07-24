@@ -251,9 +251,11 @@ def costs_admin_transition_view(request):
     if not request.user.has_perm(required_permission):
         raise PermissionDenied
 
-    invoice_ids = request.POST.getlist('invoice_ids')
-    if not invoice_ids:
+    invoice_ids = _parse_invoice_ids(request.POST.getlist('invoice_ids'))
+    if invoice_ids == []:
         return HttpResponseBadRequest('Wybierz co najmniej jedną fakturę.')
+    if invoice_ids is None:
+        return HttpResponseBadRequest('Identyfikatory faktur muszą być dodatnimi liczbami.')
     invoices = Invoice.objects.filter(pk__in=invoice_ids)
     if invoices.count() != len(set(invoice_ids)):
         return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
@@ -274,10 +276,14 @@ def costs_admin_transition_view(request):
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
 @permission_required('wwwapp.export_costs', raise_exception=True)
 def costs_csv_export_view(request):
-    invoice_ids = request.POST.getlist('invoice_ids')
+    invoice_ids = _parse_invoice_ids(request.POST.getlist('invoice_ids'))
+    if invoice_ids is None:
+        return HttpResponseBadRequest('Identyfikatory faktur muszą być dodatnimi liczbami.')
     invoices = Invoice.objects.all()
     if invoice_ids:
         invoices = invoices.filter(pk__in=invoice_ids)
+        if invoices.count() != len(set(invoice_ids)):
+            return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
     else:
         invoices = invoices.filter(status=Invoice.Status.APPROVED)
 
@@ -287,6 +293,12 @@ def costs_csv_export_view(request):
     writer.writeheader()
     writer.writerows(invoice_csv_rows(invoices=invoices.order_by('pk')))
     return response
+
+
+def _parse_invoice_ids(invoice_ids):
+    if any(not invoice_id.isdecimal() or int(invoice_id) < 1 for invoice_id in invoice_ids):
+        return None
+    return [int(invoice_id) for invoice_id in invoice_ids]
 
 
 def _cost_items_data(formset):

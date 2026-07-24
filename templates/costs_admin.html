@@ -42,14 +42,18 @@
         </tbody>
       </table>
       {% if can_approve_costs %}
-        <button class="btn btn-success" formaction="{% url 'costs_admin_transition' %}" name="status" value="APPROVED" type="submit">Zatwierdź</button>
-        <button class="btn btn-danger" formaction="{% url 'costs_admin_transition' %}" name="status" value="REJECTED" type="submit">Odrzuć</button>
+        <button class="btn btn-success" formaction="{% url 'costs_admin_transition' %}"
+                name="status" value="APPROVED" type="submit">Zatwierdź</button>
+        <button class="btn btn-danger" formaction="{% url 'costs_admin_transition' %}"
+                name="status" value="REJECTED" type="submit">Odrzuć</button>
       {% endif %}
       {% if can_process_costs %}
-        <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' %}" name="status" value="PROCESSED" type="submit">Oznacz jako przetworzone</button>
+        <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' %}"
+                name="status" value="PROCESSED" type="submit">Oznacz jako przetworzone</button>
       {% endif %}
       {% if can_export_costs %}
-        <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' %}" type="submit">Eksportuj CSV</button>
+        <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' %}"
+                type="submit">Eksportuj CSV</button>
       {% endif %}
     </form>
   </article>

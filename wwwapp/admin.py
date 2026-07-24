@@ -242,24 +242,31 @@ class NoDeleteAdmin(admin.ModelAdmin):
         return False
 
 
+class ReadOnlyFinancialAdmin(NoDeleteAdmin):
+    def get_readonly_fields(self, request, obj=None):
+        return [field.name for field in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+
 @admin.register(Invoice)
-class InvoiceAdmin(NoDeleteAdmin):
+class InvoiceAdmin(ReadOnlyFinancialAdmin):
     list_display = ('internal_number', 'document_number', 'user', 'camp', 'amount', 'status')
     list_filter = ('camp', 'status', 'invoice_type')
-    readonly_fields = ('internal_number', 'created_at', 'updated_at', 'admin_changed_at', 'admin_changed_by')
 
 
 @admin.register(CostItem)
-class CostItemAdmin(NoDeleteAdmin):
+class CostItemAdmin(ReadOnlyFinancialAdmin):
     list_display = ('invoice', 'category', 'workshop', 'amount')
     list_filter = ('category',)
 
 
 @admin.register(SettlementDetails)
-class SettlementDetailsAdmin(NoDeleteAdmin):
-    readonly_fields = ('created_at', 'updated_at')
+class SettlementDetailsAdmin(ReadOnlyFinancialAdmin):
+    pass
 
 
 @admin.register(Reimbursement)
-class ReimbursementAdmin(NoDeleteAdmin):
-    readonly_fields = ('registered_by', 'account_number_snapshot', 'created_at')
+class ReimbursementAdmin(ReadOnlyFinancialAdmin):
+    pass
