@@ -27,3 +27,12 @@ For the INTERNETy resources authentication a /resource\_auth endpoint is provide
 
 ### Online version:
 App currently available at https://warsztatywww.pl/
+# Google Sheets snapshots
+
+Set `GOOGLE_SERVICE_ACCOUNT_JSON` to the complete JSON credentials for a service account in
+`wwwapp/local_settings.py`, then share each configured spreadsheet with that service account. The
+snapshots contain participant personal data, so limit spreadsheet sharing to authorised school
+administrators. Run one long-lived worker:
+`./manage.py sync_google_sheets`; schedule `./manage.py sync_google_sheets --reconcile` hourly.
+Changes are normally published within five minutes. Access failures stay queued and recover after
+the spreadsheet is shared again; inspect the Camp admin integration fields for the retry error.

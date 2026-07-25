@@ -34,13 +34,16 @@ INSTALLED_APPS = (
     'django_bleach',
     'tinymce',
     'wwwforms',
-    'wwwapp',
+    'wwwapp.apps.WwwappConfig',
     'django_cleanup',
     'imagekit',
     'gallery',
 )
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
+
+# Set to the complete service-account JSON in production local_settings.py.
+GOOGLE_SERVICE_ACCOUNT_JSON = None
 
 
 MIDDLEWARE = (
