@@ -1,9 +1,9 @@
 """Small Google Sheets API adapter with safe full-snapshot replacement."""
 
 import json
-import os
 from datetime import datetime
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -21,15 +21,17 @@ class GoogleSheetsClient:
         self.service = service
 
     @classmethod
-    def from_environment(cls):
-        raw_json = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON')
+    def from_settings(cls):
+        raw_json = settings.GOOGLE_SERVICE_ACCOUNT_JSON
         if not raw_json:
-            raise ImproperlyConfigured('GOOGLE_SERVICE_ACCOUNT_JSON must contain service-account JSON.')
+            raise ImproperlyConfigured(
+                'Set GOOGLE_SERVICE_ACCOUNT_JSON to service-account JSON in local_settings.py.')
         try:
             info = json.loads(raw_json)
             credentials = Credentials.from_service_account_info(info, scopes=[SCOPE])
         except (ValueError, TypeError) as error:
-            raise ImproperlyConfigured('GOOGLE_SERVICE_ACCOUNT_JSON is not valid service-account JSON.') from error
+            raise ImproperlyConfigured(
+                'GOOGLE_SERVICE_ACCOUNT_JSON must contain valid service-account JSON.') from error
         return cls(build('sheets', 'v4', credentials=credentials, cache_discovery=False))
 
     def validate_spreadsheet(self, spreadsheet_id):

@@ -66,7 +66,7 @@ class CampGoogleSheetsIntegrationInline(admin.StackedInline):
                     continue
                 if form.cleaned_data.get('enabled'):
                     try:
-                        GoogleSheetsClient.from_environment().validate_spreadsheet(
+                        GoogleSheetsClient.from_settings().validate_spreadsheet(
                             form.cleaned_data['spreadsheet_id'])
                     except (GoogleSheetsAccessError, ValidationError) as error:
                         form.add_error('spreadsheet_id', str(error))
@@ -156,13 +156,13 @@ class CampAdmin(admin.ModelAdmin):
                 instance.enabled = False
             instance.save()
             if instance.enabled:
-                client = GoogleSheetsClient.from_environment()
+                client = GoogleSheetsClient.from_settings()
                 for tab_name in ('Uczestnicy', 'Prowadzący', 'Warsztaty'):
                     client.ensure_managed_sheet(instance, tab_name)
                 request_sync_after_commit([instance.camp_id])
             elif enable_requested:
                 try:
-                    client = GoogleSheetsClient.from_environment()
+                    client = GoogleSheetsClient.from_settings()
                     client.validate_spreadsheet(instance.spreadsheet_id)
                     for tab_name in ('Uczestnicy', 'Prowadzący', 'Warsztaty'):
                         client.ensure_managed_sheet(instance, tab_name)

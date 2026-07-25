@@ -21,7 +21,7 @@ def publish_integration(integration_id, claim_token):
         return False
     started_at = integration.claimed_at
     try:
-        client = GoogleSheetsClient.from_environment()
+        client = GoogleSheetsClient.from_settings()
         for tab_name, projection_factory in MANAGED_TABS:
             sheet_id = client.ensure_managed_sheet(integration, tab_name)
             client.replace_snapshot(integration.spreadsheet_id, sheet_id,

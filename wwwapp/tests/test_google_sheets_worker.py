@@ -16,7 +16,7 @@ class GoogleSheetsWorkerTests(TestCase):
         claim = claim_due_integrations(timezone.now())[0]
         client = mock.Mock()
         client.ensure_managed_sheet.side_effect = [1, 2, 3]
-        with mock.patch('wwwapp.sheets.publisher.GoogleSheetsClient.from_environment',
+        with mock.patch('wwwapp.sheets.publisher.GoogleSheetsClient.from_settings',
                         return_value=client):
             publish_integration(claim.pk, claim.claim_token)
         integration.refresh_from_db()
