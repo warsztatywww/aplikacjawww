@@ -68,10 +68,8 @@
         <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
                 name="status" value="PROCESSED" type="submit">Oznacz jako przetworzone</button>
       {% endif %}
-      {% if can_export_costs %}
-        <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' selected_year.pk %}"
-                type="submit">Eksportuj CSV</button>
-      {% endif %}
+      <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' selected_year.pk %}"
+              type="submit">Eksportuj CSV</button>
     </form>
   </article>
 {% endblock %}

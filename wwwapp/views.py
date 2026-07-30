@@ -197,6 +197,7 @@ def costs_invoice_edit_view(request, year, invoice_id):
         formset.instance.amount = invoice_form.cleaned_data['amount']
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
         with transaction.atomic():
+            old_attachment_name = invoice.attachment.name
             invoice = invoice_form.save(commit=False)
             if invoice.status == Invoice.Status.REJECTED:
                 invoice.status = Invoice.Status.RECEIVED
@@ -204,6 +205,8 @@ def costs_invoice_edit_view(request, year, invoice_id):
                 invoice.admin_modified_by = None
             invoice.save()
             formset.save()
+            if old_attachment_name and invoice.attachment.name != old_attachment_name:
+                transaction.on_commit(lambda: invoice.attachment.storage.delete(old_attachment_name))
         messages.success(request, 'Zapisano fakturę.', extra_tags='auto-dismiss')
         return redirect('costs_mine', year=camp.pk)
 
@@ -245,7 +248,6 @@ def costs_admin_view(request, year):
         'filter_form': filter_form,
         'invoices': invoices.order_by('-created_at'),
         'can_approve_costs': request.user.has_perm('wwwapp.approve_costs'),
-        'can_export_costs': True,
         'can_process_costs': request.user.has_perm('wwwapp.process_costs'),
     }
     return render(request, 'costs_admin.html', context)
@@ -460,14 +462,6 @@ def _parse_invoice_ids(invoice_ids):
             return None
         parsed_ids.append(parsed_id)
     return parsed_ids
-
-
-def _cost_items_data(formset):
-    return [
-        form.cleaned_data
-        for form in formset.forms
-        if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
-    ]
 
 
 def _render_invoice_form(request, invoice_form, formset, title):
