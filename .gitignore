@@ -4,7 +4,6 @@
 *BASE*
 *REMOTE*
 *.orig
-.worktrees/
 
 #Sqlite
 *.sqlite3
