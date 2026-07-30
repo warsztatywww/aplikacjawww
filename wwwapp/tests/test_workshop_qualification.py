@@ -135,6 +135,15 @@ class WorkshopQualificationViews(TestCase):
         response = self.client.get(reverse('latest_program') + '?this=is&my=query&string=XD')
         self.assertRedirects(response, reverse('program', args=[2020]) + '?this=is&my=query&string=XD')
 
+    def test_legacy_workshop_add_redirect_keeps_qs(self):
+        response = self.client.get('/addWorkshop/?this=is&my=query&string=XD')
+
+        self.assertRedirects(
+            response,
+            reverse('workshops_add', args=[2020]) + '?this=is&my=query&string=XD',
+            fetch_redirect_response=False,
+        )
+
     def test_view_program(self):
         response = self.client.get(reverse('program', args=[2020]))
         self.assertContains(response, 'Bardzo fajne warsztaty')

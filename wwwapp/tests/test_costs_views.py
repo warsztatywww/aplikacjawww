@@ -1,11 +1,13 @@
 import csv
+import os
 from decimal import Decimal
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.contrib.auth.models import Permission, User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from wwwapp.forms import (
@@ -21,6 +23,7 @@ from wwwapp.models import (
     Invoice,
     Reimbursement,
     SettlementDetails,
+    UploadStorage,
     Workshop,
     WorkshopType,
 )
@@ -451,6 +454,53 @@ class OwnCostsViewsTests(TestCase):
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, Invoice.Status.RECEIVED)
 
+    def test_invoice_edit_replaces_an_attachment_with_the_same_filename(self):
+        CostItem.objects.create(
+            invoice=self.invoice,
+            amount=Decimal('10.00'),
+            category=CostItem.Category.REGULAR_PURCHASES,
+        )
+        self.client.force_login(self.user)
+        field = Invoice._meta.get_field('attachment')
+        original_storage = field.storage
+
+        with TemporaryDirectory() as sendfile_root:
+            with override_settings(SENDFILE_ROOT=sendfile_root):
+                test_storage = UploadStorage()
+                field.storage = test_storage
+                self.invoice.attachment.save(
+                    'old.pdf',
+                    SimpleUploadedFile('old.pdf', b'%PDF-old', content_type='application/pdf'),
+                    save=True,
+                )
+                old_attachment_path = self.invoice.attachment.path
+
+                try:
+                    with self.captureOnCommitCallbacks(execute=True):
+                        response = self.client.post(
+                            reverse('costs_invoice_edit', args=[self.camp.pk, self.invoice.pk]),
+                            {
+                                **self.invoice_post_data(
+                                    **{
+                                        'cost_items-INITIAL_FORMS': '1',
+                                        'cost_items-0-id': self.invoice.cost_items.get().pk,
+                                    }
+                                ),
+                                'attachment': SimpleUploadedFile(
+                                    'old.pdf', b'%PDF-new', content_type='application/pdf',
+                                ),
+                            },
+                        )
+                finally:
+                    field.storage = original_storage
+
+                self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
+                self.invoice.refresh_from_db()
+                self.assertNotEqual(self.invoice.attachment.name, 'invoices/old.pdf')
+                self.assertFalse(os.path.exists(old_attachment_path))
+                with test_storage.open(self.invoice.attachment.name, 'rb') as attachment:
+                    self.assertEqual(attachment.read(), b'%PDF-new')
+
     def test_invoice_edit_is_not_available_to_another_user(self):
         self.client.force_login(self.other_user)
 
@@ -818,6 +868,24 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         self.client.get(expected_url)
 
         self.assertEqual(Reimbursement.objects.count(), 1)
+
+    def test_reimbursement_page_lists_each_recipient_summary(self):
+        self.client.force_login(self.reimbursement_user)
+
+        response = self.client.get(reverse('costs_reimbursements', args=[self.camp.pk]))
+
+        self.assertEqual(
+            response.context['reimbursement_summary'],
+            [
+                {
+                    'user': self.recipient,
+                    'account_number': self.details.account_number,
+                    'approved_total': Decimal('30.00'),
+                    'reimbursed_total': Decimal('0.00'),
+                    'remaining_total': Decimal('30.00'),
+                },
+            ],
+        )
 
     def test_reimbursements_require_registration_permission(self):
         self.client.force_login(self.recipient)

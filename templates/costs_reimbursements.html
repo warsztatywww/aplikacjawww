@@ -8,6 +8,32 @@
       {% crispy user_form %}
     </form>
 
+    <h2 class="mt-4">Podsumowanie zwrotów</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Użytkownik</th>
+          <th scope="col">Rachunek</th>
+          <th scope="col">Suma zatwierdzona</th>
+          <th scope="col">Suma zwrócona</th>
+          <th scope="col">Pozostało do zwrotu</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in reimbursement_summary %}
+          <tr>
+            <td>{{ row.user.get_full_name }}</td>
+            <td>{{ row.account_number }}</td>
+            <td>{{ row.approved_total }} zł</td>
+            <td>{{ row.reimbursed_total }} zł</td>
+            <td>{{ row.remaining_total }} zł</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">Brak osób oczekujących na zwrot.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
     {% if selected_user %}
       <h2>Nowy zwrot dla {{ selected_user.get_full_name }}</h2>
       <p>Suma zatwierdzona: {{ approved_total }} zł</p>

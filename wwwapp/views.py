@@ -6,6 +6,7 @@ import mimetypes
 import os
 import sys
 import random # Used for shuffling the workshops on the program page
+import uuid
 from decimal import Decimal
 from typing import Dict, Any, Optional
 from urllib.parse import urljoin
@@ -108,8 +109,11 @@ def get_context(request):
 
 
 def _has_settlement_details(*, user, camp):
-    details = SettlementDetails.objects.filter(user=user, camp=camp).first()
-    return details is not None and bool(details.account_number.strip())
+    try:
+        details = SettlementDetails.objects.get(user=user, camp=camp)
+    except SettlementDetails.DoesNotExist:
+        return False
+    return bool(details.account_number.strip())
 
 
 @login_required
@@ -197,7 +201,11 @@ def costs_invoice_edit_view(request, year, invoice_id):
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
         with transaction.atomic():
             old_attachment_name = invoice.attachment.name
+            uploaded_attachment = invoice_form.cleaned_data['attachment']
             invoice = invoice_form.save(commit=False)
+            if uploaded_attachment and os.path.basename(old_attachment_name) == uploaded_attachment.name:
+                filename, extension = os.path.splitext(uploaded_attachment.name)
+                invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
             if invoice.status == Invoice.Status.REJECTED:
                 invoice.status = Invoice.Status.RECEIVED
                 invoice.admin_modified_at = None
@@ -349,6 +357,16 @@ def costs_reimbursements_view(request, year):
     account_numbers = dict(
         SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
     )
+    reimbursement_summary = [
+        {
+            'user': user,
+            'account_number': account_numbers.get(user.pk, ''),
+            'approved_total': approved_total_for(user=user, camp=camp),
+            'reimbursed_total': reimbursed_total_for(user=user, camp=camp),
+            'remaining_total': balance_for(user=user, camp=camp),
+        }
+        for user in users
+    ]
     reimbursement_rows = [
         {'reimbursement': reimbursement, 'account_number': account_numbers.get(reimbursement.user_id, '')}
         for reimbursement in reimbursements.order_by('-execution_date', '-created_at')
@@ -360,6 +378,7 @@ def costs_reimbursements_view(request, year):
         'user_form': user_form,
         'selected_user': selected_user,
         'reimbursement_form': form,
+        'reimbursement_summary': reimbursement_summary,
         'reimbursement_rows': reimbursement_rows,
         'balance_before': balance_before,
         'balance_after': balance_after,
@@ -454,14 +473,20 @@ def _render_invoice_form(request, invoice_form, formset, title):
     return render(request, 'costs_invoice_form.html', context)
 
 
-def redirect_to_view_for_latest_year(target_view_name):
-    def view(request):
-        url = reverse(target_view_name, args=[Camp.current().pk])
-        args = request.META.get('QUERY_STRING', '')
-        if args:
-            url = "%s?%s" % (url, args)
-        return redirect(url)
-    return view
+def latest_program_redirect_view(request):
+    url = reverse('program', args=[Camp.current().pk])
+    args = request.META.get('QUERY_STRING', '')
+    if args:
+        url = f'{url}?{args}'
+    return redirect(url)
+
+
+def legacy_workshop_add_redirect_view(request):
+    url = reverse('workshops_add', args=[Camp.current().pk])
+    args = request.META.get('QUERY_STRING', '')
+    if args:
+        url = f'{url}?{args}'
+    return redirect(url)
 
 
 def program_view(request, year):

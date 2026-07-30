@@ -685,7 +685,10 @@ class SettlementDetailsForm(ModelForm):
         self.user = user
         self.camp = camp
         if 'instance' not in kwargs:
-            kwargs['instance'] = SettlementDetails.objects.filter(user=user, camp=camp).first()
+            try:
+                kwargs['instance'] = SettlementDetails.objects.get(user=user, camp=camp)
+            except SettlementDetails.DoesNotExist:
+                kwargs['instance'] = None
         super().__init__(*args, **kwargs)
         if self.instance.pk is None:
             previous_details = SettlementDetails.objects.filter(user=user).order_by('-updated_at').first()
