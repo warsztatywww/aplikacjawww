@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
-from django.db import OperationalError, ProgrammingError
+from django.db import OperationalError, ProgrammingError, transaction
 from django.db.models import Q, QuerySet, Exists, OuterRef, Sum
 from django.db.models.query import Prefetch
 from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
@@ -36,12 +36,11 @@ from django_sendfile import sendfile
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from wwwapp.costs import (
     CSV_FIELDS,
+    allocate_invoice_number,
     balance_for,
-    create_invoice,
     invoice_csv_rows,
     pending_total_for,
     transition_invoices,
-    update_invoice,
 )
 from wwwapp.forms import (
     ArticleForm,
@@ -143,24 +142,25 @@ def costs_invoice_add_view(request):
         messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
         return redirect('costs_settlement_details')
 
-    invoice_form = InvoiceForm(request.POST or None, request.FILES or None)
-    formset = CostItemFormSet(request.POST or None, instance=Invoice(camp=camp))
+    invoice_form = InvoiceForm(
+        request.POST or None,
+        request.FILES or None,
+        user=request.user,
+        camp=camp,
+    )
+    formset = CostItemFormSet(request.POST or None, instance=invoice_form.instance)
     invoice_form_is_valid = invoice_form.is_valid()
     if invoice_form_is_valid:
         formset.instance.amount = invoice_form.cleaned_data['amount']
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
-        try:
-            create_invoice(
-                user=request.user,
-                camp=camp,
-                invoice_data=invoice_form.cleaned_data,
-                cost_items_data=_cost_items_data(formset),
-            )
-        except ValidationError as error:
-            invoice_form.add_error(None, error)
-        else:
-            messages.success(request, 'Dodano fakturę.', extra_tags='auto-dismiss')
-            return redirect('costs_mine')
+        with transaction.atomic():
+            invoice = invoice_form.save(commit=False)
+            invoice.internal_number = allocate_invoice_number(camp=camp)
+            invoice.save()
+            formset.instance = invoice
+            formset.save()
+        messages.success(request, 'Dodano fakturę.', extra_tags='auto-dismiss')
+        return redirect('costs_mine')
 
     return _render_invoice_form(request, invoice_form, formset, 'Dodaj fakturę')
 
@@ -174,28 +174,32 @@ def costs_invoice_edit_view(request, invoice_id):
         user=request.user,
         camp=camp,
     )
-    if invoice.status not in (Invoice.Status.RECEIVED, Invoice.Status.REJECTED):
+    if not invoice.can_user_edit:
         if request.method == 'POST':
             raise PermissionDenied
         return HttpResponseNotFound()
-    invoice_form = InvoiceForm(request.POST or None, request.FILES or None, instance=invoice)
+    invoice_form = InvoiceForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=invoice,
+        user=request.user,
+        camp=camp,
+    )
     formset = CostItemFormSet(request.POST or None, instance=invoice)
     invoice_form_is_valid = invoice_form.is_valid()
     if invoice_form_is_valid:
         formset.instance.amount = invoice_form.cleaned_data['amount']
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
-        try:
-            update_invoice(
-                invoice=invoice,
-                user=request.user,
-                invoice_data=invoice_form.cleaned_data,
-                cost_items_data=_cost_items_data(formset),
-            )
-        except ValidationError as error:
-            invoice_form.add_error(None, error)
-        else:
-            messages.success(request, 'Zapisano fakturę.', extra_tags='auto-dismiss')
-            return redirect('costs_mine')
+        with transaction.atomic():
+            invoice = invoice_form.save(commit=False)
+            if invoice.status == Invoice.Status.REJECTED:
+                invoice.status = Invoice.Status.RECEIVED
+                invoice.admin_modified_at = None
+                invoice.admin_modified_by = None
+            invoice.save()
+            formset.save()
+        messages.success(request, 'Zapisano fakturę.', extra_tags='auto-dismiss')
+        return redirect('costs_mine')
 
     return _render_invoice_form(request, invoice_form, formset, 'Edytuj fakturę')
 

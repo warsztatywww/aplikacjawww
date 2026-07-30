@@ -46,6 +46,21 @@ def create_invoice(*, user, camp, invoice_data, cost_items_data):
 
 
 @transaction.atomic
+def allocate_invoice_number(*, camp):
+    """Allocate the next internal invoice number for a workshop edition."""
+    try:
+        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp)
+    except InvoiceSequence.DoesNotExist:
+        sequence = InvoiceSequence.objects.create(
+            camp=camp,
+            last_allocated=_highest_allocated_number(camp=camp),
+        )
+    sequence.last_allocated += 1
+    sequence.save(update_fields=['last_allocated'])
+    return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
+
+
+@transaction.atomic
 def _create_invoice(*, user, camp, invoice_data, cost_items_data):
     locked_camp = Camp.objects.get(pk=camp.pk)
     items = _build_cost_items(cost_items_data=cost_items_data)

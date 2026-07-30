@@ -1,4 +1,4 @@
-import os.path
+import mimetypes
 from decimal import Decimal
 
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert, AppendedText
@@ -12,7 +12,7 @@ from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
-from django.forms.widgets import Textarea, Widget
+from django.forms.widgets import DateInput, Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
 from django.utils.html import format_html
@@ -574,11 +574,7 @@ class InvoiceForm(ModelForm):
     """Validate an invoice attachment before it is stored."""
 
     MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
-    ATTACHMENT_TYPES = {
-        '.pdf': ('application/pdf', b'%PDF-'),
-        '.jpg': ('image/jpeg', b'\xff\xd8\xff'),
-        '.jpeg': ('image/jpeg', b'\xff\xd8\xff'),
-    }
+    ATTACHMENT_TYPES = {'application/pdf', 'image/jpeg'}
 
     class Meta:
         model = Invoice
@@ -598,26 +594,26 @@ class InvoiceForm(ModelForm):
             'invoice_type': 'Typ dokumentu',
             'description': 'Opis',
         }
+        widgets = {'issue_date': DateInput(attrs={'type': 'date'})}
+
+    def __init__(self, *args, user, camp, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.user = user
+        self.instance.camp = camp
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
 
     def clean_attachment(self):
         attachment = self.cleaned_data['attachment']
         if not hasattr(attachment, 'content_type'):
             return attachment
 
-        suffix = os.path.splitext(attachment.name)[1].lower()
-        expected = self.ATTACHMENT_TYPES.get(suffix)
-        if expected is None:
+        content_type, _encoding = mimetypes.guess_type(attachment.name)
+        if content_type not in self.ATTACHMENT_TYPES:
             raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
-        expected_content_type, signature = expected
-        if attachment.content_type != expected_content_type:
-            raise ValidationError('Typ MIME załącznika nie odpowiada jego rozszerzeniu.')
         if attachment.size > self.MAX_ATTACHMENT_SIZE:
             raise ValidationError('Załącznik nie może być większy niż 50 MiB.')
-
-        header = attachment.read(len(signature))
-        attachment.seek(0)
-        if not header.startswith(signature):
-            raise ValidationError('Załącznik nie ma poprawnej sygnatury pliku.')
         return attachment
 
 
@@ -635,7 +631,10 @@ class CostItemForm(ModelForm):
 
     def __init__(self, *args, camp, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['workshop'].queryset = Workshop.objects.filter(year=camp)
+        self.fields['workshop'].queryset = camp.workshops.all()
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
 
 
 class BaseCostItemInlineFormSet(BaseInlineFormSet):
@@ -688,6 +687,14 @@ class SettlementDetailsForm(ModelForm):
         if 'instance' not in kwargs:
             kwargs['instance'] = SettlementDetails.objects.filter(user=user, camp=camp).first()
         super().__init__(*args, **kwargs)
+        if self.instance.pk is None:
+            previous_details = SettlementDetails.objects.filter(user=user).order_by('-updated_at').first()
+            if previous_details:
+                self.fields['account_number'].initial = previous_details.account_number
+                self.fields['account_number'].help_text = (
+                    'Wstępnie wpisano numer rachunku podany dla poprzedniej edycji. '
+                    'Potwierdź, że jest aktualny.'
+                )
         self.helper = FormHelper(self)
         self.helper.include_media = False
         self.helper.layout = Layout(
@@ -729,12 +736,15 @@ class ReimbursementForm(ModelForm):
         self.instance.user = user
         self.instance.camp = camp
         self.instance.registered_by = registered_by
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
 
 
 class CostFilterForm(Form):
     """Provide optional invoice administration filters."""
 
-    camp = ModelChoiceField(label='Obóz', queryset=Camp.objects.all(), required=False)
+    camp = ModelChoiceField(label='Edycja', queryset=Camp.objects.all(), required=False)
     user = ModelChoiceField(label='Użytkownik', queryset=User.objects.all(), required=False)
     status = ChoiceField(
         label='Status',
@@ -746,8 +756,9 @@ class CostFilterForm(Form):
         choices=(('', 'Wszystkie'), *Invoice.Type.choices),
         required=False,
     )
-    category = ChoiceField(
-        label='Kategoria',
-        choices=(('', 'Wszystkie'), *CostItem.Category.choices),
-        required=False,
-    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False

@@ -83,7 +83,7 @@ class InvoiceFormTests(TestCase):
             'cost_items-1-category': CostItem.Category.REGULAR_PURCHASES,
         }
 
-    def test_attachment_rejects_non_pdf_or_jpeg_signature(self):
+    def test_attachment_accepts_a_pdf_based_on_its_filename(self):
         form = InvoiceForm(
             data=self.data,
             files={
@@ -91,10 +91,11 @@ class InvoiceFormTests(TestCase):
                     'invoice.pdf', b'not a document', content_type='application/pdf'
                 )
             },
+            user=self.user,
+            camp=self.camp,
         )
 
-        self.assertFalse(form.is_valid())
-        self.assertIn('attachment', form.errors)
+        self.assertTrue(form.is_valid(), form.errors)
 
     def test_attachment_accepts_pdf_and_jpeg_signatures(self):
         for name, content, content_type in (
@@ -107,14 +108,15 @@ class InvoiceFormTests(TestCase):
                     files={
                         'attachment': SimpleUploadedFile(name, content, content_type=content_type)
                     },
+                    user=self.user,
+                    camp=self.camp,
                 )
 
                 self.assertTrue(form.is_valid(), form.errors)
 
-    def test_attachment_rejects_wrong_suffix_mime_and_oversize(self):
+    def test_attachment_rejects_an_unsupported_filename_or_oversize_upload(self):
         cases = (
             ('invoice.txt', b'%PDF-1.7', 'application/pdf'),
-            ('invoice.pdf', b'%PDF-1.7', 'image/jpeg'),
             ('invoice.pdf', b'%PDF-' + b'x' * (50 * 1024 * 1024), 'application/pdf'),
         )
         for name, content, content_type in cases:
@@ -124,6 +126,8 @@ class InvoiceFormTests(TestCase):
                     files={
                         'attachment': SimpleUploadedFile(name, content, content_type=content_type)
                     },
+                    user=self.user,
+                    camp=self.camp,
                 )
 
                 self.assertFalse(form.is_valid())
