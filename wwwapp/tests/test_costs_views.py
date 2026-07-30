@@ -12,6 +12,7 @@ from wwwapp.forms import (
     CostItemFormSet,
     InvoiceForm,
     ReimbursementForm,
+    ReimbursementUserForm,
     SettlementDetailsForm,
 )
 from wwwapp.models import (
@@ -216,6 +217,15 @@ class SettlementAndReimbursementFormTests(TestCase):
                 'execution_date': 'Data wykonania',
             },
         )
+
+    def test_reimbursement_user_form_uses_full_names(self):
+        self.user.first_name = 'Jan'
+        self.user.last_name = 'Kowalski'
+        self.user.save(update_fields=['first_name', 'last_name'])
+
+        form = ReimbursementUserForm(users=User.objects.filter(pk=self.user.pk))
+
+        self.assertEqual(form.fields['user'].label_from_instance(self.user), 'Jan Kowalski')
 
 
 class OwnCostsViewsTests(TestCase):

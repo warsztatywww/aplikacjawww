@@ -741,10 +741,17 @@ class ReimbursementForm(ModelForm):
         self.helper.include_media = False
 
 
+class FullNameUserChoiceField(ModelChoiceField):
+    """Render a user choice with the participant's full name."""
+
+    def label_from_instance(self, user):
+        return user.get_full_name()
+
+
 class ReimbursementUserForm(Form):
     """Choose a participant whose reimbursement is being registered."""
 
-    user = ModelChoiceField(label='Użytkownik', queryset=User.objects.none(), required=True)
+    user = FullNameUserChoiceField(label='Użytkownik', queryset=User.objects.none(), required=True)
 
     def __init__(self, *args, users, **kwargs):
         super().__init__(*args, **kwargs)
