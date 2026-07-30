@@ -62,6 +62,12 @@ warrants it.
 - `./manage.py makemigrations --check --dry-run`: confirm model changes do not
   leave migrations missing.
 
+`coverage.sh` and `type_check.sh` are experimental tools and are not part of the
+supported verification flow. Coverage is incomplete, and type annotations cover
+only part of the project; `type_check.sh` currently fails when run for the full
+project. Use Django's test runner (`./manage.py test -v 2`) for supported test
+verification.
+
 For behavior changes, add or update a focused test. Exercise error and boundary
 cases when the modified code handles them. For model changes, run the migration
 check; create and commit the migration when Django reports one is needed.
@@ -73,7 +79,7 @@ check; create and commit the migration when Django reports one is needed.
 - Prefer clear, explicit names and small, focused changes over refactors that
   are unrelated to the requested work.
 - Keep Django view, form, and model behavior covered by app-local tests.
-- Use django-crispy-forms for forms rendered in templates.
+- Render Django forms and formsets with django-crispy-forms.
 - Keep frontend entry-point changes in `frontend/`; do not hand-edit build
   output.
 - Never commit secrets, local databases, uploaded media, virtual environments,

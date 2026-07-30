@@ -11,7 +11,7 @@
     <p>
       Suma zatwierdzonych faktur: {{ approved_total }} zł<br>
       Zwrócono: {{ reimbursed_total }} zł<br>
-      Pozostało do zwrotu: {{ remaining_total }} zł<br>
+      Zatwierdzone i jeszcze nie zwrócone: {{ remaining_total }} zł<br>
       Oczekujące na zatwierdzenie: {{ pending_total }} zł
     </p>
     {% if invoices %}
@@ -51,8 +51,13 @@
       <h2>Dane rachunku bankowego</h2>
       {% if settlement_details_form.instance.pk %}
         <p>{{ settlement_details_form.instance.account_number }}</p>
+        <details>
+          <summary class="btn btn-outline-primary">Zmień dane rachunku bankowego</summary>
+          {% crispy settlement_details_form %}
+        </details>
+      {% else %}
+        {% crispy settlement_details_form %}
       {% endif %}
-      {% crispy settlement_details_form %}
     </section>
   </article>
 {% endblock %}

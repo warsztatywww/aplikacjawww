@@ -9,6 +9,7 @@
     </form>
 
     <p>Łącznie: {{ total }} zł</p>
+    <h2>Wydatki według kategorii</h2>
     {% if has_statistics_data %}
       <svg viewBox="0 0 42 42" role="img" aria-labelledby="cost-chart-title" width="224" height="224">
         <title id="cost-chart-title">Wydatki według kategorii</title>
@@ -25,7 +26,6 @@
       <p class="text-muted" role="status">Brak danych do wyświetlenia wykresu.</p>
     {% endif %}
     <table class="table mt-3">
-      <caption>Wydatki według kategorii</caption>
       <thead>
         <tr><th scope="col">Kategoria</th><th scope="col">Kwota</th><th scope="col">Udział</th></tr>
       </thead>

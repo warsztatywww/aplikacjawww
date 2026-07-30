@@ -3,8 +3,10 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.contrib.admin.sites import AdminSite
 from django.core.exceptions import FieldDoesNotExist, ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
+from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase
+from asgiref.sync import async_to_sync
 
 from wwwapp.models import (
     Camp,
@@ -152,10 +154,44 @@ class CostModelTests(TestCase):
         self.assertEqual(InvoiceSequence.objects.get(camp=self.camp).last_allocated, 3)
         self.assertEqual(InvoiceSequence.objects.get(camp=other_invoice.camp).last_allocated, 42)
 
-    def test_invoice_queryset_deletion_is_available_for_administrative_corrections(self):
-        Invoice.objects.filter(pk=self.invoice.pk).delete()
+    def test_invoice_deletion_is_protected_for_all_django_apis(self):
+        invoices = [
+            self.invoice,
+            Invoice.objects.create(
+                user=self.user,
+                camp=self.camp,
+                document_number='FV/2/2026',
+                issue_date='2026-07-24',
+                amount=Decimal('10.00'),
+                invoice_type=Invoice.Type.KSEF,
+                attachment='invoices/fv-2.pdf',
+                description='Materiały do warsztatów',
+                internal_number='WWW_2026_FP_0002',
+            ),
+            Invoice.objects.create(
+                user=self.user,
+                camp=self.camp,
+                document_number='FV/3/2026',
+                issue_date='2026-07-24',
+                amount=Decimal('10.00'),
+                invoice_type=Invoice.Type.KSEF,
+                attachment='invoices/fv-3.pdf',
+                description='Materiały do warsztatów',
+                internal_number='WWW_2026_FP_0003',
+            ),
+        ]
 
-        self.assertFalse(Invoice.objects.filter(pk=self.invoice.pk).exists())
+        deletion_calls = (
+            invoices[0].delete,
+            lambda: Invoice.objects.filter(pk=invoices[1].pk).delete(),
+            lambda: async_to_sync(invoices[2].adelete)(),
+        )
+        for delete in deletion_calls:
+            with self.subTest(delete=delete), self.assertRaises(ProtectedError):
+                with transaction.atomic():
+                    delete()
+
+        self.assertEqual(Invoice.objects.filter(pk__in=[invoice.pk for invoice in invoices]).count(), 3)
 
     def test_batch_transition_rolls_back_when_one_invoice_is_ineligible(self):
         received = self.create_invoice(

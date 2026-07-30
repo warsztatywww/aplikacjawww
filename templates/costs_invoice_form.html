@@ -21,14 +21,6 @@
         </fieldset>
         {% endfor %}
       </div>
-      <template id="cost-item-empty-form">
-        <fieldset>
-          {% crispy formset.empty_form %}
-        </fieldset>
-      </template>
-      <button class="btn btn-secondary mb-3" id="add-cost-item" type="button">
-        Dodaj pozycję
-      </button>
 
       <button class="btn btn-primary" type="submit">Zapisz</button>
     </form>
@@ -40,11 +32,8 @@
   <script>
     (() => {
       const forms = document.getElementById('cost-item-forms');
-      const emptyForm = document.getElementById('cost-item-empty-form');
-      const addButton = document.getElementById('add-cost-item');
-      const totalForms = document.getElementById('id_cost_items-TOTAL_FORMS');
       const invoiceAmount = document.getElementById('id_amount');
-      if (!forms || !emptyForm || !addButton || !totalForms) {
+      if (!forms || !invoiceAmount) {
         return;
       }
 
@@ -68,17 +57,6 @@
           }
         });
       }
-
-      addButton.addEventListener('click', () => {
-        if (syncAmount) {
-          itemAmount.value = invoiceAmount.value;
-          syncAmount = false;
-        }
-        const formIndex = Number.parseInt(totalForms.value, 10);
-        const markup = emptyForm.innerHTML.replace(/__prefix__/g, String(formIndex));
-        forms.insertAdjacentHTML('beforeend', markup);
-        totalForms.value = String(formIndex + 1);
-      });
     })();
   </script>
 {% endblock %}

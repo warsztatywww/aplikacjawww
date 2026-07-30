@@ -6,12 +6,14 @@ import urllib.parse
 from decimal import Decimal
 from typing import Set, Optional
 
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models.deletion import ProtectedError
 from django.db.models import QuerySet, Count, F, When, Case, Max, DecimalField
 from django.db.models.functions import Greatest, Least
 from django.db.models.query_utils import Q
@@ -640,6 +642,15 @@ class Invoice(models.Model):
     def can_user_edit(self):
         return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
 
+    async def adelete(self, *args, **kwargs):
+        """Apply the synchronous deletion policy through Django's async API."""
+        return await sync_to_async(self.delete)(*args, **kwargs)
+
+
+@receiver(pre_delete, sender=Invoice)
+def prevent_invoice_deletion(*, instance, **kwargs):
+    raise ProtectedError('Faktury nie mogą zostać usunięte.', [instance])
+
 
 class CostItem(models.Model):
     class Category(models.TextChoices):
@@ -674,6 +685,22 @@ class CostItem(models.Model):
             raise ValidationError({'workshop': 'Workshop must belong to the invoice camp'})
 
 
+def normalize_polish_account_number(account_number):
+    """Return an NRB/IBAN value in the canonical Polish IBAN format."""
+    account_number = re.sub(r'\s+', '', account_number).upper()
+    return account_number if account_number.startswith('PL') else f'PL{account_number}'
+
+
+def validate_polish_account_number(account_number):
+    """Validate a Polish NRB/IBAN value, allowing optional formatting spaces."""
+    normalized = normalize_polish_account_number(account_number)
+    national_number = normalized.removeprefix('PL')
+    if not re.fullmatch(r'\d{26}', national_number):
+        raise ValidationError('Podaj poprawny polski numer rachunku bankowego.')
+    if int(f'{national_number[2:]}2521{national_number[:2]}') % 97 != 1:
+        raise ValidationError('Podaj poprawny polski numer rachunku bankowego.')
+
+
 class SettlementDetails(models.Model):
     user = models.ForeignKey(
         User,
@@ -685,7 +712,7 @@ class SettlementDetails(models.Model):
         on_delete=models.PROTECT,
         related_name='settlement_details',
     )
-    account_number = models.CharField(max_length=64)
+    account_number = models.CharField(max_length=64, validators=[validate_polish_account_number])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -694,14 +721,14 @@ class SettlementDetails(models.Model):
 
     def clean(self):
         super().clean()
-        account_number = re.sub(r'\s+', '', self.account_number).upper()
-        if account_number.startswith('PL'):
-            account_number = account_number[2:]
-        if not re.fullmatch(r'\d{26}', account_number):
-            raise ValidationError({'account_number': 'Podaj poprawny polski numer rachunku bankowego.'})
-        if int(f'{account_number[2:]}2521{account_number[:2]}') % 97 != 1:
-            raise ValidationError({'account_number': 'Podaj poprawny polski numer rachunku bankowego.'})
-        self.account_number = f'PL{account_number}'
+        self.account_number = normalize_polish_account_number(self.account_number)
+
+def settlement_details_for(*, user, camp):
+    """Return a user's unique bank-account details for one workshop edition."""
+    try:
+        return SettlementDetails.objects.get(user=user, camp=camp)
+    except SettlementDetails.DoesNotExist:
+        return None
 
 
 class Reimbursement(models.Model):

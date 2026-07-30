@@ -1,12 +1,14 @@
 """Domain services for invoices and reimbursements."""
 
+import csv
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
+from django.http import HttpResponse
 from django.utils import timezone
 
-from wwwapp.models import Camp, CostItem, Invoice, InvoiceSequence, Reimbursement, SettlementDetails
+from wwwapp.models import Invoice, InvoiceSequence, Reimbursement
 
 
 CSV_FIELDS = (
@@ -43,12 +45,10 @@ def allocate_invoice_number(*, camp):
 @transaction.atomic
 def transition_invoices(*, invoices, target_status, changed_by):
     """Move all selected invoices to one valid next status, or none of them."""
-    locked = list(
-        invoices.select_for_update().select_related('user', 'camp').prefetch_related('cost_items'),
-    )
-    if any(not _can_transition(invoice.status, target_status) for invoice in locked):
+    invoices = list(invoices.select_related('user', 'camp').prefetch_related('cost_items'))
+    if any(not _can_transition(invoice.status, target_status) for invoice in invoices):
         raise ValidationError('Co najmniej jedna faktura nie może przejść do wybranego stanu.')
-    for invoice in locked:
+    for invoice in invoices:
         invoice.status = target_status
         invoice.admin_modified_by = changed_by
         invoice.admin_modified_at = timezone.now()
@@ -101,6 +101,16 @@ def invoice_csv_rows(*, invoices):
             yield {field: _escape_csv_formula(row[field]) for field in CSV_FIELDS}
 
 
+def invoice_csv_response(*, invoices):
+    """Build the complete CSV response for the selected invoices."""
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment; filename="koszty.csv"'
+    writer = csv.DictWriter(response, fieldnames=CSV_FIELDS)
+    writer.writeheader()
+    writer.writerows(invoice_csv_rows(invoices=invoices.order_by('pk')))
+    return response
+
+
 def _escape_csv_formula(value):
     if isinstance(value, str) and value.startswith(('=', '+', '-', '@')):
         return f"'{value}"
@@ -131,6 +141,6 @@ def _highest_allocated_number(*, camp):
     allocated = [
         int(number.removeprefix(prefix))
         for number in numbers
-        if number.removeprefix(prefix).isdigit()
+        if number.removeprefix(prefix).isdecimal()
     ]
     return max(allocated, default=0)

@@ -1,4 +1,3 @@
-import csv
 import datetime
 import hashlib
 import json
@@ -36,11 +35,10 @@ from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from wwwapp.costs import (
-    CSV_FIELDS,
     allocate_invoice_number,
     approved_total_for,
     balance_for,
-    invoice_csv_rows,
+    invoice_csv_response,
     pending_total_for,
     reimbursed_total_for,
     transition_invoices,
@@ -81,6 +79,7 @@ from wwwapp.models import (
     Workshop,
     WorkshopParticipant,
     WorkshopType,
+    settlement_details_for,
 )
 from wwwapp.templatetags.wwwtags import qualified_mark
 
@@ -109,11 +108,8 @@ def get_context(request):
 
 
 def _has_settlement_details(*, user, camp):
-    try:
-        details = SettlementDetails.objects.get(user=user, camp=camp)
-    except SettlementDetails.DoesNotExist:
-        return False
-    return bool(details.account_number.strip())
+    details = settlement_details_for(user=user, camp=camp)
+    return details is not None and bool(details.account_number.strip())
 
 
 @login_required
@@ -146,14 +142,35 @@ def costs_mine_view(request, year):
 
 @login_required
 def costs_invoice_add_view(request, year):
+    return _invoice_form_view(request, year=year)
+
+
+@login_required
+def costs_invoice_edit_view(request, year, invoice_id):
+    return _invoice_form_view(request, year=year, invoice_id=invoice_id)
+
+
+def _invoice_form_view(request, *, year, invoice_id=None):
     camp = get_object_or_404(Camp, pk=year)
-    if not _has_settlement_details(user=request.user, camp=camp):
+    invoice = None
+    if invoice_id is None and not _has_settlement_details(user=request.user, camp=camp):
         messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
         return redirect(f"{reverse('costs_mine', args=[camp.pk])}?add_invoice=1")
-
+    if invoice_id is not None:
+        invoice = get_object_or_404(
+            Invoice,
+            pk=invoice_id,
+            user=request.user,
+            camp=camp,
+        )
+        if not invoice.can_user_edit:
+            if request.method == 'POST':
+                raise PermissionDenied
+            return HttpResponseNotFound()
     invoice_form = InvoiceForm(
         request.POST or None,
         request.FILES or None,
+        instance=invoice,
         user=request.user,
         camp=camp,
     )
@@ -163,61 +180,38 @@ def costs_invoice_add_view(request, year):
         formset.instance.amount = invoice_form.cleaned_data['amount']
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
         with transaction.atomic():
+            old_attachment_name = invoice.attachment.name if invoice else ''
             invoice = invoice_form.save(commit=False)
-            invoice.internal_number = allocate_invoice_number(camp=camp)
-            invoice.save()
-            formset.instance = invoice
-            formset.save()
-        messages.success(request, 'Dodano fakturę.', extra_tags='auto-dismiss')
-        return redirect('costs_mine', year=camp.pk)
-
-    return _render_invoice_form(request, invoice_form, formset, 'Dodaj fakturę')
-
-
-@login_required
-def costs_invoice_edit_view(request, year, invoice_id):
-    camp = get_object_or_404(Camp, pk=year)
-    invoice = get_object_or_404(
-        Invoice,
-        pk=invoice_id,
-        user=request.user,
-        camp=camp,
-    )
-    if not invoice.can_user_edit:
-        if request.method == 'POST':
-            raise PermissionDenied
-        return HttpResponseNotFound()
-    invoice_form = InvoiceForm(
-        request.POST or None,
-        request.FILES or None,
-        instance=invoice,
-        user=request.user,
-        camp=camp,
-    )
-    formset = CostItemFormSet(request.POST or None, instance=invoice)
-    invoice_form_is_valid = invoice_form.is_valid()
-    if invoice_form_is_valid:
-        formset.instance.amount = invoice_form.cleaned_data['amount']
-    if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
-        with transaction.atomic():
-            old_attachment_name = invoice.attachment.name
-            uploaded_attachment = invoice_form.cleaned_data['attachment']
-            invoice = invoice_form.save(commit=False)
-            if uploaded_attachment and os.path.basename(old_attachment_name) == uploaded_attachment.name:
-                filename, extension = os.path.splitext(uploaded_attachment.name)
-                invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
-            if invoice.status == Invoice.Status.REJECTED:
-                invoice.status = Invoice.Status.RECEIVED
-                invoice.admin_modified_at = None
-                invoice.admin_modified_by = None
+            if invoice_id is None:
+                invoice.internal_number = allocate_invoice_number(camp=camp)
+            else:
+                uploaded_attachment = invoice_form.cleaned_data['attachment']
+                if uploaded_attachment and os.path.basename(old_attachment_name) == uploaded_attachment.name:
+                    filename, extension = os.path.splitext(uploaded_attachment.name)
+                    invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
+                if invoice.status == Invoice.Status.REJECTED:
+                    invoice.status = Invoice.Status.RECEIVED
+                    invoice.admin_modified_at = None
+                    invoice.admin_modified_by = None
             invoice.save()
             formset.save()
             if old_attachment_name and invoice.attachment.name != old_attachment_name:
                 transaction.on_commit(lambda: invoice.attachment.storage.delete(old_attachment_name))
-        messages.success(request, 'Zapisano fakturę.', extra_tags='auto-dismiss')
+        message = 'Dodano fakturę.' if invoice_id is None else 'Zapisano fakturę.'
+        messages.success(request, message, extra_tags='auto-dismiss')
         return redirect('costs_mine', year=camp.pk)
 
-    return _render_invoice_form(request, invoice_form, formset, 'Edytuj fakturę')
+    title = 'Dodaj fakturę' if invoice_id is None else 'Edytuj fakturę'
+    return render(
+        request,
+        'costs_invoice_form.html',
+        {
+            'title': title,
+            'invoice_form': invoice_form,
+            'formset': formset,
+            'selected_year': camp,
+        },
+    )
 
 
 @login_required
@@ -305,12 +299,7 @@ def costs_csv_export_view(request, year):
     else:
         invoices = invoices.filter(status=Invoice.Status.APPROVED)
 
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = 'attachment; filename="koszty.csv"'
-    writer = csv.DictWriter(response, fieldnames=CSV_FIELDS)
-    writer.writeheader()
-    writer.writerows(invoice_csv_rows(invoices=invoices.order_by('pk')))
-    return response
+    return invoice_csv_response(invoices=invoices)
 
 
 @login_required
@@ -461,16 +450,6 @@ def _percentage(*, part, whole):
     if not whole:
         return Decimal('0.00')
     return (part / whole * 100).quantize(Decimal('0.01'))
-
-
-def _render_invoice_form(request, invoice_form, formset, title):
-    context = {
-        'title': title,
-        'invoice_form': invoice_form,
-        'formset': formset,
-        'selected_year': invoice_form.instance.camp,
-    }
-    return render(request, 'costs_invoice_form.html', context)
 
 
 def latest_program_redirect_view(request):

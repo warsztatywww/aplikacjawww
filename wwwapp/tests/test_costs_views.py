@@ -11,6 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from wwwapp.forms import (
+    CostItemForm,
     CostItemFormSet,
     InvoiceForm,
     ReimbursementForm,
@@ -180,6 +181,8 @@ class SettlementAndReimbursementFormTests(TestCase):
             camp=self.camp,
         )
 
+        self.assertEqual(form.instance.user, self.user)
+        self.assertEqual(form.instance.camp, self.camp)
         self.assertTrue(form.is_valid(), form.errors)
         details = form.save()
         self.assertEqual(details.user, self.user)
@@ -220,6 +223,19 @@ class SettlementAndReimbursementFormTests(TestCase):
                 'execution_date': 'Data wykonania',
             },
         )
+
+    def test_positive_money_inputs_have_a_minimum_html_value(self):
+        invoice_form = InvoiceForm(user=self.user, camp=self.camp)
+        reimbursement_form = ReimbursementForm(
+            user=self.user,
+            camp=self.camp,
+            registered_by=self.registered_by,
+        )
+        cost_item_form = CostItemForm(camp=self.camp)
+
+        for form in (invoice_form, reimbursement_form, cost_item_form):
+            with self.subTest(form=form.__class__.__name__):
+                self.assertEqual(form.fields['amount'].widget.attrs['min'], '0.01')
 
     def test_reimbursement_user_form_uses_full_names(self):
         self.user.first_name = 'Jan'
@@ -374,7 +390,7 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(settlement_response, 'Numer rachunku bankowego')
         self.assertContains(settlement_response, 'Zapisz')
 
-    def test_invoice_add_renders_dynamic_cost_item_formset(self):
+    def test_invoice_add_uses_crispy_formset_without_row_cloning_javascript(self):
         SettlementDetails.objects.create(
             user=self.user,
             camp=self.camp,
@@ -385,10 +401,10 @@ class OwnCostsViewsTests(TestCase):
         response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
 
         self.assertContains(response, 'id="cost-item-forms"')
-        self.assertContains(response, 'id="cost-item-empty-form"')
-        self.assertContains(response, 'name="cost_items-__prefix__-amount"')
-        self.assertContains(response, 'id="add-cost-item"')
         self.assertContains(response, 'data-sync-invoice-amount')
+        self.assertNotContains(response, 'id="cost-item-empty-form"')
+        self.assertNotContains(response, 'name="cost_items-__prefix__-amount"')
+        self.assertNotContains(response, 'id="add-cost-item"')
 
     def test_invoice_add_displays_allocation_errors(self):
         SettlementDetails.objects.create(

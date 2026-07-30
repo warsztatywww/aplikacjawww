@@ -12,7 +12,7 @@ from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
-from django.forms.widgets import DateInput, Textarea, Widget
+from django.forms.widgets import DateInput, NumberInput, Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
 from django.utils.html import format_html
@@ -26,6 +26,10 @@ from .templatetags.wwwtags import qualified_mark
 from .models import Article, Camp, CampParticipant, CostItem, Invoice, Reimbursement, \
     SettlementDetails, Solution, SolutionFile, UserProfile, Workshop, WorkshopCategory, \
     WorkshopParticipant, WorkshopType
+from wwwapp.models import settlement_details_for
+
+
+guess_file_type = getattr(mimetypes, 'guess_file_type', mimetypes.guess_type)
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -594,7 +598,10 @@ class InvoiceForm(ModelForm):
             'invoice_type': 'Typ dokumentu',
             'description': 'Opis',
         }
-        widgets = {'issue_date': DateInput(attrs={'type': 'date'})}
+        widgets = {
+            'issue_date': DateInput(attrs={'type': 'date'}),
+            'amount': NumberInput(attrs={'min': '0.01', 'step': '0.01'}),
+        }
 
     def __init__(self, *args, user, camp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -609,7 +616,7 @@ class InvoiceForm(ModelForm):
         if not hasattr(attachment, 'content_type'):
             return attachment
 
-        content_type, _encoding = mimetypes.guess_type(attachment.name)
+        content_type, _encoding = guess_file_type(attachment.name)
         if content_type not in self.ATTACHMENT_TYPES:
             raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
         if attachment.size > self.MAX_ATTACHMENT_SIZE:
@@ -628,6 +635,7 @@ class CostItemForm(ModelForm):
             'amount': 'Kwota',
             'category': 'Kategoria',
         }
+        widgets = {'amount': NumberInput(attrs={'min': '0.01', 'step': '0.01'})}
 
     def __init__(self, *args, camp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -650,17 +658,20 @@ class BaseCostItemInlineFormSet(BaseInlineFormSet):
         if any(self.errors):
             return
 
-        items = [
-            form.cleaned_data
-            for form in self.forms
-            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
-        ]
+        items = self._cost_items_data()
         if not items:
             raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
 
         total = sum((item['amount'] for item in items), Decimal('0.00'))
         if total != self.instance.amount:
             raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
+
+    def _cost_items_data(self):
+        return [
+            form.cleaned_data
+            for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+        ]
 
 
 CostItemFormSet = inlineformset_factory(
@@ -682,14 +693,11 @@ class SettlementDetailsForm(ModelForm):
         labels = {'account_number': 'Numer rachunku bankowego'}
 
     def __init__(self, *args, user, camp, **kwargs):
-        self.user = user
-        self.camp = camp
         if 'instance' not in kwargs:
-            try:
-                kwargs['instance'] = SettlementDetails.objects.get(user=user, camp=camp)
-            except SettlementDetails.DoesNotExist:
-                kwargs['instance'] = None
+            kwargs['instance'] = settlement_details_for(user=user, camp=camp) or SettlementDetails()
         super().__init__(*args, **kwargs)
+        self.instance.user = user
+        self.instance.camp = camp
         if self.instance.pk is None:
             previous_details = SettlementDetails.objects.filter(user=user).order_by('-updated_at').first()
             if previous_details:
@@ -712,15 +720,6 @@ class SettlementDetailsForm(ModelForm):
             ),
         )
 
-    def save(self, commit=True):
-        details = super().save(commit=False)
-        details.user = self.user
-        details.camp = self.camp
-        if commit:
-            details.save()
-        return details
-
-
 class ReimbursementForm(ModelForm):
     """Register a reimbursement for a participant and workshop edition."""
 
@@ -733,6 +732,7 @@ class ReimbursementForm(ModelForm):
             'comment': 'Komentarz',
             'execution_date': 'Data wykonania',
         }
+        widgets = {'amount': NumberInput(attrs={'min': '0.01', 'step': '0.01'})}
 
     def __init__(self, *args, user, camp, registered_by, **kwargs):
         super().__init__(*args, **kwargs)
