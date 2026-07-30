@@ -9,15 +9,6 @@ from django.utils import timezone
 from wwwapp.models import Camp, CostItem, Invoice, InvoiceSequence, Reimbursement, SettlementDetails
 
 
-INVOICE_FIELDS = (
-    'attachment',
-    'document_number',
-    'issue_date',
-    'amount',
-    'invoice_type',
-    'description',
-)
-COST_ITEM_FIELDS = ('workshop', 'amount', 'category')
 CSV_FIELDS = (
     'internal_number',
     'document_number',
@@ -34,16 +25,6 @@ CSV_FIELDS = (
 )
 
 
-def create_invoice(*, user, camp, invoice_data, cost_items_data):
-    """Create a received invoice with validated cost items and a camp number."""
-    return _create_invoice(
-        user=user,
-        camp=camp,
-        invoice_data=invoice_data,
-        cost_items_data=cost_items_data,
-    )
-
-
 @transaction.atomic
 def allocate_invoice_number(*, camp):
     """Allocate the next internal invoice number for a workshop edition."""
@@ -57,61 +38,6 @@ def allocate_invoice_number(*, camp):
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
     return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
-
-
-@transaction.atomic
-def _create_invoice(*, user, camp, invoice_data, cost_items_data):
-    locked_camp = Camp.objects.get(pk=camp.pk)
-    items = _build_cost_items(cost_items_data=cost_items_data)
-    amount = invoice_data.get('amount')
-    _validate_cost_item_total(items=items, amount=amount)
-
-    try:
-        sequence = InvoiceSequence.objects.select_for_update().get(camp=locked_camp)
-    except InvoiceSequence.DoesNotExist:
-        sequence = InvoiceSequence.objects.create(
-            camp=locked_camp,
-            last_allocated=_highest_allocated_number(camp=locked_camp),
-        )
-    sequence.last_allocated += 1
-    sequence.save(update_fields=['last_allocated'])
-    invoice = Invoice(
-        user=user,
-        camp=locked_camp,
-        internal_number=f'WWW_{locked_camp.year}_FP_{sequence.last_allocated:04d}',
-        **_invoice_values(invoice_data),
-    )
-    invoice.full_clean()
-    invoice.save()
-    _save_cost_items(invoice=invoice, items=items)
-    return invoice
-
-
-@transaction.atomic
-def update_invoice(*, invoice, user, invoice_data, cost_items_data):
-    """Replace editable invoice data and item allocation atomically."""
-    invoice = Invoice.objects.select_for_update().get(pk=invoice.pk)
-    if invoice.user_id != user.pk:
-        raise ValidationError('Fakturę może edytować wyłącznie użytkownik, który ją dodał.')
-    if invoice.status not in (Invoice.Status.RECEIVED, Invoice.Status.REJECTED):
-        raise ValidationError('Można edytować tylko faktury otrzymane lub odrzucone.')
-    items = _build_cost_items(cost_items_data=cost_items_data)
-    _validate_cost_item_total(items=items, amount=invoice_data.get('amount'))
-    old_attachment_name = invoice.attachment.name
-
-    for field, value in _invoice_values(invoice_data).items():
-        setattr(invoice, field, value)
-    if invoice.status == Invoice.Status.REJECTED:
-        invoice.status = Invoice.Status.RECEIVED
-        invoice.admin_modified_at = None
-        invoice.admin_modified_by = None
-    invoice.full_clean()
-    invoice.save()
-    if old_attachment_name and invoice.attachment.name != old_attachment_name:
-        transaction.on_commit(lambda: invoice.attachment.storage.delete(old_attachment_name))
-    invoice.cost_items.all().delete()
-    _save_cost_items(invoice=invoice, items=items)
-    return invoice
 
 
 @transaction.atomic
@@ -179,51 +105,6 @@ def _escape_csv_formula(value):
     if isinstance(value, str) and value.startswith(('=', '+', '-', '@')):
         return f"'{value}"
     return value
-
-
-def _invoice_values(invoice_data):
-    return {field: invoice_data[field] for field in INVOICE_FIELDS if field in invoice_data}
-
-
-def _build_cost_items(*, cost_items_data):
-    items = [CostItem(**_cost_item_values(item)) for item in cost_items_data]
-    if not items:
-        raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
-    for item in items:
-        item.full_clean(exclude=['invoice'])
-    return items
-
-
-def _cost_item_values(item):
-    if isinstance(item, CostItem):
-        return {field: getattr(item, field) for field in COST_ITEM_FIELDS}
-    return {field: item[field] for field in COST_ITEM_FIELDS if field in item}
-
-
-def _validate_cost_item_total(*, items, amount):
-    total = sum((item.amount for item in items), Decimal('0.00'))
-    if amount is None or total != amount:
-        raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
-
-
-def _save_cost_items(*, invoice, items):
-    for item in items:
-        item.invoice = invoice
-        item.full_clean()
-        item.save()
-
-
-def _validate_settlement_details(*, user, camp):
-    details = SettlementDetails.objects.filter(user=user, camp=camp).first()
-    if details is None or not details.account_number.strip():
-        raise ValidationError('Dane rachunku bankowego dla tego obozu są wymagane.')
-
-
-def _validate_invoice_items(*, invoice):
-    items = list(invoice.cost_items.all())
-    if not items:
-        raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
-    _validate_cost_item_total(items=items, amount=invoice.amount)
 
 
 def _can_transition(current_status, target_status):

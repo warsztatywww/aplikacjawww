@@ -5,12 +5,7 @@
   <article>
     <h1 class="mt-3">{{ title }}</h1>
     <form method="get" class="mb-3">
-      <div class="form-row">
-        {% for field in filter_form %}
-          <div class="col-md-3">{{ field|as_crispy_field }}</div>
-        {% endfor %}
-      </div>
-      <button class="btn btn-secondary mt-2" type="submit">Filtruj</button>
+      {% crispy filter_form %}
     </form>
 
     <p>Łącznie: {{ total }} zł</p>

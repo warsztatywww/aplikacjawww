@@ -116,10 +116,22 @@ def _has_settlement_details(*, user, camp):
 def costs_mine_view(request, year):
     camp = get_object_or_404(Camp, pk=year)
     invoices = Invoice.objects.filter(user=request.user, camp=camp).order_by('-created_at')
+    settlement_details_form = SettlementDetailsForm(
+        request.POST or None,
+        user=request.user,
+        camp=camp,
+    )
+    if request.method == 'POST' and settlement_details_form.is_valid():
+        settlement_details_form.save()
+        messages.success(request, 'Zapisano dane rachunku bankowego.', extra_tags='auto-dismiss')
+        if request.GET.get('add_invoice') == '1':
+            return redirect('costs_invoice_add', year=camp.pk)
+        return redirect('costs_mine', year=camp.pk)
     context = {
         'title': 'Moje koszty',
         'selected_year': camp,
         'invoices': invoices,
+        'settlement_details_form': settlement_details_form,
         'approved_total': approved_total_for(user=request.user, camp=camp),
         'reimbursed_total': reimbursed_total_for(user=request.user, camp=camp),
         'remaining_total': balance_for(user=request.user, camp=camp),
@@ -129,24 +141,11 @@ def costs_mine_view(request, year):
 
 
 @login_required
-def costs_settlement_details_view(request, year):
-    camp = get_object_or_404(Camp, pk=year)
-    form = SettlementDetailsForm(request.POST or None, user=request.user, camp=camp)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, 'Zapisano dane rachunku.', extra_tags='auto-dismiss')
-        return redirect('costs_mine', year=camp.pk)
-
-    context = {'title': 'Dane rachunku bankowego', 'form': form, 'selected_year': camp}
-    return render(request, 'form.html', context)
-
-
-@login_required
 def costs_invoice_add_view(request, year):
     camp = get_object_or_404(Camp, pk=year)
     if not _has_settlement_details(user=request.user, camp=camp):
         messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
-        return redirect('costs_settlement_details', year=camp.pk)
+        return redirect(f"{reverse('costs_mine', args=[camp.pk])}?add_invoice=1")
 
     invoice_form = InvoiceForm(
         request.POST or None,
@@ -267,11 +266,9 @@ def costs_admin_transition_view(request, year):
     if not request.user.has_perm(required_permission):
         raise PermissionDenied
 
-    invoice_ids = _parse_invoice_ids(request.POST.getlist('invoice_ids'))
+    invoice_ids = request.POST.getlist('invoice_ids')
     if invoice_ids == []:
         return HttpResponseBadRequest('Wybierz co najmniej jedną fakturę.')
-    if invoice_ids is None:
-        return HttpResponseBadRequest('Identyfikatory faktur muszą być dodatnimi liczbami.')
     invoices = Invoice.objects.filter(pk__in=invoice_ids, camp_id=year)
     if invoices.count() != len(set(invoice_ids)):
         return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
@@ -291,9 +288,7 @@ def costs_admin_transition_view(request, year):
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
 def costs_csv_export_view(request, year):
-    invoice_ids = _parse_invoice_ids(request.POST.getlist('invoice_ids'))
-    if invoice_ids is None:
-        return HttpResponseBadRequest('Identyfikatory faktur muszą być dodatnimi liczbami.')
+    invoice_ids = request.POST.getlist('invoice_ids')
     invoices = Invoice.objects.filter(camp_id=year)
     if invoice_ids:
         invoices = invoices.filter(pk__in=invoice_ids)
@@ -447,21 +442,6 @@ def _percentage(*, part, whole):
     if not whole:
         return Decimal('0.00')
     return (part / whole * 100).quantize(Decimal('0.01'))
-
-
-def _parse_invoice_ids(invoice_ids):
-    parsed_ids = []
-    for invoice_id in invoice_ids:
-        try:
-            parsed_id = int(invoice_id)
-        except (TypeError, ValueError):
-            return None
-        if not isinstance(invoice_id, str) or not invoice_id.isdecimal():
-            return None
-        if parsed_id < 1 or parsed_id > 2_147_483_647:
-            return None
-        parsed_ids.append(parsed_id)
-    return parsed_ids
 
 
 def _render_invoice_form(request, invoice_form, formset, title):

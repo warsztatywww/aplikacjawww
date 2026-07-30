@@ -739,6 +739,15 @@ class ReimbursementForm(ModelForm):
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.include_media = False
+        self.helper.layout = Layout(
+            'amount',
+            'type',
+            'comment',
+            'execution_date',
+            FormActions(
+                StrictButton('Zarejestruj zwrot', type='submit', css_class='btn-primary'),
+            ),
+        )
 
 
 class FullNameUserChoiceField(ModelChoiceField):
@@ -759,6 +768,10 @@ class ReimbursementUserForm(Form):
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.include_media = False
+        self.helper.layout = Layout(
+            'user',
+            FormActions(StrictButton('Wybierz', type='submit', css_class='btn-secondary')),
+        )
 
 
 class CostFilterForm(Form):
@@ -781,6 +794,12 @@ class CostFilterForm(Form):
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.include_media = False
+        self.helper.layout = Layout(
+            'user',
+            'status',
+            'invoice_type',
+            FormActions(StrictButton('Filtruj', type='submit', css_class='btn-secondary')),
+        )
 
 
 class StatisticsFilterForm(Form):
@@ -806,3 +825,8 @@ class StatisticsFilterForm(Form):
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.include_media = False
+        self.helper.layout = Layout(
+            'status',
+            'context',
+            FormActions(StrictButton('Filtruj', type='submit', css_class='btn-secondary')),
+        )

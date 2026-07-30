@@ -41,11 +41,6 @@ urlpatterns = [
         name='costs_admin_transition',
     ),
     path('<int:year>/costs/admin/export/', views.costs_csv_export_view, name='costs_csv_export'),
-    path(
-        '<int:year>/costs/settlement-details/',
-        views.costs_settlement_details_view,
-        name='costs_settlement_details',
-    ),
     path('<int:year>/costs/invoices/add/', views.costs_invoice_add_view, name='costs_invoice_add'),
     path(
         '<int:year>/costs/invoices/<int:invoice_id>/edit/',

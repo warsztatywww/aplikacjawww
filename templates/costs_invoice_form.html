@@ -10,6 +10,9 @@
 
       <h2>Pozycje kosztowe</h2>
       {{ formset.management_form }}
+      {% if formset.non_form_errors %}
+        <div class="alert alert-danger" role="alert">{{ formset.non_form_errors }}</div>
+      {% endif %}
       <div id="cost-item-forms">
         {% for form in formset %}
         <fieldset{% if forloop.first and formset.initial_form_count == 0 %}

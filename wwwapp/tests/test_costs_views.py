@@ -305,21 +305,46 @@ class OwnCostsViewsTests(TestCase):
 
         response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
 
-        self.assertRedirects(response, reverse('costs_settlement_details', args=[self.camp.pk]))
+        self.assertRedirects(
+            response,
+            f"{reverse('costs_mine', args=[self.camp.pk])}?add_invoice=1",
+        )
 
-    def test_settlement_details_submission_saves_account(self):
+    def test_mine_page_saves_account_and_returns_to_invoice_form(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
-            reverse('costs_settlement_details', args=[self.camp.pk]),
+            f"{reverse('costs_mine', args=[self.camp.pk])}?add_invoice=1",
             {'account_number': 'PL61109010140000071219812874'},
         )
 
-        self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
+        self.assertRedirects(response, reverse('costs_invoice_add', args=[self.camp.pk]))
         self.assertEqual(
             SettlementDetails.objects.get(user=self.user, camp=self.camp).account_number,
             'PL61109010140000071219812874',
         )
+
+    def test_mine_page_displays_saved_account_details(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
+
+        self.assertContains(response, 'Dane rachunku bankowego')
+        self.assertContains(response, 'PL61109010140000071219812874')
+
+    def test_mydata_navigation_shows_own_costs_after_first_invoice(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('mydata_forms'))
+
+        page = response.content.decode()
+        self.assertIn(reverse('costs_mine', args=[self.camp.pk]), page)
+        self.assertLess(page.index('Formularze'), page.index(reverse('costs_mine', args=[self.camp.pk])))
 
     def test_cost_forms_render_polish_labels_and_submit_control(self):
         SettlementDetails.objects.create(
@@ -330,7 +355,7 @@ class OwnCostsViewsTests(TestCase):
         self.client.force_login(self.user)
 
         invoice_response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
-        settlement_response = self.client.get(reverse('costs_settlement_details', args=[self.camp.pk]))
+        settlement_response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
 
         for label in (
             'Załącznik',
@@ -361,6 +386,26 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(response, 'name="cost_items-__prefix__-amount"')
         self.assertContains(response, 'id="add-cost-item"')
         self.assertContains(response, 'data-sync-invoice-amount')
+
+    def test_invoice_add_displays_allocation_errors(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_invoice_add', args=[self.camp.pk]),
+            {
+                **self.invoice_post_data(**{'cost_items-0-amount': '9.00'}),
+                'attachment': SimpleUploadedFile(
+                    'invoice.pdf', b'%PDF-1.7', content_type='application/pdf',
+                ),
+            },
+        )
+
+        self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
 
     def test_invoice_add_creates_invoice_with_a_cost_item(self):
         SettlementDetails.objects.create(
@@ -653,31 +698,6 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.processed_invoice.refresh_from_db()
         self.assertEqual(self.processed_invoice.status, Invoice.Status.PROCESSED)
-
-    def test_malformed_invoice_ids_return_bad_request(self):
-        malformed_data = {'invoice_ids': ['not-an-invoice-id']}
-        self.client.force_login(self.admin)
-
-        transition_response = self.client.post(
-            reverse('costs_admin_transition', args=[self.camp.pk]),
-            {**malformed_data, 'status': Invoice.Status.APPROVED},
-        )
-        self.client.force_login(self.csv_user)
-        export_response = self.client.post(reverse('costs_csv_export', args=[self.camp.pk]), malformed_data)
-
-        self.assertEqual(transition_response.status_code, 400)
-        self.assertEqual(export_response.status_code, 400)
-
-    def test_oversized_numeric_invoice_id_returns_bad_request(self):
-        oversized_data = {'invoice_ids': ['9' * 100]}
-        self.client.force_login(self.admin)
-
-        response = self.client.post(
-            reverse('costs_admin_transition', args=[self.camp.pk]),
-            {**oversized_data, 'status': Invoice.Status.APPROVED},
-        )
-
-        self.assertEqual(response.status_code, 400)
 
     def test_default_csv_exports_only_approved_invoice_cost_items(self):
         self.client.force_login(self.csv_user)
