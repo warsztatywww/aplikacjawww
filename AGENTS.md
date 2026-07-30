@@ -59,8 +59,6 @@ warrants it.
 
 - `./manage.py test wwwapp.tests.test_auth`: run a focused Django test module.
 - `./manage.py test -v 2`: run the full Django test suite.
-- `./coverage.sh`: run `wwwapp` tests with coverage reporting.
-- `./type_check.sh`: run the repository's mypy check for `wwwapp`.
 - `./manage.py makemigrations --check --dry-run`: confirm model changes do not
   leave migrations missing.
 
@@ -75,6 +73,7 @@ check; create and commit the migration when Django reports one is needed.
 - Prefer clear, explicit names and small, focused changes over refactors that
   are unrelated to the requested work.
 - Keep Django view, form, and model behavior covered by app-local tests.
+- Use django-crispy-forms for forms rendered in templates.
 - Keep frontend entry-point changes in `frontend/`; do not hand-edit build
   output.
 - Never commit secrets, local databases, uploaded media, virtual environments,
