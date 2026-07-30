@@ -77,7 +77,7 @@
             </li>
             {% endif %}
 
-            {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.see_all_workshops or perms.wwwforms.see_form_results or perms.wwwapp.export_workshop_registration %}
+            {% if request.user.is_staff or perms.wwwapp.see_all_users or perms.wwwapp.see_all_workshops or perms.wwwforms.see_form_results or perms.wwwapp.export_workshop_registration or perms.wwwapp.view_all_costs %}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAdmin" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 Admin
@@ -109,6 +109,9 @@
                 {% if perms.wwwapp.export_workshop_registration %}
                   <a class="dropdown-item" href="{% url 'dataForPlan' current_year.pk %}">Dane do planu</a>
                 {% endif %}
+                {% if perms.wwwapp.view_all_costs %}
+                  <a class="dropdown-item" href="{% url 'costs_admin' current_year.pk %}">Koszty</a>
+                {% endif %}
               </div>
             </li>
             {% endif %}
@@ -132,9 +135,9 @@
               <a class="nav-link" href="{% url 'mydata_status' %}">Kwalifikacja</a>
             </li>
 
-            {% if user.is_authenticated %}
+            {% if user.is_authenticated and has_invoices %}
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'costs_mine' %}">Moje koszty</a>
+              <a class="nav-link" href="{% url 'costs_mine' current_year.pk %}">Moje koszty</a>
             </li>
             {% endif %}
           </ul>

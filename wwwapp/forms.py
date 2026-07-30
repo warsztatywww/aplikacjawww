@@ -741,10 +741,22 @@ class ReimbursementForm(ModelForm):
         self.helper.include_media = False
 
 
+class ReimbursementUserForm(Form):
+    """Choose a participant whose reimbursement is being registered."""
+
+    user = ModelChoiceField(label='Użytkownik', queryset=User.objects.none(), required=True)
+
+    def __init__(self, *args, users, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = users
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+
+
 class CostFilterForm(Form):
     """Provide optional invoice administration filters."""
 
-    camp = ModelChoiceField(label='Edycja', queryset=Camp.objects.all(), required=False)
     user = ModelChoiceField(label='Użytkownik', queryset=User.objects.all(), required=False)
     status = ChoiceField(
         label='Status',
@@ -754,6 +766,31 @@ class CostFilterForm(Form):
     invoice_type = ChoiceField(
         label='Typ dokumentu',
         choices=(('', 'Wszystkie'), *Invoice.Type.choices),
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+
+
+class StatisticsFilterForm(Form):
+    """Filter cost statistics for one workshop edition."""
+
+    status = ChoiceField(
+        label='Status faktury',
+        choices=(('', 'Zatwierdzone i przetworzone'), *Invoice.Status.choices),
+        required=False,
+    )
+    context = ChoiceField(
+        label='Zakres',
+        choices=(
+            ('', 'Edycja i warsztaty'),
+            ('camp', 'Edycja'),
+            ('workshop', 'Warsztaty'),
+        ),
         required=False,
     )
 

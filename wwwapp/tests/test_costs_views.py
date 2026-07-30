@@ -27,7 +27,7 @@ from wwwapp.models import (
 
 CSV_HEADER = [
     'internal_number', 'document_number', 'issue_date', 'user', 'invoice_type', 'status',
-    'invoice_amount', 'category', 'context_type', 'context_id', 'context_name', 'item_amount',
+    'invoice_amount', 'category', 'camp', 'workshop', 'item_amount',
     'description',
 ]
 
@@ -280,30 +280,32 @@ class OwnCostsViewsTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse('costs_mine'))
+        response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 200)
         pending_invoice = Invoice.objects.get(internal_number='WWW_2026_FP_0002')
         self.assertEqual(list(response.context['invoices']), [pending_invoice, self.invoice])
-        self.assertEqual(response.context['confirmed_total'], Decimal('10.00'))
+        self.assertEqual(response.context['approved_total'], Decimal('10.00'))
+        self.assertEqual(response.context['reimbursed_total'], Decimal('0.00'))
+        self.assertEqual(response.context['remaining_total'], Decimal('10.00'))
         self.assertEqual(response.context['pending_total'], Decimal('4.00'))
 
     def test_invoice_add_requires_settlement_details(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse('costs_invoice_add'))
+        response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
 
-        self.assertRedirects(response, reverse('costs_settlement_details'))
+        self.assertRedirects(response, reverse('costs_settlement_details', args=[self.camp.pk]))
 
     def test_settlement_details_submission_saves_account(self):
         self.client.force_login(self.user)
 
         response = self.client.post(
-            reverse('costs_settlement_details'),
+            reverse('costs_settlement_details', args=[self.camp.pk]),
             {'account_number': 'PL61109010140000071219812874'},
         )
 
-        self.assertRedirects(response, reverse('costs_mine'))
+        self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
         self.assertEqual(
             SettlementDetails.objects.get(user=self.user, camp=self.camp).account_number,
             'PL61109010140000071219812874',
@@ -317,8 +319,8 @@ class OwnCostsViewsTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        invoice_response = self.client.get(reverse('costs_invoice_add'))
-        settlement_response = self.client.get(reverse('costs_settlement_details'))
+        invoice_response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
+        settlement_response = self.client.get(reverse('costs_settlement_details', args=[self.camp.pk]))
 
         for label in (
             'Załącznik',
@@ -342,7 +344,7 @@ class OwnCostsViewsTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse('costs_invoice_add'))
+        response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
 
         self.assertContains(response, 'id="cost-item-forms"')
         self.assertContains(response, 'id="cost-item-empty-form"')
@@ -358,14 +360,14 @@ class OwnCostsViewsTests(TestCase):
         )
         self.client.force_login(self.user)
 
-        response = self.client.post(reverse('costs_invoice_add'), {
+        response = self.client.post(reverse('costs_invoice_add', args=[self.camp.pk]), {
             **self.invoice_post_data(),
             'attachment': SimpleUploadedFile(
                 'invoice.pdf', b'%PDF-1.7', content_type='application/pdf'
             ),
         })
 
-        self.assertRedirects(response, reverse('costs_mine'))
+        self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
         invoice = Invoice.objects.get(internal_number='WWW_2026_FP_0002')
         self.assertEqual(invoice.user, self.user)
         self.assertEqual(invoice.cost_items.get().amount, Decimal('10.00'))
@@ -386,18 +388,18 @@ class OwnCostsViewsTests(TestCase):
         self.client.force_login(self.user)
 
         response = self.client.post(
-            reverse('costs_invoice_edit', args=[self.invoice.pk]),
+            reverse('costs_invoice_edit', args=[self.camp.pk, self.invoice.pk]),
             self.invoice_post_data(),
         )
 
-        self.assertRedirects(response, reverse('costs_mine'))
+        self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, Invoice.Status.RECEIVED)
 
     def test_invoice_edit_is_not_available_to_another_user(self):
         self.client.force_login(self.other_user)
 
-        response = self.client.get(reverse('costs_invoice_edit', args=[self.invoice.pk]))
+        response = self.client.get(reverse('costs_invoice_edit', args=[self.camp.pk, self.invoice.pk]))
 
         self.assertEqual(response.status_code, 404)
 
@@ -409,7 +411,7 @@ class OwnCostsViewsTests(TestCase):
                 self.invoice.status = status
                 self.invoice.save()
 
-                response = self.client.get(reverse('costs_invoice_edit', args=[self.invoice.pk]))
+                response = self.client.get(reverse('costs_invoice_edit', args=[self.camp.pk, self.invoice.pk]))
 
                 self.assertEqual(response.status_code, 404)
 
@@ -417,7 +419,7 @@ class OwnCostsViewsTests(TestCase):
     def test_owner_can_get_attachment(self, _sendfile_response):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse('costs_invoice_attachment', args=[self.invoice.pk]))
+        response = self.client.get(reverse('costs_invoice_attachment', args=[self.camp.pk, self.invoice.pk]))
 
         self.assertEqual(response.status_code, 200)
 
@@ -425,11 +427,11 @@ class OwnCostsViewsTests(TestCase):
     def test_only_all_costs_permission_can_get_another_users_attachment(self, _sendfile_response):
         self.client.force_login(self.other_user)
 
-        response = self.client.get(reverse('costs_invoice_attachment', args=[self.invoice.pk]))
+        response = self.client.get(reverse('costs_invoice_attachment', args=[self.camp.pk, self.invoice.pk]))
 
         self.assertEqual(response.status_code, 404)
         self.other_user.user_permissions.add(Permission.objects.get(codename='view_all_costs'))
-        response = self.client.get(reverse('costs_invoice_attachment', args=[self.invoice.pk]))
+        response = self.client.get(reverse('costs_invoice_attachment', args=[self.camp.pk, self.invoice.pk]))
         self.assertEqual(response.status_code, 200)
 
 
@@ -444,10 +446,9 @@ class CostAdministrationViewsTests(TestCase):
         self.process_user = User.objects.create_user(username='cost-process')
         self.approve_permission = Permission.objects.get(codename='approve_costs')
         self.view_permission = Permission.objects.get(codename='view_all_costs')
-        self.export_permission = Permission.objects.get(codename='export_costs')
         self.process_permission = Permission.objects.get(codename='process_costs')
         self.admin.user_permissions.add(self.view_permission, self.approve_permission)
-        self.csv_user.user_permissions.add(self.view_permission, self.export_permission)
+        self.csv_user.user_permissions.add(self.view_permission)
         self.process_user.user_permissions.add(self.view_permission, self.process_permission)
         SettlementDetails.objects.create(
             user=self.owner,
@@ -511,20 +512,20 @@ class CostAdministrationViewsTests(TestCase):
     def test_administration_requires_view_permission(self):
         self.client.force_login(self.owner)
 
-        response = self.client.get(reverse('costs_admin'))
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 403)
 
-    def test_administration_filters_invoices_by_category_and_status(self):
+    def test_administration_filters_invoices_by_status(self):
         self.client.force_login(self.admin)
 
         response = self.client.get(
-            reverse('costs_admin'),
-            {'status': Invoice.Status.APPROVED, 'category': CostItem.Category.OUTINGS},
+            reverse('costs_admin', args=[self.camp.pk]),
+            {'status': Invoice.Status.APPROVED},
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(list(response.context['invoices']), [self.split_invoice])
+        self.assertEqual(list(response.context['invoices']), [self.split_invoice, self.approved_invoice])
 
     def test_administration_filters_invoices_by_camp_user_and_type(self):
         other_owner = User.objects.create_user(username='other-cost-owner')
@@ -538,9 +539,8 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.admin)
 
         response = self.client.get(
-            reverse('costs_admin'),
+            reverse('costs_admin', args=[self.other_camp.pk]),
             {
-                'camp': self.other_camp.pk,
                 'user': other_owner.pk,
                 'invoice_type': Invoice.Type.OUTSIDE_KSEF,
             },
@@ -552,9 +552,9 @@ class CostAdministrationViewsTests(TestCase):
     def test_filter_choices_include_polish_all_option(self):
         self.client.force_login(self.admin)
 
-        response = self.client.get(reverse('costs_admin'))
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
 
-        for field_name in ('status', 'invoice_type', 'category'):
+        for field_name in ('status', 'invoice_type'):
             with self.subTest(field_name=field_name):
                 choices = response.context['filter_form'].fields[field_name].choices
                 self.assertEqual(choices[0], ('', 'Wszystkie'))
@@ -562,18 +562,18 @@ class CostAdministrationViewsTests(TestCase):
     def test_administration_links_to_protected_invoice_attachments(self):
         self.client.force_login(self.admin)
 
-        response = self.client.get(reverse('costs_admin'))
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
 
         self.assertContains(
             response,
-            reverse('costs_invoice_attachment', args=[self.received_invoice.pk]),
+            reverse('costs_invoice_attachment', args=[self.camp.pk, self.received_invoice.pk]),
         )
 
     def test_approval_transition_requires_approval_permission(self):
         self.client.force_login(self.csv_user)
 
         response = self.client.post(
-            reverse('costs_admin_transition'),
+            reverse('costs_admin_transition', args=[self.camp.pk]),
             {'invoice_ids': [self.received_invoice.pk], 'status': Invoice.Status.APPROVED},
         )
 
@@ -585,7 +585,7 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.admin)
 
         response = self.client.post(
-            reverse('costs_admin_transition'),
+            reverse('costs_admin_transition', args=[self.camp.pk]),
             {
                 'invoice_ids': [self.received_invoice.pk, self.approved_invoice.pk],
                 'status': Invoice.Status.APPROVED,
@@ -600,7 +600,7 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.admin)
 
         response = self.client.post(
-            reverse('costs_admin_transition'),
+            reverse('costs_admin_transition', args=[self.camp.pk]),
             {'invoice_ids': [self.approved_invoice.pk], 'status': Invoice.Status.PROCESSED},
         )
 
@@ -610,11 +610,11 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.process_user)
 
         response = self.client.post(
-            reverse('costs_admin_transition'),
+            reverse('costs_admin_transition', args=[self.camp.pk]),
             {'invoice_ids': [self.approved_invoice.pk], 'status': Invoice.Status.PROCESSED},
         )
 
-        self.assertRedirects(response, reverse('costs_admin'))
+        self.assertRedirects(response, reverse('costs_admin', args=[self.camp.pk]))
         self.approved_invoice.refresh_from_db()
         self.assertEqual(self.approved_invoice.status, Invoice.Status.PROCESSED)
 
@@ -622,7 +622,7 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.owner)
 
         response = self.client.post(
-            reverse('costs_invoice_edit', args=[self.processed_invoice.pk]),
+            reverse('costs_invoice_edit', args=[self.other_camp.pk, self.processed_invoice.pk]),
             {
                 'document_number': 'FV/processed',
                 'issue_date': '2026-07-24',
@@ -649,11 +649,11 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.admin)
 
         transition_response = self.client.post(
-            reverse('costs_admin_transition'),
+            reverse('costs_admin_transition', args=[self.camp.pk]),
             {**malformed_data, 'status': Invoice.Status.APPROVED},
         )
         self.client.force_login(self.csv_user)
-        export_response = self.client.post(reverse('costs_csv_export'), malformed_data)
+        export_response = self.client.post(reverse('costs_csv_export', args=[self.camp.pk]), malformed_data)
 
         self.assertEqual(transition_response.status_code, 400)
         self.assertEqual(export_response.status_code, 400)
@@ -663,7 +663,7 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.admin)
 
         response = self.client.post(
-            reverse('costs_admin_transition'),
+            reverse('costs_admin_transition', args=[self.camp.pk]),
             {**oversized_data, 'status': Invoice.Status.APPROVED},
         )
 
@@ -672,7 +672,7 @@ class CostAdministrationViewsTests(TestCase):
     def test_default_csv_exports_only_approved_invoice_cost_items(self):
         self.client.force_login(self.csv_user)
 
-        response = self.client.post(reverse('costs_csv_export'))
+        response = self.client.post(reverse('costs_csv_export', args=[self.camp.pk]))
         rows = list(csv.reader(response.content.decode().splitlines()))
 
         self.assertEqual(response.status_code, 200)
@@ -684,7 +684,7 @@ class CostAdministrationViewsTests(TestCase):
         self.client.force_login(self.csv_user)
 
         response = self.client.post(
-            reverse('costs_csv_export'), {'invoice_ids': [self.split_invoice.pk]},
+            reverse('costs_csv_export', args=[self.camp.pk]), {'invoice_ids': [self.split_invoice.pk]},
         )
         rows = list(csv.reader(response.content.decode().splitlines()))
 
@@ -692,17 +692,17 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(len(rows), 3)
         self.assertEqual({row[0] for row in rows[1:]}, {self.split_invoice.internal_number})
 
-    def test_csv_export_requires_export_permission(self):
+    def test_csv_export_requires_view_permission(self):
         self.client.force_login(self.admin)
 
-        response = self.client.post(reverse('costs_csv_export'))
+        response = self.client.post(reverse('costs_csv_export', args=[self.camp.pk]))
 
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
 
     def test_csv_export_does_not_mutate_invoice_status(self):
         self.client.force_login(self.csv_user)
 
-        response = self.client.post(reverse('costs_csv_export'))
+        response = self.client.post(reverse('costs_csv_export', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 200)
         self.approved_invoice.refresh_from_db()
@@ -721,7 +721,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             Permission.objects.get(codename='register_reimbursements'),
         )
         self.statistics_user.user_permissions.add(
-            Permission.objects.get(codename='view_cost_statistics'),
+            Permission.objects.get(codename='view_all_costs'),
         )
         self.details = SettlementDetails.objects.create(
             user=self.recipient,
@@ -737,7 +737,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             'amount': '40.00',
             'type': Reimbursement.Type.ASSOCIATION,
             'comment': 'Transfer',
-            'executed_date': '2026-07-24',
+            'execution_date': '2026-07-24',
         }
 
     def create_invoice(
@@ -763,23 +763,26 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         CostItem.objects.create(invoice=invoice, amount=amount, category=category)
         return invoice
 
-    def test_reimbursement_saves_account_snapshot_and_warns_above_balance(self):
+    def test_reimbursement_uses_current_account_and_warns_above_balance(self):
         self.client.force_login(self.reimbursement_user)
 
-        response = self.client.post(reverse('costs_reimbursements'), self.over_balance_post)
+        response = self.client.post(
+            reverse('costs_reimbursements', args=[self.camp.pk]),
+            self.over_balance_post,
+        )
 
         reimbursement = Reimbursement.objects.get()
-        self.assertEqual(reimbursement.account_number_snapshot, self.details.account_number)
         expected_url = (
-            f"{reverse('costs_reimbursements')}?user_id={self.recipient.pk}"
+            f"{reverse('costs_reimbursements', args=[self.camp.pk])}?user={self.recipient.pk}"
         )
         self.assertRedirects(response, expected_url, fetch_redirect_response=False)
 
         follow_response = self.client.get(expected_url)
 
-        self.assertEqual(follow_response.context['balance_before'], Decimal('30.00'))
-        self.assertEqual(follow_response.context['balance_after'], Decimal('-10.00'))
+        self.assertEqual(follow_response.context['balance_before'], Decimal('-10.00'))
+        self.assertIsNone(follow_response.context['balance_after'])
         self.assertContains(follow_response, 'przekracza saldo')
+        self.assertContains(follow_response, self.details.account_number)
         self.assertEqual(Reimbursement.objects.count(), 1)
 
         self.client.get(expected_url)
@@ -789,7 +792,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
     def test_reimbursements_require_registration_permission(self):
         self.client.force_login(self.recipient)
 
-        response = self.client.get(reverse('costs_reimbursements'))
+        response = self.client.get(reverse('costs_reimbursements', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 403)
 
@@ -807,7 +810,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         )
         self.client.force_login(self.statistics_user)
 
-        response = self.client.get(reverse('costs_statistics'), {'camp': self.camp.pk})
+        response = self.client.get(reverse('costs_statistics', args=[self.camp.pk]))
 
         self.assertEqual(
             response.context['category_totals'][CostItem.Category.WORKSHOPS],
@@ -826,7 +829,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         )
         self.client.force_login(self.statistics_user)
 
-        response = self.client.get(reverse('costs_statistics'), {'camp': self.camp.pk})
+        response = self.client.get(reverse('costs_statistics', args=[self.camp.pk]))
 
         self.assertEqual(response.context['total'], Decimal('30.00'))
         self.assertEqual(
@@ -834,7 +837,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             Decimal('0.00'),
         )
 
-    def test_statistics_filter_by_category_status_and_context(self):
+    def test_statistics_filter_by_status_and_context(self):
         workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')
         workshop = Workshop.objects.create(
             year=self.camp,
@@ -882,25 +885,22 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         self.client.force_login(self.statistics_user)
 
         response = self.client.get(
-            reverse('costs_statistics'),
+            reverse('costs_statistics', args=[self.camp.pk]),
             {
-                'camp': self.camp.pk,
                 'status': Invoice.Status.APPROVED,
-                'category': CostItem.Category.WORKSHOPS,
                 'context': 'workshop',
             },
         )
 
-        self.assertEqual(response.context['total'], Decimal('30.00'))
+        self.assertEqual(response.context['total'], Decimal('35.00'))
 
     def test_statistics_render_empty_chart_for_no_matching_items(self):
         self.client.force_login(self.statistics_user)
 
         response = self.client.get(
-            reverse('costs_statistics'),
+            reverse('costs_statistics', args=[self.camp.pk]),
             {
-                'camp': self.camp.pk,
-                'category': CostItem.Category.OUTINGS,
+                'status': Invoice.Status.RECEIVED,
             },
         )
 
@@ -910,6 +910,6 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
     def test_statistics_require_permission(self):
         self.client.force_login(self.recipient)
 
-        response = self.client.get(reverse('costs_statistics'))
+        response = self.client.get(reverse('costs_statistics', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 403)

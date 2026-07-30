@@ -1,12 +1,12 @@
 {% extends "base.html" %}
+{% load crispy_forms_tags %}
 
 {% block content %}
   <article>
     <header><h1>{{ title }}</h1></header>
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
-      {{ invoice_form.non_field_errors }}
-      {{ invoice_form.as_p }}
+      {% crispy invoice_form %}
 
       <h2>Pozycje kosztowe</h2>
       {{ formset.management_form }}
@@ -14,14 +14,13 @@
         {% for form in formset %}
         <fieldset{% if forloop.first and formset.initial_form_count == 0 %}
           data-sync-invoice-amount{% endif %}>
-          {{ form.non_field_errors }}
-          {{ form.as_p }}
+          {% crispy form %}
         </fieldset>
         {% endfor %}
       </div>
       <template id="cost-item-empty-form">
         <fieldset>
-          {{ formset.empty_form.as_p }}
+          {% crispy formset.empty_form %}
         </fieldset>
       </template>
       <button class="btn btn-secondary mb-3" id="add-cost-item" type="button">

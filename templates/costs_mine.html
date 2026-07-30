@@ -4,14 +4,16 @@
   <article>
     <header class="d-flex justify-content-between align-items-center mt-3">
       <h1>{{ title }}</h1>
-      <a class="btn btn-primary" href="{% url 'costs_invoice_add' %}">Dodaj fakturę</a>
+      <a class="btn btn-primary" href="{% url 'costs_invoice_add' selected_year.pk %}">Dodaj fakturę</a>
     </header>
 
     <p>
-      Potwierdzone: {{ confirmed_total }} zł<br>
-      Oczekujące: {{ pending_total }} zł
+      Suma zatwierdzonych faktur: {{ approved_total }} zł<br>
+      Zwrócono: {{ reimbursed_total }} zł<br>
+      Pozostało do zwrotu: {{ remaining_total }} zł<br>
+      Oczekujące na zatwierdzenie: {{ pending_total }} zł
     </p>
-    <p><a href="{% url 'costs_settlement_details' %}">Dane rachunku bankowego</a></p>
+    <p><a href="{% url 'costs_settlement_details' selected_year.pk %}">Zmień dane rachunku bankowego</a></p>
 
     {% if invoices %}
       <table class="table">
@@ -28,8 +30,8 @@
           {% for invoice in invoices %}
             <tr>
               <td>
-                {% if invoice.status == 'RECEIVED' or invoice.status == 'REJECTED' %}
-                  <a href="{% url 'costs_invoice_edit' invoice.pk %}">{{ invoice.document_number }}</a>
+                {% if invoice.can_user_edit %}
+                  <a href="{% url 'costs_invoice_edit' selected_year.pk invoice.pk %}">{{ invoice.document_number }}</a>
                 {% else %}
                   {{ invoice.document_number }}
                 {% endif %}
@@ -37,13 +39,13 @@
               <td>{{ invoice.issue_date }}</td>
               <td>{{ invoice.amount }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
-              <td><a href="{% url 'costs_invoice_attachment' invoice.pk %}">Pobierz</a></td>
+              <td><a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">Pobierz</a></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     {% else %}
-      <p>Nie dodano jeszcze faktur.</p>
+      <p>Nie {% if user.user_profile.gender == 'F' %}dodałaś{% else %}dodałeś{% endif %} jeszcze faktur.</p>
     {% endif %}
   </article>
 {% endblock %}

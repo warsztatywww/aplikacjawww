@@ -27,9 +27,8 @@ CSV_FIELDS = (
     'status',
     'invoice_amount',
     'category',
-    'context_type',
-    'context_id',
-    'context_name',
+    'camp',
+    'workshop',
     'item_amount',
     'description',
 )
@@ -132,15 +131,22 @@ def transition_invoices(*, invoices, target_status, changed_by):
 
 def balance_for(*, user, camp):
     """Return approved and processed invoice value less reimbursements."""
-    confirmed = _total_for_invoices(
+    return approved_total_for(user=user, camp=camp) - reimbursed_total_for(user=user, camp=camp)
+
+
+def approved_total_for(*, user, camp):
+    """Return the value of approved and processed invoices."""
+    return _total_for_invoices(
         user=user,
         camp=camp,
         statuses=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
     )
-    reimbursements = Reimbursement.objects.filter(user=user, camp=camp).aggregate(
-        total=Sum('amount'),
-    )['total']
-    return confirmed - (reimbursements or Decimal('0.00'))
+
+
+def reimbursed_total_for(*, user, camp):
+    """Return reimbursements registered for a participant and edition."""
+    total = Reimbursement.objects.filter(user=user, camp=camp).aggregate(total=Sum('amount'))['total']
+    return total or Decimal('0.00')
 
 
 def pending_total_for(*, user, camp):
@@ -156,14 +162,13 @@ def invoice_csv_rows(*, invoices):
                 'internal_number': invoice.internal_number,
                 'document_number': invoice.document_number,
                 'issue_date': invoice.issue_date,
-                'user': invoice.user.username,
+                'user': invoice.user.get_full_name(),
                 'invoice_type': invoice.invoice_type,
                 'status': invoice.status,
                 'invoice_amount': invoice.amount,
                 'category': item.category,
-                'context_type': 'workshop' if item.workshop_id else 'camp',
-                'context_id': item.workshop_id or invoice.camp_id,
-                'context_name': str(item.workshop) if item.workshop_id else str(invoice.camp),
+                'camp': str(invoice.camp),
+                'workshop': str(item.workshop) if item.workshop_id else '',
                 'item_amount': item.amount,
                 'description': invoice.description,
             }

@@ -37,9 +37,11 @@ from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from wwwapp.costs import (
     CSV_FIELDS,
     allocate_invoice_number,
+    approved_total_for,
     balance_for,
     invoice_csv_rows,
     pending_total_for,
+    reimbursed_total_for,
     transition_invoices,
 )
 from wwwapp.forms import (
@@ -49,6 +51,7 @@ from wwwapp.forms import (
     CostItemFormSet,
     InvoiceForm,
     ReimbursementForm,
+    ReimbursementUserForm,
     SettlementDetailsForm,
     SolutionFileFormSet,
     SolutionForm,
@@ -58,6 +61,7 @@ from wwwapp.forms import (
     UserProfileForm,
     UserProfilePageForm,
     UserSecretNotesForm,
+    StatisticsFilterForm,
     WorkshopForm,
     WorkshopParticipantPointsForm,
 )
@@ -84,6 +88,7 @@ def get_context(request):
     context = {}
 
     if request.user.is_authenticated:
+        context['has_invoices'] = Invoice.objects.filter(user=request.user).exists()
         visible_resources = ResourceYearPermission.objects.exclude(access_url__exact="")
         if request.user.has_perm('wwwapp.access_all_resources'):
             context['resources'] = visible_resources
@@ -108,39 +113,40 @@ def _has_settlement_details(*, user, camp):
 
 
 @login_required
-def costs_mine_view(request):
-    camp = Camp.current()
+def costs_mine_view(request, year):
+    camp = get_object_or_404(Camp, pk=year)
     invoices = Invoice.objects.filter(user=request.user, camp=camp).order_by('-created_at')
-    context = get_context(request)
-    context.update({
+    context = {
         'title': 'Moje koszty',
+        'selected_year': camp,
         'invoices': invoices,
-        'confirmed_total': balance_for(user=request.user, camp=camp),
+        'approved_total': approved_total_for(user=request.user, camp=camp),
+        'reimbursed_total': reimbursed_total_for(user=request.user, camp=camp),
+        'remaining_total': balance_for(user=request.user, camp=camp),
         'pending_total': pending_total_for(user=request.user, camp=camp),
-    })
+    }
     return render(request, 'costs_mine.html', context)
 
 
 @login_required
-def costs_settlement_details_view(request):
-    camp = Camp.current()
+def costs_settlement_details_view(request, year):
+    camp = get_object_or_404(Camp, pk=year)
     form = SettlementDetailsForm(request.POST or None, user=request.user, camp=camp)
     if request.method == 'POST' and form.is_valid():
         form.save()
         messages.success(request, 'Zapisano dane rachunku.', extra_tags='auto-dismiss')
-        return redirect('costs_mine')
+        return redirect('costs_mine', year=camp.pk)
 
-    context = get_context(request)
-    context.update({'title': 'Dane do rozliczeń', 'form': form})
+    context = {'title': 'Dane rachunku bankowego', 'form': form, 'selected_year': camp}
     return render(request, 'form.html', context)
 
 
 @login_required
-def costs_invoice_add_view(request):
-    camp = Camp.current()
+def costs_invoice_add_view(request, year):
+    camp = get_object_or_404(Camp, pk=year)
     if not _has_settlement_details(user=request.user, camp=camp):
         messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
-        return redirect('costs_settlement_details')
+        return redirect('costs_settlement_details', year=camp.pk)
 
     invoice_form = InvoiceForm(
         request.POST or None,
@@ -160,14 +166,14 @@ def costs_invoice_add_view(request):
             formset.instance = invoice
             formset.save()
         messages.success(request, 'Dodano fakturę.', extra_tags='auto-dismiss')
-        return redirect('costs_mine')
+        return redirect('costs_mine', year=camp.pk)
 
     return _render_invoice_form(request, invoice_form, formset, 'Dodaj fakturę')
 
 
 @login_required
-def costs_invoice_edit_view(request, invoice_id):
-    camp = Camp.current()
+def costs_invoice_edit_view(request, year, invoice_id):
+    camp = get_object_or_404(Camp, pk=year)
     invoice = get_object_or_404(
         Invoice,
         pk=invoice_id,
@@ -199,14 +205,14 @@ def costs_invoice_edit_view(request, invoice_id):
             invoice.save()
             formset.save()
         messages.success(request, 'Zapisano fakturę.', extra_tags='auto-dismiss')
-        return redirect('costs_mine')
+        return redirect('costs_mine', year=camp.pk)
 
     return _render_invoice_form(request, invoice_form, formset, 'Edytuj fakturę')
 
 
 @login_required
-def costs_invoice_attachment_view(request, invoice_id):
-    invoice = get_object_or_404(Invoice, pk=invoice_id)
+def costs_invoice_attachment_view(request, year, invoice_id):
+    invoice = get_object_or_404(Invoice, pk=invoice_id, camp_id=year)
     if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
         return HttpResponseNotFound()
 
@@ -221,37 +227,34 @@ def costs_invoice_attachment_view(request, invoice_id):
 
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
-def costs_admin_view(request):
+def costs_admin_view(request, year):
+    camp = get_object_or_404(Camp, pk=year)
     filter_form = CostFilterForm(request.GET or None)
-    invoices = Invoice.objects.select_related('camp', 'user').prefetch_related('cost_items')
+    invoices = Invoice.objects.filter(camp=camp).select_related('user').prefetch_related('cost_items')
     if filter_form.is_valid():
         filters = filter_form.cleaned_data
-        if filters['camp']:
-            invoices = invoices.filter(camp=filters['camp'])
         if filters['status']:
             invoices = invoices.filter(status=filters['status'])
         if filters['user']:
             invoices = invoices.filter(user=filters['user'])
         if filters['invoice_type']:
             invoices = invoices.filter(invoice_type=filters['invoice_type'])
-        if filters['category']:
-            invoices = invoices.filter(cost_items__category=filters['category']).distinct()
-    context = get_context(request)
-    context.update({
+    context = {
         'title': 'Administracja kosztami',
+        'selected_year': camp,
         'filter_form': filter_form,
         'invoices': invoices.order_by('-created_at'),
         'can_approve_costs': request.user.has_perm('wwwapp.approve_costs'),
-        'can_export_costs': request.user.has_perm('wwwapp.export_costs'),
+        'can_export_costs': True,
         'can_process_costs': request.user.has_perm('wwwapp.process_costs'),
-    })
+    }
     return render(request, 'costs_admin.html', context)
 
 
 @require_POST
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
-def costs_admin_transition_view(request):
+def costs_admin_transition_view(request, year):
     target_status = request.POST.get('status')
     if target_status in (Invoice.Status.APPROVED, Invoice.Status.REJECTED):
         required_permission = 'wwwapp.approve_costs'
@@ -267,7 +270,7 @@ def costs_admin_transition_view(request):
         return HttpResponseBadRequest('Wybierz co najmniej jedną fakturę.')
     if invoice_ids is None:
         return HttpResponseBadRequest('Identyfikatory faktur muszą być dodatnimi liczbami.')
-    invoices = Invoice.objects.filter(pk__in=invoice_ids)
+    invoices = Invoice.objects.filter(pk__in=invoice_ids, camp_id=year)
     if invoices.count() != len(set(invoice_ids)):
         return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
     try:
@@ -279,18 +282,17 @@ def costs_admin_transition_view(request):
     except ValidationError as error:
         return HttpResponseBadRequest('; '.join(error.messages))
     messages.success(request, 'Zmieniono status wybranych faktur.', extra_tags='auto-dismiss')
-    return redirect('costs_admin')
+    return redirect('costs_admin', year=year)
 
 
 @require_POST
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
-@permission_required('wwwapp.export_costs', raise_exception=True)
-def costs_csv_export_view(request):
+def costs_csv_export_view(request, year):
     invoice_ids = _parse_invoice_ids(request.POST.getlist('invoice_ids'))
     if invoice_ids is None:
         return HttpResponseBadRequest('Identyfikatory faktur muszą być dodatnimi liczbami.')
-    invoices = Invoice.objects.all()
+    invoices = Invoice.objects.filter(camp_id=year)
     if invoice_ids:
         invoices = invoices.filter(pk__in=invoice_ids)
         if invoices.count() != len(set(invoice_ids)):
@@ -308,24 +310,27 @@ def costs_csv_export_view(request):
 
 @login_required
 @permission_required('wwwapp.register_reimbursements', raise_exception=True)
-def costs_reimbursements_view(request):
+def costs_reimbursements_view(request, year):
     """Show reimbursement history and register a payment for a participant."""
-    camp = Camp.current()
+    camp = get_object_or_404(Camp, pk=year)
+    users = User.objects.filter(
+        invoices__camp=camp,
+        invoices__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+    ).distinct().order_by('first_name', 'last_name', 'pk')
+    user_form = ReimbursementUserForm(request.GET or None, users=users)
     selected_user = None
     form = None
     balance_before = None
     balance_after = None
-    user_id = request.POST.get('user_id') or request.GET.get('user_id')
+    user_id = request.POST.get('user_id')
+    if user_form.is_valid():
+        selected_user = user_form.cleaned_data['user']
+    elif user_id:
+        selected_user = get_object_or_404(users, pk=user_id)
     if user_id:
-        selected_user = get_object_or_404(User, pk=user_id)
+        selected_user = get_object_or_404(users, pk=user_id)
+    if selected_user:
         balance_before = balance_for(user=selected_user, camp=camp)
-        reimbursement_balances = request.session.pop('reimbursement_balances', None)
-        if (
-            reimbursement_balances
-            and reimbursement_balances['user_id'] == selected_user.pk
-        ):
-            balance_before = Decimal(reimbursement_balances['before'])
-            balance_after = Decimal(reimbursement_balances['after'])
         form = ReimbursementForm(
             request.POST or None,
             user=selected_user,
@@ -338,43 +343,48 @@ def costs_reimbursements_view(request):
             messages.success(request, 'Zarejestrowano zwrot kosztów.', extra_tags='auto-dismiss')
             if reimbursement.amount > balance_before:
                 messages.warning(request, 'Kwota zwrotu przekracza saldo.')
-            request.session['reimbursement_balances'] = {
-                'user_id': selected_user.pk,
-                'before': str(balance_before),
-                'after': str(balance_after),
-            }
-            redirect_url = reverse('costs_reimbursements')
-            return redirect(f'{redirect_url}?user_id={selected_user.pk}')
+            redirect_url = reverse('costs_reimbursements', args=[camp.pk])
+            return redirect(f'{redirect_url}?user={selected_user.pk}')
     elif request.method == 'POST':
         messages.error(request, 'Wybierz użytkownika do rozliczenia.')
 
-    reimbursements = Reimbursement.objects.select_related('user', 'camp', 'registered_by')
-    context = get_context(request)
-    context.update({
+    reimbursements = Reimbursement.objects.filter(camp=camp).select_related('user', 'registered_by')
+    account_numbers = dict(
+        SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
+    )
+    reimbursement_rows = [
+        {'reimbursement': reimbursement, 'account_number': account_numbers.get(reimbursement.user_id, '')}
+        for reimbursement in reimbursements.order_by('-execution_date', '-created_at')
+    ]
+    context = {
         'title': 'Zwroty kosztów',
-        'users': User.objects.order_by('username'),
+        'selected_year': camp,
+        'users': users,
+        'user_form': user_form,
         'selected_user': selected_user,
         'reimbursement_form': form,
-        'reimbursements': reimbursements.filter(camp=camp).order_by(
-            '-executed_date',
-            '-created_at',
-        ),
+        'reimbursement_rows': reimbursement_rows,
         'balance_before': balance_before,
         'balance_after': balance_after,
-    })
+        'approved_total': approved_total_for(user=selected_user, camp=camp) if selected_user else None,
+        'reimbursed_total': reimbursed_total_for(user=selected_user, camp=camp) if selected_user else None,
+    }
     return render(request, 'costs_reimbursements.html', context)
 
 
 @login_required
-@permission_required('wwwapp.view_cost_statistics', raise_exception=True)
-def costs_statistics_view(request):
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_statistics_view(request, year):
     """Summarize cost-item totals for the selected financial-report filters."""
-    camp = Camp.current()
-    if request.GET.get('camp'):
-        camp = get_object_or_404(Camp, pk=request.GET['camp'])
+    camp = get_object_or_404(Camp, pk=year)
 
+    filter_form = StatisticsFilterForm(request.GET or None)
     items = CostItem.objects.filter(invoice__camp=camp)
-    status = request.GET.get('status')
+    status = ''
+    item_context = ''
+    if filter_form.is_valid():
+        status = filter_form.cleaned_data['status']
+        item_context = filter_form.cleaned_data['context']
     if status in Invoice.Status.values:
         items = items.filter(invoice__status=status)
     else:
@@ -382,12 +392,6 @@ def costs_statistics_view(request):
         items = items.filter(
             invoice__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
         )
-    category = request.GET.get('category')
-    if category in CostItem.Category.values:
-        items = items.filter(category=category)
-    else:
-        category = ''
-    item_context = request.GET.get('context')
     if item_context == 'workshop':
         items = items.filter(workshop__isnull=False)
     elif item_context == 'camp':
@@ -417,23 +421,23 @@ def costs_statistics_view(request):
         }
         for value, label in CostItem.Category.choices
     ]
-    context = get_context(request)
-    context.update({
+    colors = ('#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997')
+    offset = Decimal('0.00')
+    for row, color in zip(category_rows, colors):
+        row['color'] = color
+        row['offset'] = -offset
+        row['remainder'] = Decimal('100.00') - row['percentage']
+        offset += row['percentage']
+    context = {
         'title': 'Statystyki kosztów',
-        'camps': Camp.objects.order_by('-year'),
-        'selected_camp': camp,
-        'selected_status': status,
-        'selected_category': category,
-        'selected_context': item_context,
-        'category_choices': CostItem.Category.choices,
-        'status_choices': Invoice.Status.choices,
+        'selected_year': camp,
+        'filter_form': filter_form,
         'category_totals': category_totals,
         'category_percentages': category_percentages,
         'category_rows': category_rows,
         'total': total,
         'has_statistics_data': bool(total),
-        'pie_gradient': _pie_gradient(category_rows) if total else None,
-    })
+    }
     return render(request, 'costs_statistics.html', context)
 
 
@@ -441,17 +445,6 @@ def _percentage(*, part, whole):
     if not whole:
         return Decimal('0.00')
     return (part / whole * 100).quantize(Decimal('0.01'))
-
-
-def _pie_gradient(category_rows):
-    colors = ('#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997')
-    start = Decimal('0.00')
-    segments = []
-    for row, color in zip(category_rows, colors):
-        end = start + row['percentage']
-        segments.append(f'{color} {start}% {end}%')
-        start = end
-    return f"conic-gradient({', '.join(segments)})"
 
 
 def _parse_invoice_ids(invoice_ids):
@@ -478,8 +471,12 @@ def _cost_items_data(formset):
 
 
 def _render_invoice_form(request, invoice_form, formset, title):
-    context = get_context(request)
-    context.update({'title': title, 'invoice_form': invoice_form, 'formset': formset})
+    context = {
+        'title': title,
+        'invoice_form': invoice_form,
+        'formset': formset,
+        'selected_year': invoice_form.instance.camp,
+    }
     return render(request, 'costs_invoice_form.html', context)
 
 

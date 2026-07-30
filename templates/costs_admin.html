@@ -4,6 +4,10 @@
 {% block content %}
   <article>
     <h1 class="mt-3">{{ title }}</h1>
+    <p>
+      <a class="btn btn-outline-secondary" href="{% url 'costs_reimbursements' selected_year.pk %}">Zwroty kosztów</a>
+      <a class="btn btn-outline-secondary" href="{% url 'costs_statistics' selected_year.pk %}">Statystyki</a>
+    </p>
     <form method="get" class="mb-3">
       <div class="form-row">
         {% for field in filter_form %}
@@ -25,6 +29,7 @@
             <th scope="col">Kwota</th>
             <th scope="col">Status</th>
             <th scope="col">Załącznik</th>
+            <th scope="col">Opis i pozycje</th>
           </tr>
         </thead>
         <tbody>
@@ -37,26 +42,34 @@
               <td>{{ invoice.amount }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
               <td>
-                <a href="{% url 'costs_invoice_attachment' invoice.pk %}">Pobierz</a>
+                <a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">Pobierz</a>
+              </td>
+              <td>
+                {{ invoice.description|linebreaksbr }}
+                <ul class="mb-0">
+                  {% for item in invoice.cost_items.all %}
+                    <li>{{ item.get_category_display }}: {{ item.amount }} zł{% if item.workshop %} — {{ item.workshop }}{% endif %}</li>
+                  {% endfor %}
+                </ul>
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="7">Brak faktur spełniających kryteria.</td></tr>
+            <tr><td colspan="8">Brak faktur spełniających kryteria.</td></tr>
           {% endfor %}
         </tbody>
       </table>
       {% if can_approve_costs %}
-        <button class="btn btn-success" formaction="{% url 'costs_admin_transition' %}"
+        <button class="btn btn-success" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
                 name="status" value="APPROVED" type="submit">Zatwierdź</button>
-        <button class="btn btn-danger" formaction="{% url 'costs_admin_transition' %}"
+        <button class="btn btn-danger" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
                 name="status" value="REJECTED" type="submit">Odrzuć</button>
       {% endif %}
       {% if can_process_costs %}
-        <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' %}"
+        <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
                 name="status" value="PROCESSED" type="submit">Oznacz jako przetworzone</button>
       {% endif %}
       {% if can_export_costs %}
-        <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' %}"
+        <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' selected_year.pk %}"
                 type="submit">Eksportuj CSV</button>
       {% endif %}
     </form>

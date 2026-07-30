@@ -344,15 +344,15 @@ class CostModelTests(TestCase):
             tuple(rows[0]),
             (
                 'internal_number', 'document_number', 'issue_date', 'user', 'invoice_type',
-                'status', 'invoice_amount', 'category', 'context_type', 'context_id',
-                'context_name', 'item_amount',
+                'status', 'invoice_amount', 'category', 'camp', 'workshop', 'item_amount',
                 'description',
             ),
         )
         self.assertEqual(rows[0]['internal_number'], invoice.internal_number)
         self.assertEqual(rows[0]['document_number'], invoice.document_number)
         self.assertEqual(rows[0]['item_amount'], Decimal('10.00'))
-        self.assertEqual(rows[0]['context_type'], 'camp')
+        self.assertEqual(rows[0]['camp'], str(self.camp))
+        self.assertEqual(rows[0]['workshop'], '')
         self.assertEqual(rows[1]['category'], CostItem.Category.OUTINGS)
 
     def test_invoice_csv_rows_escape_formula_leading_user_text(self):
@@ -363,8 +363,8 @@ class CostModelTests(TestCase):
         )
         self.invoice.description = '+description'
         self.invoice.save(update_fields=['description'])
-        self.user.username = '-username'
-        self.user.save(update_fields=['username'])
+        self.user.first_name = '-name'
+        self.user.save(update_fields=['first_name'])
 
         for formula_prefix in ('=', '+', '-', '@'):
             with self.subTest(formula_prefix=formula_prefix):
@@ -377,4 +377,4 @@ class CostModelTests(TestCase):
 
                 self.assertEqual(row['document_number'], f"'{formula_prefix}formula")
                 self.assertEqual(row['description'], "'+description")
-                self.assertEqual(row['user'], "'-username")
+                self.assertEqual(row['user'], "'-name")
