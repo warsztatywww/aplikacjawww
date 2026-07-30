@@ -177,18 +177,13 @@ class SettlementAndReimbursementFormTests(TestCase):
         self.assertEqual(details.user, self.user)
         self.assertEqual(details.camp, self.camp)
 
-    def test_reimbursement_form_saves_current_settlement_account_snapshot(self):
-        SettlementDetailsForm(
-            data={'account_number': 'PL61109010140000071219812874'},
-            user=self.user,
-            camp=self.camp,
-        ).save()
+    def test_reimbursement_form_sets_the_registration_context(self):
         form = ReimbursementForm(
             data={
                 'amount': '10.00',
                 'type': Reimbursement.Type.ASSOCIATION,
                 'comment': 'Transfer',
-                'executed_date': '2026-07-24',
+                'execution_date': '2026-07-24',
             },
             user=self.user,
             camp=self.camp,
@@ -197,7 +192,9 @@ class SettlementAndReimbursementFormTests(TestCase):
 
         self.assertTrue(form.is_valid(), form.errors)
         reimbursement = form.save()
-        self.assertEqual(reimbursement.account_number_snapshot, 'PL61109010140000071219812874')
+        self.assertEqual(reimbursement.user, self.user)
+        self.assertEqual(reimbursement.camp, self.camp)
+        self.assertEqual(reimbursement.registered_by, self.registered_by)
 
     def test_reimbursement_form_uses_polish_labels(self):
         form = ReimbursementForm(
@@ -212,7 +209,7 @@ class SettlementAndReimbursementFormTests(TestCase):
                 'amount': 'Kwota',
                 'type': 'Typ zwrotu',
                 'comment': 'Komentarz',
-                'executed_date': 'Data wykonania',
+                'execution_date': 'Data wykonania',
             },
         )
 

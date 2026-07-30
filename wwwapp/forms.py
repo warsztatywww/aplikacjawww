@@ -712,42 +712,23 @@ class SettlementDetailsForm(ModelForm):
 
 
 class ReimbursementForm(ModelForm):
-    """Register a reimbursement with the account used at registration time."""
+    """Register a reimbursement for a participant and workshop edition."""
 
     class Meta:
         model = Reimbursement
-        fields = ['amount', 'type', 'comment', 'executed_date']
+        fields = ['amount', 'type', 'comment', 'execution_date']
         labels = {
             'amount': 'Kwota',
             'type': 'Typ zwrotu',
             'comment': 'Komentarz',
-            'executed_date': 'Data wykonania',
+            'execution_date': 'Data wykonania',
         }
 
     def __init__(self, *args, user, camp, registered_by, **kwargs):
-        self.user = user
-        self.camp = camp
-        self.registered_by = registered_by
-        self.account_number_snapshot = None
         super().__init__(*args, **kwargs)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        details = SettlementDetails.objects.filter(user=self.user, camp=self.camp).first()
-        if details is None or not details.account_number.strip():
-            raise ValidationError('Dane rachunku bankowego dla tego obozu są wymagane.')
-        self.account_number_snapshot = details.account_number
-        return cleaned_data
-
-    def save(self, commit=True):
-        reimbursement = super().save(commit=False)
-        reimbursement.user = self.user
-        reimbursement.camp = self.camp
-        reimbursement.registered_by = self.registered_by
-        reimbursement.account_number_snapshot = self.account_number_snapshot
-        if commit:
-            reimbursement.save()
-        return reimbursement
+        self.instance.user = user
+        self.instance.camp = camp
+        self.instance.registered_by = registered_by
 
 
 class CostFilterForm(Form):

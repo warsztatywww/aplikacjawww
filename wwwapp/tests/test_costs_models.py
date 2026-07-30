@@ -1,14 +1,13 @@
 import os
 from decimal import Decimal
-from threading import Barrier, Thread
 from tempfile import TemporaryDirectory
 
 from django.contrib.auth.models import User
+from django.contrib.admin.sites import AdminSite
 from django.core.files.base import ContentFile
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import IntegrityError
-from django.db import close_old_connections
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 
 from wwwapp.models import (
     Camp,
@@ -28,6 +27,7 @@ from wwwapp.costs import (
     transition_invoices,
     update_invoice,
 )
+from wwwapp.admin import CostItemAdmin, InvoiceAdmin, ReimbursementAdmin, SettlementDetailsAdmin
 
 
 class CostModelTests(TestCase):
@@ -91,14 +91,52 @@ class CostModelTests(TestCase):
             SettlementDetails.objects.create(user=self.user, camp=self.camp,
                                              account_number='PL27114020040000300201355387')
 
-    def test_reimbursement_uses_an_account_number_snapshot(self):
-        self.assertIsNotNone(Reimbursement._meta.get_field('account_number_snapshot'))
+    def test_reimbursement_does_not_copy_an_account_number_snapshot(self):
+        with self.assertRaises(FieldDoesNotExist):
+            Reimbursement._meta.get_field('account_number_snapshot')
 
-    def test_invoice_queryset_deletion_is_prohibited(self):
-        with self.assertRaises(ValidationError):
-            Invoice.objects.filter(pk=self.invoice.pk).delete()
+    def test_cost_administrators_allow_standard_edits_and_reimbursement_deletion(self):
+        site = AdminSite()
+        request = RequestFactory().get('/')
+        request.user = User.objects.create_superuser('financial-admin', 'admin@example.com', 'password')
+        for admin_class, model in (
+            (InvoiceAdmin, Invoice),
+            (CostItemAdmin, CostItem),
+            (SettlementDetailsAdmin, SettlementDetails),
+            (ReimbursementAdmin, Reimbursement),
+        ):
+            with self.subTest(model=model.__name__):
+                model_admin = admin_class(model, site)
+                self.assertTrue(model_admin.has_add_permission(request))
+                self.assertTrue(model_admin.has_change_permission(request))
+                self.assertTrue(model_admin.has_delete_permission(request))
 
-        self.assertTrue(Invoice.objects.filter(pk=self.invoice.pk).exists())
+    def test_cost_text_fields_do_not_impose_a_frontend_length_limit(self):
+        self.assertIsNone(Invoice._meta.get_field('description').max_length)
+        self.assertIsNone(Reimbursement._meta.get_field('comment').max_length)
+
+    def test_settlement_details_normalize_a_formatted_polish_account_number(self):
+        details = SettlementDetails(
+            user=self.user,
+            camp=self.other_camp,
+            account_number='PL 61 1090 1014 0000 0712 1981 2874',
+        )
+
+        details.full_clean()
+
+        self.assertEqual(details.account_number, 'PL61109010140000071219812874')
+
+    def test_invoice_exposes_when_the_owner_can_edit_it(self):
+        self.assertTrue(self.invoice.can_user_edit)
+
+        self.invoice.status = Invoice.Status.APPROVED
+
+        self.assertFalse(self.invoice.can_user_edit)
+
+    def test_invoice_queryset_deletion_is_available_for_administrative_corrections(self):
+        Invoice.objects.filter(pk=self.invoice.pk).delete()
+
+        self.assertFalse(Invoice.objects.filter(pk=self.invoice.pk).exists())
 
     def test_rejected_invoice_becomes_received_when_edited(self):
         self.invoice.status = Invoice.Status.REJECTED
@@ -167,30 +205,6 @@ class CostModelTests(TestCase):
             finally:
                 field.storage = original_storage
 
-    def test_create_requires_settlement_details(self):
-        user_without_details = User.objects.create_user(username='no-details')
-
-        with self.assertRaises(ValidationError):
-            create_invoice(
-                user=user_without_details,
-                camp=self.camp,
-                invoice_data=self.data,
-                cost_items_data=[self.item],
-            )
-
-    def test_create_rejects_blank_settlement_account(self):
-        SettlementDetails.objects.filter(user=self.other_user, camp=self.camp).update(
-            account_number=' ',
-        )
-
-        with self.assertRaises(ValidationError):
-            create_invoice(
-                user=self.other_user,
-                camp=self.camp,
-                invoice_data=self.data,
-                cost_items_data=[self.item],
-            )
-
     def test_create_requires_at_least_one_cost_item(self):
         with self.assertRaises(ValidationError):
             create_invoice(
@@ -241,6 +255,7 @@ class CostModelTests(TestCase):
             (Invoice.Status.RECEIVED, Invoice.Status.REJECTED),
             (Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
             (Invoice.Status.APPROVED, Invoice.Status.REJECTED),
+            (Invoice.Status.REJECTED, Invoice.Status.APPROVED),
         }
 
         for index, source in enumerate(Invoice.Status.values):
@@ -304,9 +319,8 @@ class CostModelTests(TestCase):
             camp=self.camp,
             amount=Decimal('3.00'),
             type=Reimbursement.Type.ASSOCIATION,
-            executed_date='2026-07-25',
+            execution_date='2026-07-25',
             registered_by=self.admin,
-            account_number_snapshot='PL61109010140000071219812874',
         )
 
         self.assertEqual(balance_for(user=self.user, camp=self.camp), Decimal('11.00'))
@@ -364,54 +378,3 @@ class CostModelTests(TestCase):
                 self.assertEqual(row['document_number'], f"'{formula_prefix}formula")
                 self.assertEqual(row['description'], "'+description")
                 self.assertEqual(row['user'], "'-username")
-
-
-class InvoiceSequenceConcurrencyTests(TransactionTestCase):
-    reset_sequences = True
-
-    def setUp(self):
-        self.camp = Camp.objects.create(year=2030)
-        self.user = User.objects.create_user(username='sequence-user')
-        SettlementDetails.objects.create(
-            user=self.user,
-            camp=self.camp,
-            account_number='PL61109010140000071219812874',
-        )
-
-    def test_concurrent_creates_allocate_unique_contiguous_numbers(self):
-        barrier = Barrier(2)
-        numbers = []
-        errors = []
-        data = {
-            'issue_date': '2030-01-01',
-            'amount': Decimal('1.00'),
-            'invoice_type': Invoice.Type.KSEF,
-            'attachment': 'invoices/sequence.pdf',
-            'description': 'Test',
-        }
-        item = {'amount': Decimal('1.00'), 'category': CostItem.Category.WORKSHOPS}
-
-        def create(number):
-            close_old_connections()
-            try:
-                barrier.wait()
-                invoice = create_invoice(
-                    user=User.objects.get(pk=self.user.pk),
-                    camp=Camp.objects.get(pk=self.camp.pk),
-                    invoice_data={**data, 'document_number': f'FV/{number}/2030'},
-                    cost_items_data=[item],
-                )
-                numbers.append(invoice.internal_number)
-            except Exception as error:
-                errors.append(error)
-            finally:
-                close_old_connections()
-
-        threads = [Thread(target=create, args=(number,)) for number in (1, 2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-
-        self.assertEqual(errors, [])
-        self.assertEqual(set(numbers), {'WWW_2030_FP_0001', 'WWW_2030_FP_0002'})

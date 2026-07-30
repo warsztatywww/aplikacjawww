@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import threading
 import urllib.parse
 from decimal import Decimal
@@ -589,13 +590,6 @@ class InvoiceSequence(models.Model):
     last_allocated = models.PositiveIntegerField(default=0)
 
 
-class InvoiceQuerySet(models.QuerySet):
-    """Prevent invoices from being removed through bulk operations."""
-
-    def delete(self):
-        raise ValidationError('Invoices cannot be deleted')
-
-
 class Invoice(models.Model):
     class Status(models.TextChoices):
         RECEIVED = 'RECEIVED', 'Otrzymana'
@@ -620,34 +614,31 @@ class Invoice(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))],
     )
     invoice_type = models.CharField(max_length=24, choices=Type.choices)
-    description = models.TextField(max_length=1000)
+    description = models.TextField()
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.RECEIVED)
     internal_number = models.CharField(max_length=30, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    admin_changed_at = models.DateTimeField(null=True, blank=True)
-    admin_changed_by = models.ForeignKey(
+    admin_modified_at = models.DateTimeField(null=True, blank=True)
+    admin_modified_by = models.ForeignKey(
         User,
         null=True,
         blank=True,
         on_delete=models.PROTECT,
-        related_name='admin_changed_invoices',
+        related_name='admin_modified_invoices',
     )
-
-    objects = InvoiceQuerySet.as_manager()
 
     class Meta:
         permissions = (
             ('view_all_costs', 'Can view all costs'),
             ('approve_costs', 'Can approve or reject costs'),
-            ('export_costs', 'Can export costs'),
             ('process_costs', 'Can process costs'),
             ('register_reimbursements', 'Can register reimbursements'),
-            ('view_cost_statistics', 'Can view cost statistics'),
         )
 
-    def delete(self, *args, **kwargs):
-        raise ValidationError('Invoices cannot be deleted')
+    @property
+    def can_user_edit(self):
+        return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
 
 
 class CostItem(models.Model):
@@ -679,11 +670,7 @@ class CostItem(models.Model):
 
     def clean(self):
         super().clean()
-        if (
-            self.workshop_id
-            and self.invoice_id
-            and self.workshop.year_id != self.invoice.camp_id
-        ):
+        if self.workshop_id and self.workshop.year_id != self.invoice.camp_id:
             raise ValidationError({'workshop': 'Workshop must belong to the invoice camp'})
 
 
@@ -698,12 +685,23 @@ class SettlementDetails(models.Model):
         on_delete=models.PROTECT,
         related_name='settlement_details',
     )
-    account_number = models.CharField(max_length=34)
+    account_number = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('user', 'camp')
+
+    def clean(self):
+        super().clean()
+        account_number = re.sub(r'\s+', '', self.account_number).upper()
+        if account_number.startswith('PL'):
+            account_number = account_number[2:]
+        if not re.fullmatch(r'\d{26}', account_number):
+            raise ValidationError({'account_number': 'Podaj poprawny polski numer rachunku bankowego.'})
+        if int(f'{account_number[2:]}2521{account_number[:2]}') % 97 != 1:
+            raise ValidationError({'account_number': 'Podaj poprawny polski numer rachunku bankowego.'})
+        self.account_number = f'PL{account_number}'
 
 
 class Reimbursement(models.Model):
@@ -719,10 +717,9 @@ class Reimbursement(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))],
     )
     type = models.CharField(max_length=11, choices=Type.choices)
-    comment = models.TextField(max_length=1000, blank=True)
-    executed_date = models.DateField()
+    comment = models.TextField(blank=True)
+    execution_date = models.DateField()
     registered_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='registered_reimbursements')
-    account_number_snapshot = models.CharField(max_length=34)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

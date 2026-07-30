@@ -237,36 +237,23 @@ admin.site.register(Solution, SolutionAdmin)
 admin.site.register(ResourceYearPermission)
 
 
-class NoDeleteAdmin(admin.ModelAdmin):
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
-class ReadOnlyFinancialAdmin(NoDeleteAdmin):
-    def get_readonly_fields(self, request, obj=None):
-        return [field.name for field in self.model._meta.fields]
-
-    def has_add_permission(self, request):
-        return False
-
-
 @admin.register(Invoice)
-class InvoiceAdmin(ReadOnlyFinancialAdmin):
+class InvoiceAdmin(admin.ModelAdmin):
     list_display = ('internal_number', 'document_number', 'user', 'camp', 'amount', 'status')
     list_filter = ('camp', 'status', 'invoice_type')
 
 
 @admin.register(CostItem)
-class CostItemAdmin(ReadOnlyFinancialAdmin):
+class CostItemAdmin(admin.ModelAdmin):
     list_display = ('invoice', 'category', 'workshop', 'amount')
     list_filter = ('category',)
 
 
 @admin.register(SettlementDetails)
-class SettlementDetailsAdmin(ReadOnlyFinancialAdmin):
+class SettlementDetailsAdmin(admin.ModelAdmin):
     pass
 
 
 @admin.register(Reimbursement)
-class ReimbursementAdmin(ReadOnlyFinancialAdmin):
+class ReimbursementAdmin(admin.ModelAdmin):
     pass

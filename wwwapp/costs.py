@@ -1,10 +1,8 @@
 """Domain services for invoices and reimbursements."""
 
 from decimal import Decimal
-from time import sleep
-
 from django.core.exceptions import ValidationError
-from django.db import OperationalError, transaction
+from django.db import transaction
 from django.db.models import Sum
 from django.utils import timezone
 
@@ -39,33 +37,28 @@ CSV_FIELDS = (
 
 def create_invoice(*, user, camp, invoice_data, cost_items_data):
     """Create a received invoice with validated cost items and a camp number."""
-    for attempt in range(3):
-        try:
-            return _create_invoice(
-                user=user,
-                camp=camp,
-                invoice_data=invoice_data,
-                cost_items_data=cost_items_data,
-            )
-        except OperationalError as error:
-            if attempt == 2 or 'locked' not in str(error).lower():
-                raise
-            sleep(0.05 * (attempt + 1))
-    raise RuntimeError('Invoice creation retry loop unexpectedly ended')
+    return _create_invoice(
+        user=user,
+        camp=camp,
+        invoice_data=invoice_data,
+        cost_items_data=cost_items_data,
+    )
 
 
 @transaction.atomic
 def _create_invoice(*, user, camp, invoice_data, cost_items_data):
-    locked_camp = Camp.objects.select_for_update().get(pk=camp.pk)
-    _validate_settlement_details(user=user, camp=locked_camp)
+    locked_camp = Camp.objects.get(pk=camp.pk)
     items = _build_cost_items(cost_items_data=cost_items_data)
     amount = invoice_data.get('amount')
     _validate_cost_item_total(items=items, amount=amount)
 
-    sequence, _ = InvoiceSequence.objects.select_for_update().get_or_create(
-        camp=locked_camp,
-        defaults={'last_allocated': _highest_allocated_number(camp=locked_camp)},
-    )
+    try:
+        sequence = InvoiceSequence.objects.select_for_update().get(camp=locked_camp)
+    except InvoiceSequence.DoesNotExist:
+        sequence = InvoiceSequence.objects.create(
+            camp=locked_camp,
+            last_allocated=_highest_allocated_number(camp=locked_camp),
+        )
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
     invoice = Invoice(
@@ -88,7 +81,6 @@ def update_invoice(*, invoice, user, invoice_data, cost_items_data):
         raise ValidationError('Fakturę może edytować wyłącznie użytkownik, który ją dodał.')
     if invoice.status not in (Invoice.Status.RECEIVED, Invoice.Status.REJECTED):
         raise ValidationError('Można edytować tylko faktury otrzymane lub odrzucone.')
-    _validate_settlement_details(user=invoice.user, camp=invoice.camp)
     items = _build_cost_items(cost_items_data=cost_items_data)
     _validate_cost_item_total(items=items, amount=invoice_data.get('amount'))
     old_attachment_name = invoice.attachment.name
@@ -97,8 +89,8 @@ def update_invoice(*, invoice, user, invoice_data, cost_items_data):
         setattr(invoice, field, value)
     if invoice.status == Invoice.Status.REJECTED:
         invoice.status = Invoice.Status.RECEIVED
-        invoice.admin_changed_at = None
-        invoice.admin_changed_by = None
+        invoice.admin_modified_at = None
+        invoice.admin_modified_by = None
     invoice.full_clean()
     invoice.save()
     if old_attachment_name and invoice.attachment.name != old_attachment_name:
@@ -117,12 +109,9 @@ def transition_invoices(*, invoices, target_status, changed_by):
     if any(not _can_transition(invoice.status, target_status) for invoice in locked):
         raise ValidationError('Co najmniej jedna faktura nie może przejść do wybranego stanu.')
     for invoice in locked:
-        _validate_settlement_details(user=invoice.user, camp=invoice.camp)
-        _validate_invoice_items(invoice=invoice)
-    for invoice in locked:
         invoice.status = target_status
-        invoice.admin_changed_by = changed_by
-        invoice.admin_changed_at = timezone.now()
+        invoice.admin_modified_by = changed_by
+        invoice.admin_modified_at = timezone.now()
         invoice.save()
 
 
@@ -221,6 +210,7 @@ def _can_transition(current_status, target_status):
     transitions = {
         Invoice.Status.RECEIVED: (Invoice.Status.APPROVED, Invoice.Status.REJECTED),
         Invoice.Status.APPROVED: (Invoice.Status.PROCESSED, Invoice.Status.REJECTED),
+        Invoice.Status.REJECTED: (Invoice.Status.APPROVED,),
     }
     return target_status in transitions.get(current_status, ())
 
