@@ -10,12 +10,14 @@ from wwwapp.models import (
     Camp,
     CostItem,
     Invoice,
+    InvoiceSequence,
     Reimbursement,
     SettlementDetails,
     Workshop,
     WorkshopType,
 )
 from wwwapp.costs import (
+    allocate_invoice_number,
     balance_for,
     invoice_csv_rows,
     pending_total_for,
@@ -126,6 +128,29 @@ class CostModelTests(TestCase):
         self.invoice.status = Invoice.Status.APPROVED
 
         self.assertFalse(self.invoice.can_user_edit)
+
+    def test_invoice_numbers_are_sequential_per_edition(self):
+        other_invoice = Invoice.objects.create(
+            user=self.user,
+            camp=self.other_camp,
+            document_number='FV/1/2027',
+            issue_date='2027-07-24',
+            amount=Decimal('1.00'),
+            invoice_type=Invoice.Type.KSEF,
+            attachment='invoices/other.pdf',
+            description='Other edition',
+            internal_number='WWW_2027_FP_0041',
+        )
+
+        first_number = allocate_invoice_number(camp=self.camp)
+        second_number = allocate_invoice_number(camp=self.camp)
+        other_number = allocate_invoice_number(camp=self.other_camp)
+
+        self.assertEqual(first_number, 'WWW_2026_FP_0002')
+        self.assertEqual(second_number, 'WWW_2026_FP_0003')
+        self.assertEqual(other_number, 'WWW_2027_FP_0042')
+        self.assertEqual(InvoiceSequence.objects.get(camp=self.camp).last_allocated, 3)
+        self.assertEqual(InvoiceSequence.objects.get(camp=other_invoice.camp).last_allocated, 42)
 
     def test_invoice_queryset_deletion_is_available_for_administrative_corrections(self):
         Invoice.objects.filter(pk=self.invoice.pk).delete()
