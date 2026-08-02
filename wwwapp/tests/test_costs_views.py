@@ -851,6 +851,16 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(self.received_invoice.admin_modified_by, self.admin)
         self.assertIsNotNone(self.received_invoice.admin_modified_at)
 
+    def test_admin_invoice_edit_does_not_render_year_switches_without_an_invoice_id(self):
+        self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))
+        self.client.force_login(self.admin)
+
+        response = self.client.get(
+            reverse('costs_admin_invoice_edit', args=[self.camp.pk, self.received_invoice.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+
     def test_admin_cost_list_links_to_invoice_owner_profile_by_full_name(self):
         self.received_invoice.user.first_name = 'Jan'
         self.received_invoice.user.last_name = 'Kowalski'

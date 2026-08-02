@@ -39,7 +39,7 @@
               </td>
               <td>{{ invoice.camp }}</td>
               <td><a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a></td>
-              <td>{{ invoice.amount }} zł</td>
+              <td>{{ invoice.amount|floatformat:2 }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
               <td>
                 <a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">Pobierz</a>
@@ -48,7 +48,10 @@
                 {{ invoice.description|linebreaksbr }}
                 <ul class="mb-0">
                   {% for item in invoice.cost_items.all %}
-                    <li>{{ item.get_category_display }}: {{ item.amount }} zł{% if item.workshop %} — {{ item.workshop }}{% endif %}</li>
+                    <li>
+                      {{ item.get_category_display }}: {{ item.amount|floatformat:2 }} zł
+                      {% if item.workshop %} — {{ item.workshop }}{% endif %}
+                    </li>
                   {% endfor %}
                 </ul>
               </td>

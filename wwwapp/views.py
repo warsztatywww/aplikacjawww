@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import json
+import math
 import mimetypes
 import os
 import sys
@@ -442,12 +443,12 @@ def costs_statistics_view(request, year):
         for value, label in CostItem.Category.choices
     ]
     colors = ('#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997')
-    offset = Decimal('0.00')
+    start_angle = -90
     for row, color in zip(category_rows, colors):
         row['color'] = color
-        row['offset'] = -offset
-        row['remainder'] = Decimal('100.00') - row['percentage']
-        offset += row['percentage']
+        angle = float(row['total'] / total * 360) if total else 0
+        row['pie_path'] = _pie_slice_path(start_angle=start_angle, angle=angle)
+        start_angle += angle
     context = {
         'title': 'Statystyki kosztów',
         'selected_year': camp,
@@ -465,6 +466,26 @@ def _percentage(*, part, whole):
     if not whole:
         return Decimal('0.00')
     return (part / whole * 100).quantize(Decimal('0.01'))
+
+
+def _pie_slice_path(*, start_angle, angle):
+    """Return an SVG path describing a sector of a pie chart."""
+    if not angle:
+        return ''
+    if angle >= 360:
+        return 'M 50 50 L 50 10 A 40 40 0 1 1 50 90 A 40 40 0 1 1 50 10 Z'
+
+    start_radians = math.radians(start_angle)
+    end_radians = math.radians(start_angle + angle)
+    start_x = 50 + 40 * math.cos(start_radians)
+    start_y = 50 + 40 * math.sin(start_radians)
+    end_x = 50 + 40 * math.cos(end_radians)
+    end_y = 50 + 40 * math.sin(end_radians)
+    large_arc = 1 if angle > 180 else 0
+    return (
+        f'M 50 50 L {start_x:.4f} {start_y:.4f} '
+        f'A 40 40 0 {large_arc} 1 {end_x:.4f} {end_y:.4f} Z'
+    )
 
 
 def latest_program_redirect_view(request):

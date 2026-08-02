@@ -24,9 +24,9 @@
           <tr>
             <td>{{ row.user.get_full_name }}</td>
             <td>{{ row.account_number }}</td>
-            <td>{{ row.approved_total }} zł</td>
-            <td>{{ row.reimbursed_total }} zł</td>
-            <td>{{ row.remaining_total }} zł</td>
+            <td>{{ row.approved_total|floatformat:2 }} zł</td>
+            <td>{{ row.reimbursed_total|floatformat:2 }} zł</td>
+            <td>{{ row.remaining_total|floatformat:2 }} zł</td>
           </tr>
         {% empty %}
           <tr><td colspan="5">Brak osób oczekujących na zwrot.</td></tr>
@@ -36,11 +36,11 @@
 
     {% if selected_user %}
       <h2>Nowy zwrot dla {{ selected_user.get_full_name }}</h2>
-      <p>Suma zatwierdzona: {{ approved_total }} zł</p>
-      <p>Suma zwrócona: {{ reimbursed_total }} zł</p>
-      <p>Pozostało do zwrotu: {{ balance_before }} zł</p>
+      <p>Suma zatwierdzona: {{ approved_total|floatformat:2 }} zł</p>
+      <p>Suma zwrócona: {{ reimbursed_total|floatformat:2 }} zł</p>
+      <p>Pozostało do zwrotu: {{ balance_before|floatformat:2 }} zł</p>
       {% if balance_after is not None %}
-        <p>Saldo po zwrocie: {{ balance_after }} zł</p>
+        <p>Saldo po zwrocie: {{ balance_after|floatformat:2 }} zł</p>
       {% endif %}
       <form method="post">
         {% csrf_token %}
@@ -66,7 +66,7 @@
           <tr>
             <td>{{ row.reimbursement.execution_date }}</td>
             <td>{{ row.reimbursement.user.get_full_name }}</td>
-            <td>{{ row.reimbursement.amount }} zł</td>
+            <td>{{ row.reimbursement.amount|floatformat:2 }} zł</td>
             <td>{{ row.reimbursement.get_type_display }}</td>
             <td>{{ row.account_number }}</td>
             <td>{{ row.reimbursement.registered_by.get_full_name }}</td>
