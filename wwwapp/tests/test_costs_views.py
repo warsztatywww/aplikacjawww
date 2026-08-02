@@ -22,6 +22,7 @@ from wwwapp.models import (
     Camp,
     CostItem,
     Invoice,
+    InvoiceSequence,
     Reimbursement,
     SettlementDetails,
     UploadStorage,
@@ -264,6 +265,7 @@ class OwnCostsViewsTests(TestCase):
             description='Workshop materials',
             internal_number='WWW_2026_FP_0001',
         )
+        InvoiceSequence.objects.create(camp=self.camp, last_allocated=1)
 
     def invoice_post_data(self, **overrides):
         data = {

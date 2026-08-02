@@ -6,7 +6,6 @@ import urllib.parse
 from decimal import Decimal
 from typing import Set, Optional
 
-from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
@@ -641,11 +640,6 @@ class Invoice(models.Model):
     @property
     def can_user_edit(self):
         return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
-
-    async def adelete(self, *args, **kwargs):
-        """Apply the synchronous deletion policy through Django's async API."""
-        return await sync_to_async(self.delete)(*args, **kwargs)
-
 
 @receiver(pre_delete, sender=Invoice)
 def prevent_invoice_deletion(*, instance, **kwargs):

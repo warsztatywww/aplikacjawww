@@ -390,13 +390,12 @@ def costs_statistics_view(request, year):
     if filter_form.is_valid():
         status = filter_form.cleaned_data['status']
         item_context = filter_form.cleaned_data['context']
-    if status in Invoice.Status.values:
-        items = items.filter(invoice__status=status)
-    else:
-        status = ''
+    if status == '':
         items = items.filter(
             invoice__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
         )
+    elif status in Invoice.Status.values:
+        items = items.filter(invoice__status=status)
     if item_context == 'workshop':
         items = items.filter(workshop__isnull=False)
     elif item_context == 'camp':

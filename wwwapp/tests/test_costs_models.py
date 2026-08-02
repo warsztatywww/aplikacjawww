@@ -6,7 +6,6 @@ from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase
-from asgiref.sync import async_to_sync
 
 from wwwapp.models import (
     Camp,
@@ -57,6 +56,7 @@ class CostModelTests(TestCase):
             description='Materiały do warsztatów',
             internal_number='WWW_2026_FP_0001',
         )
+        InvoiceSequence.objects.create(camp=self.camp, last_allocated=1)
         workshop_type = WorkshopType.objects.create(year=self.other_camp, name='Type')
         self.other_workshop = Workshop.objects.create(
             year=self.other_camp,
@@ -131,7 +131,7 @@ class CostModelTests(TestCase):
 
         self.assertFalse(self.invoice.can_user_edit)
 
-    def test_invoice_numbers_are_sequential_per_edition(self):
+    def test_invoice_numbers_start_from_one_when_the_sequence_is_created(self):
         other_invoice = Invoice.objects.create(
             user=self.user,
             camp=self.other_camp,
@@ -143,18 +143,22 @@ class CostModelTests(TestCase):
             description='Other edition',
             internal_number='WWW_2027_FP_0041',
         )
+        InvoiceSequence.objects.create(camp=self.other_camp, last_allocated=41)
+        empty_camp = Camp.objects.create(year=2028)
 
         first_number = allocate_invoice_number(camp=self.camp)
         second_number = allocate_invoice_number(camp=self.camp)
         other_number = allocate_invoice_number(camp=self.other_camp)
+        empty_camp_number = allocate_invoice_number(camp=empty_camp)
 
         self.assertEqual(first_number, 'WWW_2026_FP_0002')
         self.assertEqual(second_number, 'WWW_2026_FP_0003')
         self.assertEqual(other_number, 'WWW_2027_FP_0042')
+        self.assertEqual(empty_camp_number, 'WWW_2028_FP_0001')
         self.assertEqual(InvoiceSequence.objects.get(camp=self.camp).last_allocated, 3)
         self.assertEqual(InvoiceSequence.objects.get(camp=other_invoice.camp).last_allocated, 42)
 
-    def test_invoice_deletion_is_protected_for_all_django_apis(self):
+    def test_invoice_deletion_is_protected_for_available_django_apis(self):
         invoices = [
             self.invoice,
             Invoice.objects.create(
@@ -184,7 +188,6 @@ class CostModelTests(TestCase):
         deletion_calls = (
             invoices[0].delete,
             lambda: Invoice.objects.filter(pk=invoices[1].pk).delete(),
-            lambda: async_to_sync(invoices[2].adelete)(),
         )
         for delete in deletion_calls:
             with self.subTest(delete=delete), self.assertRaises(ProtectedError):

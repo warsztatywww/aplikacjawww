@@ -33,7 +33,7 @@
               <td><input type="checkbox" name="invoice_ids" value="{{ invoice.pk }}"></td>
               <td>{{ invoice.internal_number }}</td>
               <td>{{ invoice.camp }}</td>
-              <td>{{ invoice.user }}</td>
+              <td><a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a></td>
               <td>{{ invoice.amount }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
               <td>

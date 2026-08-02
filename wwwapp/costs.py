@@ -33,10 +33,7 @@ def allocate_invoice_number(*, camp):
     try:
         sequence = InvoiceSequence.objects.select_for_update().get(camp=camp)
     except InvoiceSequence.DoesNotExist:
-        sequence = InvoiceSequence.objects.create(
-            camp=camp,
-            last_allocated=_highest_allocated_number(camp=camp),
-        )
+        sequence = InvoiceSequence.objects.create(camp=camp)
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
     return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
@@ -131,16 +128,3 @@ def _total_for_invoices(*, user, camp, statuses):
         total=Sum('amount'),
     )['total']
     return total or Decimal('0.00')
-
-
-def _highest_allocated_number(*, camp):
-    prefix = f'WWW_{camp.year}_FP_'
-    numbers = Invoice.objects.filter(camp=camp, internal_number__startswith=prefix).values_list(
-        'internal_number', flat=True,
-    )
-    allocated = [
-        int(number.removeprefix(prefix))
-        for number in numbers
-        if number.removeprefix(prefix).isdecimal()
-    ]
-    return max(allocated, default=0)
