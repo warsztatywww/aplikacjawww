@@ -182,7 +182,7 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         request.POST or None,
         request.FILES or None,
         instance=invoice,
-        user=request.user,
+        user=invoice.user if invoice else request.user,
         camp=camp,
     )
     formset = CostItemFormSet(request.POST or None, instance=invoice_form.instance)
