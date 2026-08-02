@@ -1,56 +1,92 @@
-{% extends "base.html" %}
+{% extends "mydata_base.html" %}
 {% load crispy_forms_tags %}
+{% load wwwtags %}
 
-{% block content %}
+{% block mydata_page_content %}
   <article>
-    <header class="d-flex justify-content-between align-items-center mt-3">
-      <h1>{{ title }}</h1>
-      <a class="btn btn-primary" href="{% url 'costs_invoice_add' selected_year.pk %}">Dodaj fakturę</a>
-    </header>
+    <section class="card mb-4" aria-labelledby="cost-summary-heading">
+      <div class="card-body">
+        <h2 class="h4" id="cost-summary-heading">Podsumowanie rozliczenia</h2>
+        <div class="row">
+          <div class="col-sm-6 col-xl-3 mb-3 mb-xl-0">
+            <div class="border rounded h-100 p-3">
+              <div class="small text-muted">Zatwierdzone faktury</div>
+              <div class="h4 mb-0">{{ approved_total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3 mb-3 mb-xl-0">
+            <div class="border rounded h-100 p-3">
+              <div class="small text-muted">Zwrócono</div>
+              <div class="h4 mb-0">{{ reimbursed_total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3 mb-3 mb-sm-0">
+            <div class="border rounded h-100 p-3">
+              <div class="small text-muted">Pozostało do zwrotu</div>
+              <div class="h4 mb-0">{{ remaining_total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-xl-3">
+            <div class="border border-warning rounded h-100 p-3">
+              <div class="small text-muted">Oczekujące na zatwierdzenie</div>
+              <div class="h4 mb-0">{{ pending_total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <p>
-      Suma zatwierdzonych faktur: {{ approved_total }} zł<br>
-      Zwrócono: {{ reimbursed_total }} zł<br>
-      Zatwierdzone i jeszcze nie zwrócone: {{ remaining_total }} zł<br>
-      Oczekujące na zatwierdzenie: {{ pending_total }} zł
-    </p>
-    {% if invoices %}
-      <table class="table">
+    <section class="mb-4" aria-labelledby="invoices-heading">
+      <header class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3">
+        <div>
+          <h2 class="h4 mb-1" id="invoices-heading">Faktury</h2>
+          <p class="mb-2 mb-sm-0 text-muted">Dodaj dokument lub wybierz oczekujący dokument, aby go poprawić.</p>
+        </div>
+        <a class="btn btn-primary" href="{% url 'costs_invoice_add' year=selected_year.pk %}">Dodaj fakturę</a>
+      </header>
+      {% if invoices %}
+      <div class="table-responsive">
+      <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th>Numer</th>
-            <th>Data</th>
-            <th>Kwota</th>
-            <th>Status</th>
-            <th>Załącznik</th>
+            <th scope="col">Numer</th>
+            <th scope="col">Data</th>
+            <th scope="col">Kwota</th>
+            <th scope="col">Status</th>
+            <th scope="col">Załącznik</th>
           </tr>
         </thead>
         <tbody>
           {% for invoice in invoices %}
             <tr>
-              <td>
+              <th scope="row">
                 {% if invoice.can_user_edit %}
-                  <a href="{% url 'costs_invoice_edit' selected_year.pk invoice.pk %}">{{ invoice.document_number }}</a>
+                  <a href="{% url 'costs_invoice_edit' year=selected_year.pk invoice_id=invoice.pk %}">{{ invoice.document_number }}</a>
                 {% else %}
                   {{ invoice.document_number }}
                 {% endif %}
-              </td>
-              <td>{{ invoice.issue_date }}</td>
-              <td>{{ invoice.amount }} zł</td>
+              </th>
+              <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
+              <td>{{ invoice.amount|floatformat:2 }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
-              <td><a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">Pobierz</a></td>
+              <td><a href="{% url 'costs_invoice_attachment' year=selected_year.pk invoice_id=invoice.pk %}">Pobierz</a></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
+      </div>
     {% else %}
-      <p>Nie {% if user.user_profile.gender == 'F' %}dodałaś{% else %}dodałeś{% endif %} jeszcze faktur.</p>
+      <div class="alert alert-light border mb-0" role="status">
+        Nie {% if user.user_profile.gender == 'F' %}dodałaś{% else %}dodałeś{% endif %} jeszcze faktur.
+      </div>
     {% endif %}
+    </section>
 
-    <section class="mt-4">
-      <h2>Dane rachunku bankowego</h2>
+    <section class="card" aria-labelledby="settlement-details-heading">
+      <div class="card-body">
+      <h2 class="h4" id="settlement-details-heading">Dane rachunku bankowego</h2>
       {% if settlement_details_form.instance.pk %}
-        <p>{{ settlement_details_form.instance.account_number }}</p>
+        <p class="font-weight-bold">{{ settlement_details_form.instance.account_number|polish_account_number }}</p>
         <details>
           <summary class="btn btn-outline-primary">Zmień dane rachunku bankowego</summary>
           {% crispy settlement_details_form %}
@@ -58,6 +94,7 @@
       {% else %}
         {% crispy settlement_details_form %}
       {% endif %}
+      </div>
     </section>
   </article>
 {% endblock %}

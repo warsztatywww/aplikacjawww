@@ -238,6 +238,19 @@ class SettlementAndReimbursementFormTests(TestCase):
             with self.subTest(form=form.__class__.__name__):
                 self.assertEqual(form.fields['amount'].widget.attrs['min'], '0.01')
 
+    def test_invoice_date_uses_the_standard_date_picker_widget(self):
+        form = InvoiceForm(user=self.user, camp=self.camp)
+
+        self.assertEqual(form.fields['issue_date'].widget.input_type, 'text')
+        self.assertNotIn('type', form.fields['issue_date'].widget.attrs)
+
+    def test_money_inputs_accept_local_decimal_entry(self):
+        form = InvoiceForm(user=self.user, camp=self.camp)
+
+        self.assertEqual(form.fields['amount'].widget.input_type, 'text')
+        self.assertEqual(form.fields['amount'].widget.attrs['inputmode'], 'decimal')
+        self.assertIn('data-money-input', form.fields['amount'].widget.attrs)
+
     def test_reimbursement_user_form_uses_full_names(self):
         self.user.first_name = 'Jan'
         self.user.last_name = 'Kowalski'
@@ -320,6 +333,13 @@ class OwnCostsViewsTests(TestCase):
         self.assertEqual(response.context['reimbursed_total'], Decimal('0.00'))
         self.assertEqual(response.context['remaining_total'], Decimal('10.00'))
         self.assertEqual(response.context['pending_total'], Decimal('4.00'))
+        self.assertContains(
+            response,
+            reverse('costs_invoice_edit', args=[self.camp.pk, pending_invoice.pk]),
+        )
+        self.assertContains(response, 'Podsumowanie rozliczenia')
+        self.assertContains(response, 'id="invoices-heading">Faktury</h2>')
+        self.assertContains(response, '4,00 zł')
 
     def test_invoice_add_requires_settlement_details(self):
         self.client.force_login(self.user)
@@ -356,7 +376,7 @@ class OwnCostsViewsTests(TestCase):
         response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
 
         self.assertContains(response, 'Dane rachunku bankowego')
-        self.assertContains(response, 'PL61109010140000071219812874')
+        self.assertContains(response, 'PL 61 1090 1014 0000 0712 1981 2874')
 
     def test_mydata_navigation_shows_own_costs_after_first_invoice(self):
         self.client.force_login(self.user)
@@ -366,6 +386,60 @@ class OwnCostsViewsTests(TestCase):
         page = response.content.decode()
         self.assertIn(reverse('costs_mine', args=[self.camp.pk]), page)
         self.assertLess(page.index('Formularze'), page.index(reverse('costs_mine', args=[self.camp.pk])))
+
+    def test_mydata_navigation_hides_own_costs_without_an_invoice_or_lecturer_role(self):
+        self.client.force_login(self.other_user)
+
+        response = self.client.get(reverse('mydata_forms'))
+
+        self.assertNotContains(response, 'Moje koszty')
+
+    def test_mydata_navigation_shows_own_costs_to_a_lecturer_without_an_invoice(self):
+        workshop_type = WorkshopType.objects.create(year=self.camp, name='Lecturer type')
+        workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='lecturer-workshop',
+            title='Lecturer workshop',
+        )
+        workshop.lecturer.add(self.other_user.user_profile)
+        self.client.force_login(self.other_user)
+
+        response = self.client.get(reverse('mydata_forms'))
+
+        self.assertContains(response, 'Moje koszty')
+
+    def test_own_cost_urls_are_nested_under_the_profile(self):
+        self.assertEqual(reverse('costs_mine', args=[self.camp.pk]), f'/me/costs/{self.camp.pk}/')
+        self.assertEqual(
+            reverse('costs_invoice_add', args=[self.camp.pk]),
+            f'/me/costs/{self.camp.pk}/invoices/add/',
+        )
+
+    def test_cost_list_uses_the_profile_navigation_shell(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
+
+        self.assertTemplateUsed(response, 'mydata_base.html')
+        self.assertEqual(response.context['title'], 'Mój profil')
+        self.assertContains(response, 'nav-pills')
+        self.assertContains(response, 'Moje koszty')
+
+    def test_invoice_add_explains_fields_and_links_back_to_own_costs(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
+
+        self.assertContains(response, 'Wróć do moich kosztów')
+        self.assertContains(response, 'Załącz skan lub plik PDF dokumentu')
+        self.assertContains(response, 'Łączna kwota brutto dokumentu')
+        self.assertContains(response, 'pozostałej bez przypisania do warsztatu')
 
     def test_cost_forms_render_polish_labels_and_submit_control(self):
         SettlementDetails.objects.create(
@@ -392,7 +466,7 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(settlement_response, 'Numer rachunku bankowego')
         self.assertContains(settlement_response, 'Zapisz')
 
-    def test_invoice_add_uses_crispy_formset_without_row_cloning_javascript(self):
+    def test_invoice_add_allows_adding_multiple_cost_items(self):
         SettlementDetails.objects.create(
             user=self.user,
             camp=self.camp,
@@ -404,9 +478,24 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertContains(response, 'id="cost-item-forms"')
         self.assertContains(response, 'data-sync-invoice-amount')
-        self.assertNotContains(response, 'id="cost-item-empty-form"')
-        self.assertNotContains(response, 'name="cost_items-__prefix__-amount"')
-        self.assertNotContains(response, 'id="add-cost-item"')
+        self.assertContains(response, 'id="cost-item-empty-form"')
+        self.assertContains(response, 'name="cost_items-__prefix__-amount"')
+        self.assertContains(response, 'id="add-cost-item"')
+        self.assertContains(response, 'class="alert alert-info" id="cost-item-total"')
+        self.assertContains(response, 'class="cost-item-form card mb-2"')
+
+    def test_invoice_amount_uses_the_shared_date_picker_and_money_input(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
+
+        self.assertContains(response, 'data-money-input')
+        self.assertContains(response, 'inputmode="decimal"')
 
     def test_invoice_add_displays_allocation_errors(self):
         SettlementDetails.objects.create(
@@ -427,6 +516,28 @@ class OwnCostsViewsTests(TestCase):
         )
 
         self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
+
+    def test_invoice_edit_displays_allocation_error_and_remaining_amount_action(self):
+        cost_item = CostItem.objects.create(
+            invoice=self.invoice,
+            amount=Decimal('10.00'),
+            category=CostItem.Category.REGULAR_PURCHASES,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_invoice_edit', args=[self.camp.pk, self.invoice.pk]),
+            self.invoice_post_data(**{
+                'cost_items-INITIAL_FORMS': '1',
+                'cost_items-0-id': str(cost_item.pk),
+                'cost_items-0-amount': '9.00',
+            }),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="cost-item-total-error"')
+        self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
+        self.assertContains(response, 'data-fill-remaining-cost-item')
 
     def test_invoice_add_creates_invoice_with_a_cost_item(self):
         SettlementDetails.objects.create(
@@ -525,6 +636,24 @@ class OwnCostsViewsTests(TestCase):
         response = self.client.get(reverse('costs_invoice_edit', args=[self.camp.pk, self.invoice.pk]))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_invoice_edit_does_not_render_year_switches_without_an_invoice_id(self):
+        invoice = Invoice.objects.create(
+            user=self.user,
+            camp=Camp.objects.create(year=2027),
+            attachment='invoices/fv-2027.pdf',
+            document_number='FV/1/2027',
+            issue_date='2027-07-24',
+            amount=Decimal('10.00'),
+            invoice_type=Invoice.Type.KSEF,
+            description='Workshop materials',
+            internal_number='WWW_2027_FP_0001',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_invoice_edit', args=[invoice.camp_id, invoice.pk]))
+
+        self.assertEqual(response.status_code, 200)
 
     def test_approved_and_processed_invoices_cannot_be_edited(self):
         self.client.force_login(self.user)
@@ -691,6 +820,50 @@ class CostAdministrationViewsTests(TestCase):
             response,
             reverse('costs_invoice_attachment', args=[self.camp.pk, self.received_invoice.pk]),
         )
+
+    def test_admin_with_change_invoice_permission_can_edit_another_users_invoice(self):
+        self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse('costs_admin_invoice_edit', args=[self.camp.pk, self.received_invoice.pk]),
+            {
+                'document_number': 'FV/corrected',
+                'issue_date': '2026-07-24',
+                'amount': '12.00',
+                'invoice_type': Invoice.Type.KSEF,
+                'description': 'Corrected cost administration test',
+                'cost_items-TOTAL_FORMS': '1',
+                'cost_items-INITIAL_FORMS': '1',
+                'cost_items-MIN_NUM_FORMS': '0',
+                'cost_items-MAX_NUM_FORMS': '1000',
+                'cost_items-0-id': self.received_invoice.cost_items.get().pk,
+                'cost_items-0-workshop': '',
+                'cost_items-0-amount': '12.00',
+                'cost_items-0-category': CostItem.Category.REGULAR_PURCHASES,
+            },
+        )
+
+        self.assertRedirects(response, reverse('costs_admin', args=[self.camp.pk]))
+        self.received_invoice.refresh_from_db()
+        self.assertEqual(self.received_invoice.document_number, 'FV/corrected')
+        self.assertEqual(self.received_invoice.amount, Decimal('12.00'))
+        self.assertEqual(self.received_invoice.admin_modified_by, self.admin)
+        self.assertIsNotNone(self.received_invoice.admin_modified_at)
+
+    def test_admin_cost_list_links_to_invoice_owner_profile_by_full_name(self):
+        self.received_invoice.user.first_name = 'Jan'
+        self.received_invoice.user.last_name = 'Kowalski'
+        self.received_invoice.user.save()
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
+
+        self.assertContains(
+            response,
+            reverse('profile', args=[self.received_invoice.user_id]),
+        )
+        self.assertContains(response, 'Jan Kowalski')
 
     def test_approval_transition_requires_approval_permission(self):
         self.client.force_login(self.csv_user)

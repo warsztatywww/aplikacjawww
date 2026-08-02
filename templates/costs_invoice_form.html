@@ -1,9 +1,25 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
+{% block styles %}
+  {{ block.super }}
+  <style>
+    .cost-item-form .form-group {
+      margin-bottom: 0;
+    }
+
+    .cost-item-form .form-text {
+      display: none;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
   <article>
-    <header><h1>{{ title }}</h1></header>
+    <header class="d-flex justify-content-between align-items-center mt-3">
+      <h1>{{ title }}</h1>
+      <a class="btn btn-outline-primary" href="{{ return_url }}">{{ return_label }}</a>
+    </header>
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       {% crispy invoice_form %}
@@ -11,16 +27,56 @@
       <h2>Pozycje kosztowe</h2>
       {{ formset.management_form }}
       {% if formset.non_form_errors %}
-        <div class="alert alert-danger" role="alert">{{ formset.non_form_errors }}</div>
+        <div class="alert alert-danger" id="cost-item-total-error" role="alert" tabindex="-1">
+          <strong>Nie można zapisać faktury.</strong>
+          {{ formset.non_form_errors }}
+        </div>
       {% endif %}
+      <div class="alert alert-info" id="cost-item-total" aria-live="polite" role="status"></div>
       <div id="cost-item-forms">
         {% for form in formset %}
-        <fieldset{% if forloop.first and formset.initial_form_count == 0 %}
+        <fieldset class="cost-item-form card mb-2"{% if forloop.first and formset.initial_form_count == 0 %}
           data-sync-invoice-amount{% endif %}>
-          {% crispy form %}
+          <div class="card-body py-2">
+            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+            <div class="row align-items-end">
+              <div class="col-12 col-lg-5 mb-2 mb-lg-0">{{ form.workshop|as_crispy_field }}</div>
+              <div class="col-12 col-md-6 col-lg-3 mb-2 mb-lg-0">{{ form.category|as_crispy_field }}</div>
+              <div class="col-8 col-md-4 col-lg-2">{{ form.amount|as_crispy_field }}</div>
+              <div class="col-4 col-md-2 d-flex align-items-end">
+                <button class="btn btn-outline-secondary btn-sm" data-fill-remaining-cost-item
+                  type="button">Reszta</button>
+              </div>
+              {% if form.DELETE %}
+                <div class="col-12 mt-2 form-check">
+                  {{ form.DELETE }}
+                  <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">
+                    Usuń pozycję
+                  </label>
+                </div>
+              {% endif %}
+            </div>
+          </div>
         </fieldset>
         {% endfor %}
       </div>
+      <template id="cost-item-empty-form">
+        <fieldset class="cost-item-form card mb-2">
+          <div class="card-body py-2">
+            {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+            <div class="row align-items-end">
+              <div class="col-12 col-lg-5 mb-2 mb-lg-0">{{ formset.empty_form.workshop|as_crispy_field }}</div>
+              <div class="col-12 col-md-6 col-lg-3 mb-2 mb-lg-0">{{ formset.empty_form.category|as_crispy_field }}</div>
+              <div class="col-8 col-md-4 col-lg-2">{{ formset.empty_form.amount|as_crispy_field }}</div>
+              <div class="col-4 col-md-2 d-flex align-items-end">
+                <button class="btn btn-outline-secondary btn-sm" data-fill-remaining-cost-item
+                  type="button">Reszta</button>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+      </template>
+      <button class="btn btn-outline-primary mt-2" id="add-cost-item" type="button">Dodaj pozycję kosztową</button>
 
       <button class="btn btn-primary" type="submit">Zapisz</button>
     </form>
@@ -33,9 +89,113 @@
     (() => {
       const forms = document.getElementById('cost-item-forms');
       const invoiceAmount = document.getElementById('id_amount');
-      if (!forms || !invoiceAmount) {
+      const invoiceForm = forms ? forms.closest('form') : null;
+      const totalForms = document.getElementById('id_cost_items-TOTAL_FORMS');
+      const emptyForm = document.getElementById('cost-item-empty-form');
+      const addCostItem = document.getElementById('add-cost-item');
+      const totalDisplay = document.getElementById('cost-item-total');
+      if (!forms || !invoiceAmount || !invoiceForm || !totalForms || !emptyForm || !addCostItem
+        || !totalDisplay) {
         return;
       }
+
+      const amountInGrosze = (input) => {
+        const value = input.value.trim();
+        if (!/^\d+(?:[,.]\d{0,2})?$/.test(value)) {
+          return null;
+        }
+        return Math.round(Number(value.replace(',', '.')) * 100);
+      };
+      const formatMoney = (input) => {
+        const value = input.value.trim();
+        if (!/^\d+(?:[,.]\d{0,2})?$/.test(value)) {
+          return;
+        }
+        input.value = Number.parseFloat(value.replace(',', '.')).toFixed(2);
+      };
+      const costItemFieldsets = () => [...forms.querySelectorAll(':scope > fieldset')];
+      const costItemAmount = (fieldset) => fieldset.querySelector('input[name$="-amount"]');
+      const isDeleted = (fieldset) => {
+        const deleteInput = fieldset.querySelector('input[name$="-DELETE"]');
+        return deleteInput && deleteInput.checked;
+      };
+      const formatGrosze = (amount) => (amount / 100).toLocaleString('pl-PL', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      const updateTotalDisplay = () => {
+        const expected = amountInGrosze(invoiceAmount);
+        const inputs = costItemFieldsets()
+          .filter((fieldset) => !isDeleted(fieldset))
+          .map(costItemAmount);
+        const amounts = inputs.map(amountInGrosze);
+        if (expected === null || amounts.includes(null)) {
+          totalDisplay.textContent = 'Uzupełnij poprawne kwoty, aby sprawdzić sumę pozycji.';
+          return;
+        }
+        const total = amounts.reduce((sum, amount) => sum + amount, 0);
+        const difference = expected - total;
+        let status = 'Suma pozycji jest zgodna z kwotą faktury.';
+        if (difference > 0) {
+          status = `Do rozliczenia pozostaje: ${formatGrosze(difference)} zł.`;
+        } else if (difference < 0) {
+          status = `Suma pozycji przekracza kwotę faktury o ${formatGrosze(-difference)} zł.`;
+        }
+        totalDisplay.textContent = `Suma pozycji: ${formatGrosze(total)} zł. ${status}`;
+      };
+      invoiceForm.addEventListener('submit', () => {
+        invoiceForm.querySelectorAll('[data-money-input]').forEach(formatMoney);
+      });
+      invoiceForm.querySelectorAll('[data-money-input]').forEach((input) => {
+        input.addEventListener('blur', () => {
+          formatMoney(input);
+          updateTotalDisplay();
+        });
+      });
+
+      addCostItem.addEventListener('click', () => {
+        const index = totalForms.value;
+        forms.insertAdjacentHTML('beforeend', emptyForm.innerHTML.replaceAll('__prefix__', index));
+        totalForms.value = String(Number.parseInt(index, 10) + 1);
+        forms.lastElementChild.querySelectorAll('[data-money-input]').forEach((input) => {
+          input.addEventListener('blur', () => {
+            formatMoney(input);
+            updateTotalDisplay();
+          });
+        });
+        updateTotalDisplay();
+      });
+
+      forms.addEventListener('input', updateTotalDisplay);
+      forms.addEventListener('change', updateTotalDisplay);
+      invoiceAmount.addEventListener('input', updateTotalDisplay);
+      forms.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-fill-remaining-cost-item]');
+        if (!button) {
+          return;
+        }
+        const fieldset = button.closest('fieldset');
+        const itemAmount = fieldset ? costItemAmount(fieldset) : null;
+        const invoiceInGrosze = amountInGrosze(invoiceAmount);
+        if (!itemAmount || invoiceInGrosze === null || isDeleted(fieldset)) {
+          return;
+        }
+        const otherAmounts = costItemFieldsets()
+          .filter((otherFieldset) => otherFieldset !== fieldset && !isDeleted(otherFieldset))
+          .map(costItemAmount)
+          .map(amountInGrosze);
+        if (otherAmounts.includes(null)) {
+          totalDisplay.textContent = 'Najpierw uzupełnij poprawne kwoty w pozostałych pozycjach.';
+          return;
+        }
+        const remaining = invoiceInGrosze - otherAmounts.reduce((sum, amount) => sum + amount, 0);
+        if (remaining < 1) {
+          totalDisplay.textContent = 'Pozostałe pozycje wyczerpują kwotę faktury.';
+          return;
+        }
+        itemAmount.value = (remaining / 100).toFixed(2);
+        updateTotalDisplay();
+      });
 
       const syncContainer = forms.querySelector('[data-sync-invoice-amount]');
       const itemAmount = syncContainer
@@ -54,9 +214,12 @@
         invoiceAmount.addEventListener('input', () => {
           if (syncAmount) {
             itemAmount.value = invoiceAmount.value;
+            updateTotalDisplay();
           }
         });
       }
+      updateTotalDisplay();
+      document.getElementById('cost-item-total-error')?.focus();
     })();
   </script>
 {% endblock %}

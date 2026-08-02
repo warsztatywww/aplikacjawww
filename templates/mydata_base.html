@@ -12,7 +12,7 @@
       <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_cover_letter' %}active{% endif %}" href="{% url 'mydata_cover_letter' %}">List motywacyjny</a></li>
       <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_profile_page' %}active{% endif %}" href="{% url 'mydata_profile_page' %}">Strona profilowa</a></li>
       <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'mydata_forms' %}active{% endif %}" href="{% url 'mydata_forms' %}">Formularze</a></li>
-      {% if has_invoices %}
+      {% if show_costs %}
         <li class="nav-item"><a class="nav-link {% if request.resolver_match.view_name == 'costs_mine' %}active{% endif %}" href="{% url 'costs_mine' current_year.pk %}">Moje koszty</a></li>
       {% endif %}
     </ul>

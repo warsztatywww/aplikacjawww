@@ -26,6 +26,7 @@ from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
@@ -89,6 +90,10 @@ def get_context(request):
 
     if request.user.is_authenticated:
         context['has_invoices'] = Invoice.objects.filter(user=request.user).exists()
+        context['show_costs'] = (
+            context['has_invoices']
+            or request.user.user_profile.lecturer_workshops.exists()
+        )
         visible_resources = ResourceYearPermission.objects.exclude(access_url__exact="")
         if request.user.has_perm('wwwapp.access_all_resources'):
             context['resources'] = visible_resources
@@ -128,7 +133,7 @@ def costs_mine_view(request, year):
             return redirect('costs_invoice_add', year=camp.pk)
         return redirect('costs_mine', year=camp.pk)
     context = {
-        'title': 'Moje koszty',
+        'title': 'Mój profil',
         'selected_year': camp,
         'invoices': invoices,
         'settlement_details_form': settlement_details_form,
@@ -150,20 +155,25 @@ def costs_invoice_edit_view(request, year, invoice_id):
     return _invoice_form_view(request, year=year, invoice_id=invoice_id)
 
 
-def _invoice_form_view(request, *, year, invoice_id=None):
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+@permission_required('wwwapp.change_invoice', raise_exception=True)
+def costs_admin_invoice_edit_view(request, year, invoice_id):
+    return _invoice_form_view(request, year=year, invoice_id=invoice_id, admin_edit=True)
+
+
+def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
     camp = get_object_or_404(Camp, pk=year)
     invoice = None
     if invoice_id is None and not _has_settlement_details(user=request.user, camp=camp):
         messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
         return redirect(f"{reverse('costs_mine', args=[camp.pk])}?add_invoice=1")
     if invoice_id is not None:
-        invoice = get_object_or_404(
-            Invoice,
-            pk=invoice_id,
-            user=request.user,
-            camp=camp,
-        )
-        if not invoice.can_user_edit:
+        invoice_filters = {'pk': invoice_id, 'camp': camp}
+        if not admin_edit:
+            invoice_filters['user'] = request.user
+        invoice = get_object_or_404(Invoice, **invoice_filters)
+        if not admin_edit and not invoice.can_user_edit:
             if request.method == 'POST':
                 raise PermissionDenied
             return HttpResponseNotFound()
@@ -189,7 +199,10 @@ def _invoice_form_view(request, *, year, invoice_id=None):
                 if uploaded_attachment and os.path.basename(old_attachment_name) == uploaded_attachment.name:
                     filename, extension = os.path.splitext(uploaded_attachment.name)
                     invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
-                if invoice.status == Invoice.Status.REJECTED:
+                if admin_edit:
+                    invoice.admin_modified_at = timezone.now()
+                    invoice.admin_modified_by = request.user
+                elif invoice.status == Invoice.Status.REJECTED:
                     invoice.status = Invoice.Status.RECEIVED
                     invoice.admin_modified_at = None
                     invoice.admin_modified_by = None
@@ -199,7 +212,7 @@ def _invoice_form_view(request, *, year, invoice_id=None):
                 transaction.on_commit(lambda: invoice.attachment.storage.delete(old_attachment_name))
         message = 'Dodano fakturę.' if invoice_id is None else 'Zapisano fakturę.'
         messages.success(request, message, extra_tags='auto-dismiss')
-        return redirect('costs_mine', year=camp.pk)
+        return redirect('costs_admin' if admin_edit else 'costs_mine', year=camp.pk)
 
     title = 'Dodaj fakturę' if invoice_id is None else 'Edytuj fakturę'
     return render(
@@ -210,6 +223,8 @@ def _invoice_form_view(request, *, year, invoice_id=None):
             'invoice_form': invoice_form,
             'formset': formset,
             'selected_year': camp,
+            'return_url': reverse('costs_admin' if admin_edit else 'costs_mine', args=[camp.pk]),
+            'return_label': 'Wróć do kosztów' if admin_edit else 'Wróć do moich kosztów',
         },
     )
 
@@ -250,6 +265,7 @@ def costs_admin_view(request, year):
         'invoices': invoices.order_by('-created_at'),
         'can_approve_costs': request.user.has_perm('wwwapp.approve_costs'),
         'can_process_costs': request.user.has_perm('wwwapp.process_costs'),
+        'can_change_invoices': request.user.has_perm('wwwapp.change_invoice'),
     }
     return render(request, 'costs_admin.html', context)
 

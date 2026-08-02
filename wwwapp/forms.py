@@ -12,7 +12,7 @@ from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
-from django.forms.widgets import DateInput, NumberInput, Textarea, Widget
+from django.forms.widgets import DateInput, NumberInput, TextInput, Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
 from django.utils.html import format_html
@@ -30,6 +30,12 @@ from wwwapp.models import settlement_details_for
 
 
 guess_file_type = getattr(mimetypes, 'guess_file_type', mimetypes.guess_type)
+MONEY_INPUT_ATTRS = {
+    'data-money-input': '',
+    'inputmode': 'decimal',
+    'min': '0.01',
+    'step': '0.01',
+}
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -598,9 +604,17 @@ class InvoiceForm(ModelForm):
             'invoice_type': 'Typ dokumentu',
             'description': 'Opis',
         }
+        help_texts = {
+            'attachment': 'Załącz skan lub plik PDF dokumentu (PDF, JPG lub JPEG; maks. 50 MiB).',
+            'document_number': 'Przepisz numer widoczny na fakturze lub rachunku.',
+            'issue_date': 'Wybierz datę wystawienia widoczną na dokumencie.',
+            'amount': 'Łączna kwota brutto dokumentu. Musi być równa sumie pozycji kosztowych.',
+            'invoice_type': 'Wybierz rodzaj dokumentu, który przekazujesz do rozliczenia.',
+            'description': 'Krótko wyjaśnij, czego dotyczy wydatek i dlaczego był potrzebny.',
+        }
         widgets = {
-            'issue_date': DateInput(attrs={'type': 'date'}),
-            'amount': NumberInput(attrs={'min': '0.01', 'step': '0.01'}),
+            'issue_date': DateInput(),
+            'amount': TextInput(attrs=MONEY_INPUT_ATTRS),
         }
 
     def __init__(self, *args, user, camp, **kwargs):
@@ -635,7 +649,12 @@ class CostItemForm(ModelForm):
             'amount': 'Kwota',
             'category': 'Kategoria',
         }
-        widgets = {'amount': NumberInput(attrs={'min': '0.01', 'step': '0.01'})}
+        help_texts = {
+            'workshop': 'Wybierz warsztat, którego dotyczy wydatek, albo zostaw puste dla części pozostałej bez przypisania do warsztatu.',
+            'amount': 'Kwota brutto przypisana do tej pozycji. Suma wszystkich pozycji musi równać się kwocie dokumentu.',
+            'category': 'Wybierz kategorię najlepiej opisującą ten wydatek.',
+        }
+        widgets = {'amount': TextInput(attrs=MONEY_INPUT_ATTRS)}
 
     def __init__(self, *args, camp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -732,7 +751,7 @@ class ReimbursementForm(ModelForm):
             'comment': 'Komentarz',
             'execution_date': 'Data wykonania',
         }
-        widgets = {'amount': NumberInput(attrs={'min': '0.01', 'step': '0.01'})}
+        widgets = {'amount': TextInput(attrs=MONEY_INPUT_ATTRS)}
 
     def __init__(self, *args, user, camp, registered_by, **kwargs):
         super().__init__(*args, **kwargs)
