@@ -1,4 +1,5 @@
 import mimetypes
+import os
 from decimal import Decimal
 
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert, AppendedText
