@@ -8,7 +8,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.utils import timezone
 
-from wwwapp.models import Camp, Invoice, InvoiceSequence, Reimbursement
+from wwwapp.models import Invoice, InvoiceSequence, Reimbursement
 
 
 CSV_FIELDS = (
@@ -30,11 +30,9 @@ CSV_FIELDS = (
 @transaction.atomic
 def allocate_invoice_number(*, camp):
     """Allocate the next internal invoice number for a workshop edition."""
-    Camp.objects.select_for_update().get(pk=camp.pk)
-    try:
-        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp)
-    except InvoiceSequence.DoesNotExist:
-        sequence = InvoiceSequence.objects.create(camp=camp)
+    sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
+    if not created:
+        sequence = InvoiceSequence.objects.select_for_update().get(pk=sequence.pk)
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
     return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
