@@ -22,7 +22,8 @@ from django.core.exceptions import PermissionDenied, SuspiciousOperation, Valida
 from django.db import OperationalError, ProgrammingError, transaction
 from django.db.models import Q, QuerySet, Exists, OuterRef, Sum
 from django.db.models.query import Prefetch
-from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
+from django.core.files.uploadedfile import UploadedFile
+from django.http import Http404, JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
 from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
@@ -177,7 +178,7 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         if not admin_edit and not invoice.can_user_edit:
             if request.method == 'POST':
                 raise PermissionDenied
-            return HttpResponseNotFound()
+            raise Http404
     invoice_form = InvoiceForm(
         request.POST or None,
         request.FILES or None,
@@ -197,7 +198,10 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
                 invoice.internal_number = allocate_invoice_number(camp=camp)
             else:
                 uploaded_attachment = invoice_form.cleaned_data['attachment']
-                if uploaded_attachment and os.path.basename(old_attachment_name) == uploaded_attachment.name:
+                if (
+                    isinstance(uploaded_attachment, UploadedFile)
+                    and os.path.basename(uploaded_attachment.name) == os.path.basename(old_attachment_name)
+                ):
                     filename, extension = os.path.splitext(uploaded_attachment.name)
                     invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
                 if admin_edit:
@@ -234,7 +238,7 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
 def costs_invoice_attachment_view(request, year, invoice_id):
     invoice = get_object_or_404(Invoice, pk=invoice_id, camp_id=year)
     if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
-        return HttpResponseNotFound()
+        raise Http404
 
     mimetype, encoding = mimetypes.guess_type(invoice.attachment.path)
     return sendfile(
@@ -336,8 +340,6 @@ def costs_reimbursements_view(request, year):
     user_id = request.POST.get('user_id')
     if user_form.is_valid():
         selected_user = user_form.cleaned_data['user']
-    elif user_id:
-        selected_user = get_object_or_404(users, pk=user_id)
     if user_id:
         selected_user = get_object_or_404(users, pk=user_id)
     if selected_user:

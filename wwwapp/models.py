@@ -641,6 +641,7 @@ class Invoice(models.Model):
     def can_user_edit(self):
         return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
 
+
 @receiver(pre_delete, sender=Invoice)
 def prevent_invoice_deletion(*, instance, **kwargs):
     raise ProtectedError('Faktury nie mogą zostać usunięte.', [instance])
@@ -676,7 +677,7 @@ class CostItem(models.Model):
     def clean(self):
         super().clean()
         if self.workshop_id and self.workshop.year_id != self.invoice.camp_id:
-            raise ValidationError({'workshop': 'Workshop must belong to the invoice camp'})
+            raise ValidationError({'workshop': 'Warsztat musi pochodzić z tej samej edycji co faktura.'})
 
 
 def normalize_polish_account_number(account_number):
@@ -716,6 +717,7 @@ class SettlementDetails(models.Model):
     def clean(self):
         super().clean()
         self.account_number = normalize_polish_account_number(self.account_number)
+
 
 def settlement_details_for(*, user, camp):
     """Return a user's unique bank-account details for one workshop edition."""

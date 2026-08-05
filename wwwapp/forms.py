@@ -7,13 +7,14 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Div, HTML, Field
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import FileExtensionValidator
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
-from django.forms.widgets import DateInput, NumberInput, TextInput, Textarea, Widget
+from django.forms.widgets import DateInput, TextInput, Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
 from django.utils.html import format_html
@@ -30,7 +31,6 @@ from .models import Article, Camp, CampParticipant, CostItem, Invoice, Reimburse
 from wwwapp.models import settlement_details_for
 
 
-guess_file_type = getattr(mimetypes, 'guess_file_type', mimetypes.guess_type)
 MONEY_INPUT_ATTRS = {
     'data-money-input': '',
     'inputmode': 'decimal',
@@ -628,10 +628,10 @@ class InvoiceForm(ModelForm):
 
     def clean_attachment(self):
         attachment = self.cleaned_data['attachment']
-        if not hasattr(attachment, 'content_type'):
+        if not isinstance(attachment, UploadedFile):
             return attachment
 
-        content_type, _encoding = guess_file_type(attachment.name)
+        content_type, _encoding = mimetypes.guess_type(attachment.name)
         if content_type not in self.ATTACHMENT_TYPES:
             raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
         if attachment.size > self.MAX_ATTACHMENT_SIZE:
