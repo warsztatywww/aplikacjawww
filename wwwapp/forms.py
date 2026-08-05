@@ -643,9 +643,7 @@ class InvoiceForm(ModelForm):
             attachment.seek(0)
         except (OSError, ValueError):
             return False
-        return header.startswith(b'%PDF-') or header[:3] in (
-            b'\xff\xd8\xff',
-        )
+        return header.startswith(b'%PDF-') or header[:3] == b'\xff\xd8\xff'
 
 
 class CostItemForm(ModelForm):

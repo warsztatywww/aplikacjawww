@@ -89,7 +89,7 @@ class InvoiceFormTests(TestCase):
             'cost_items-1-category': CostItem.Category.REGULAR_PURCHASES,
         }
 
-    def test_attachment_accepts_a_pdf_based_on_its_filename(self):
+    def test_attachment_rejects_non_pdf_content_even_with_a_pdf_filename(self):
         form = InvoiceForm(
             data=self.data,
             files={
@@ -101,7 +101,8 @@ class InvoiceFormTests(TestCase):
             camp=self.camp,
         )
 
-        self.assertTrue(form.is_valid(), form.errors)
+        self.assertFalse(form.is_valid())
+        self.assertIn('attachment', form.errors)
 
     def test_attachment_accepts_pdf_and_jpeg_signatures(self):
         for name, content, content_type in (
@@ -120,9 +121,9 @@ class InvoiceFormTests(TestCase):
 
                 self.assertTrue(form.is_valid(), form.errors)
 
-    def test_attachment_rejects_an_unsupported_filename_or_oversize_upload(self):
+    def test_attachment_rejects_unrecognized_or_oversize_uploads(self):
         cases = (
-            ('invoice.txt', b'%PDF-1.7', 'application/pdf'),
+            ('invoice.pdf', b'plain text without a signature', 'application/pdf'),
             ('invoice.pdf', b'%PDF-' + b'x' * (50 * 1024 * 1024), 'application/pdf'),
         )
         for name, content, content_type in cases:
@@ -140,9 +141,23 @@ class InvoiceFormTests(TestCase):
                 self.assertIn('attachment', form.errors)
 
     def test_cost_item_formset_rejects_unequal_total(self):
-        formset = CostItemFormSet(self.split_post, instance=self.invoice)
+        formset = CostItemFormSet(
+            self.split_post,
+            instance=self.invoice,
+            invoice_amount=Decimal('10.00'),
+        )
 
         self.assertFalse(formset.is_valid())
+        self.assertTrue(formset.non_form_errors())
+
+    def test_cost_item_formset_accepts_a_complete_allocation(self):
+        formset = CostItemFormSet(
+            self.split_post,
+            instance=self.invoice,
+            invoice_amount=Decimal('9.99'),
+        )
+
+        self.assertTrue(formset.is_valid(), formset.non_form_errors())
 
     def test_cost_item_formset_requires_a_non_deleted_row(self):
         data = {
@@ -654,6 +669,20 @@ class OwnCostsViewsTests(TestCase):
         response = self.client.get(reverse('costs_invoice_edit', args=[invoice.camp_id, invoice.pk]))
 
         self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'year-navigation')
+
+    def test_invoice_add_keeps_the_year_navigation_footer(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'year-navigation')
 
     def test_approved_and_processed_invoices_cannot_be_edited(self):
         self.client.force_login(self.user)
