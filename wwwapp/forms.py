@@ -1,4 +1,4 @@
-import os.path
+import os
 from decimal import Decimal
 
 from crispy_forms.bootstrap import FormActions, StrictButton, PrependedAppendedText, Alert, AppendedText
@@ -6,13 +6,14 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Fieldset, Div, HTML, Field
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import FileExtensionValidator
 from django.forms import ModelChoiceField, ModelMultipleChoiceField
 from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
-from django.forms.widgets import Textarea, Widget
+from django.forms.widgets import DateInput, NumberInput, TextInput, Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
 from django.utils.html import format_html
@@ -23,8 +24,17 @@ from django.conf import settings
 from django.contrib.staticfiles.storage import staticfiles_storage
 
 from .templatetags.wwwtags import qualified_mark
-from .models import UserProfile, Article, Workshop, WorkshopCategory, \
-    WorkshopType, CampParticipant, WorkshopParticipant, Camp, Solution, SolutionFile
+from .models import Article, Camp, CampParticipant, CostItem, Invoice, Reimbursement, \
+    SettlementDetails, Solution, SolutionFile, UserProfile, Workshop, WorkshopCategory, \
+    WorkshopParticipant, WorkshopType
+from wwwapp.models import settlement_details_for
+
+
+AMOUNT_WIDGET = NumberInput(attrs={
+    'data-amount-input': '',
+    'min': '0.01',
+    'step': '0.01',
+})
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -567,3 +577,269 @@ class CampInterestEmailForm(Form):
         if user and user.is_authenticated:
             self.fields['email'].initial = user.email
             self.fields['email'].disabled = True
+
+
+class InvoiceForm(ModelForm):
+    """Validate an invoice attachment before it is stored."""
+
+    MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
+
+    class Meta:
+        model = Invoice
+        fields = [
+            'attachment',
+            'document_number',
+            'issue_date',
+            'amount',
+            'invoice_type',
+            'description',
+        ]
+        labels = {
+            'attachment': 'Załącznik',
+            'document_number': 'Numer dokumentu',
+            'issue_date': 'Data wystawienia',
+            'amount': 'Kwota',
+            'invoice_type': 'Typ dokumentu',
+            'description': 'Opis',
+        }
+        help_texts = {
+            'attachment': 'Załącz skan lub plik PDF dokumentu (PDF, JPG lub JPEG; maks. 50 MiB).',
+            'document_number': 'Przepisz numer widoczny na fakturze lub rachunku.',
+            'issue_date': 'Wybierz datę wystawienia widoczną na dokumencie.',
+            'amount': 'Łączna kwota brutto dokumentu. Musi być równa sumie pozycji kosztowych.',
+            'invoice_type': 'Wybierz rodzaj dokumentu, który przekazujesz do rozliczenia.',
+            'description': 'Krótko wyjaśnij, czego dotyczy wydatek i dlaczego był potrzebny.',
+        }
+        widgets = {'amount': AMOUNT_WIDGET}
+
+    def __init__(self, *args, user, camp, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.user = user
+        self.instance.camp = camp
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+
+    def clean_attachment(self):
+        attachment = self.cleaned_data['attachment']
+        if not isinstance(attachment, UploadedFile):
+            return attachment
+
+        if not self._looks_like_supported_document(attachment):
+            raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
+        if attachment.size > self.MAX_ATTACHMENT_SIZE:
+            raise ValidationError('Załącznik nie może być większy niż 50 MiB.')
+        return attachment
+
+    @staticmethod
+    def _looks_like_supported_document(attachment):
+        try:
+            attachment.seek(0)
+            header = attachment.read(8)
+            attachment.seek(0)
+        except (OSError, ValueError):
+            return False
+        return header.startswith(b'%PDF-') or header[:3] == b'\xff\xd8\xff'
+
+
+class CostItemForm(ModelForm):
+    """Edit one allocation of an invoice total."""
+
+    class Meta:
+        model = CostItem
+        fields = ['workshop', 'amount', 'category']
+        labels = {
+            'workshop': 'Warsztat',
+            'amount': 'Kwota',
+            'category': 'Kategoria',
+        }
+        help_texts = {
+            'workshop': 'Wybierz warsztat, którego dotyczy wydatek, albo zostaw puste dla części pozostałej bez przypisania do warsztatu.',
+            'amount': 'Kwota brutto przypisana do tej pozycji. Suma wszystkich pozycji musi równać się kwocie dokumentu.',
+            'category': 'Wybierz kategorię najlepiej opisującą ten wydatek.',
+        }
+        widgets = {'amount': AMOUNT_WIDGET}
+
+    def __init__(self, *args, camp, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['workshop'].queryset = camp.workshops.all()
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+
+
+class BaseCostItemInlineFormSet(BaseInlineFormSet):
+    """Require a complete, camp-scoped allocation of the invoice amount."""
+
+    def __init__(self, *args, invoice_amount=None, **kwargs):
+        self.invoice_amount = invoice_amount
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['camp'] = self.instance.camp
+        return kwargs
+
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        items = [
+            form.cleaned_data
+            for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+        ]
+        if not items:
+            raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
+
+        total = sum((item['amount'] for item in items), Decimal('0.00'))
+        if total != self.invoice_amount:
+            raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
+
+CostItemFormSet = inlineformset_factory(
+    Invoice,
+    CostItem,
+    form=CostItemForm,
+    formset=BaseCostItemInlineFormSet,
+    extra=0,
+    can_delete=True,
+    min_num=1,
+    validate_min=True,
+)
+
+
+class SettlementDetailsForm(ModelForm):
+    """Store a participant's bank account for one camp."""
+
+    class Meta:
+        model = SettlementDetails
+        fields = ['account_number']
+        labels = {'account_number': 'Numer rachunku bankowego'}
+        widgets = {
+            'account_number': TextInput(
+                attrs={'placeholder': '00 0000 0000 0000 0000 0000 0000'},
+            ),
+        }
+
+    def __init__(self, *args, user, camp, **kwargs):
+        if 'instance' not in kwargs:
+            kwargs['instance'] = settlement_details_for(user=user, camp=camp)
+        super().__init__(*args, **kwargs)
+        self.instance.user = user
+        self.instance.camp = camp
+        if self.instance.pk is None:
+            previous_details = SettlementDetails.objects.filter(user=user).order_by('-updated_at').first()
+            if previous_details:
+                self.fields['account_number'].initial = previous_details.account_number
+                self.fields['account_number'].help_text = (
+                    'Wstępnie wpisano numer rachunku podany dla poprzedniej edycji. '
+                    'Potwierdź, że jest aktualny.'
+                )
+        self.helper = FormHelper(self)
+        self.helper.include_media = False
+        self.helper.layout = Layout(
+            'account_number',
+            FormActions(
+                StrictButton(
+                    'Zapisz',
+                    type='submit',
+                    css_class='btn-outline-primary btn-lg mx-1 my-3',
+                ),
+                css_class='text-right',
+            ),
+        )
+
+class ReimbursementForm(ModelForm):
+    """Register a reimbursement for a participant and workshop edition."""
+
+    class Meta:
+        model = Reimbursement
+        fields = ['amount', 'type', 'comment', 'execution_date']
+        labels = {
+            'amount': 'Kwota',
+            'type': 'Typ zwrotu',
+            'comment': 'Komentarz',
+            'execution_date': 'Data wykonania',
+        }
+        widgets = {'amount': AMOUNT_WIDGET}
+
+    def __init__(self, *args, user, camp, registered_by, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.user = user
+        self.instance.camp = camp
+        self.instance.registered_by = registered_by
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+        self.helper.layout = Layout(
+            'amount',
+            'type',
+            'comment',
+            'execution_date',
+            FormActions(
+                StrictButton('Zarejestruj zwrot', type='submit', css_class='btn-primary'),
+            ),
+        )
+
+
+class FullNameUserChoiceField(ModelChoiceField):
+    """Render a user choice with the participant's full name."""
+
+    def label_from_instance(self, user):
+        return user.get_full_name()
+
+
+class CostFilterForm(Form):
+    """Provide optional invoice administration filters."""
+
+    user = FullNameUserChoiceField(label='Użytkownik', queryset=None, required=False)
+    status = ChoiceField(
+        label='Status',
+        choices=(('', 'Wszystkie'), *Invoice.Status.choices),
+        required=False,
+    )
+    invoice_type = ChoiceField(
+        label='Typ dokumentu',
+        choices=(('', 'Wszystkie'), *Invoice.Type.choices),
+        required=False,
+    )
+
+    def __init__(self, *args, users, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = users
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+        self.helper.layout = Layout(
+            'user',
+            'status',
+            'invoice_type',
+            FormActions(StrictButton('Filtruj', type='submit', css_class='btn-secondary')),
+        )
+
+
+class StatisticsFilterForm(Form):
+    """Filter cost statistics for one workshop edition."""
+
+    status = ChoiceField(
+        label='Status faktury',
+        choices=(
+            ('', 'Zatwierdzone i przetworzone'),
+            (Invoice.Status.RECEIVED, 'Otrzymane'),
+            (Invoice.Status.APPROVED, 'Zatwierdzone'),
+            (Invoice.Status.REJECTED, 'Odrzucone'),
+            (Invoice.Status.PROCESSED, 'Przetworzone'),
+        ),
+        required=False,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.include_media = False
+        self.helper.layout = Layout(
+            'status',
+            FormActions(StrictButton('Filtruj', type='submit', css_class='btn-secondary')),
+        )

@@ -45,3 +45,15 @@ def provider_signin_text(value):
         # this is their official translation when you use the JS SDK with locale set to PL
         return "Zaloguj się przez Facebooka"
     return "Zaloguj się przez " + provider_friendly_name(value).title()
+
+
+@register.filter
+def polish_account_number(value):
+    """Display a canonical Polish IBAN in readable groups."""
+    value = str(value or '')
+    if not value.startswith('PL') or len(value) != 28:
+        return value
+    groups = [value[2:4]]
+    for index in range(4, len(value), 4):
+        groups.append(value[index:index + 4])
+    return f"PL {' '.join(groups)}"

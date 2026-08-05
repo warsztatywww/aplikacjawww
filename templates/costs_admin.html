@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <article>
+    <h1 class="mt-3">{{ title }}</h1>
+    <p>
+      <a class="btn btn-outline-secondary" href="{% url 'costs_reimbursements' selected_year.pk %}">Zwroty kosztów</a>
+      <a class="btn btn-outline-secondary" href="{% url 'costs_statistics' selected_year.pk %}">Statystyki</a>
+    </p>
+    <form method="get" class="mb-3">
+      {% crispy filter_form %}
+    </form>
+
+    <form method="post">
+      {% csrf_token %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Wybór</th>
+            <th scope="col">Numer wew.</th>
+            <th scope="col">Numer</th>
+            <th scope="col">Data</th>
+            <th scope="col">Użytkownik</th>
+            <th scope="col">Kwota</th>
+            <th scope="col">Status</th>
+            <th scope="col">Załącznik</th>
+            <th scope="col">Opis i pozycje</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+            <tr>
+              <td><input type="checkbox" name="invoice_ids" value="{{ invoice.pk }}"></td>
+              <td>
+                {{ invoice.internal_number }}
+                {% if can_change_invoices %}
+                  <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">Edytuj</a>
+                {% endif %}
+              </td>
+              <td>{{ invoice.document_number }}</td>
+              <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
+              <td><a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a></td>
+              <td>{{ invoice.amount|floatformat:2 }} zł</td>
+              <td>{{ invoice.get_status_display }}</td>
+              <td>
+                <a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">Pobierz</a>
+              </td>
+              <td>
+                {{ invoice.description|linebreaksbr }}
+                <ul class="mb-0">
+                  {% for item in invoice.cost_items.all %}
+                    <li>
+                      {{ item.get_category_display }}: {{ item.amount|floatformat:2 }} zł
+                      {% if item.workshop %} — {{ item.workshop }}{% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="9">Brak faktur spełniających kryteria.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if can_approve_costs %}
+        <button class="btn btn-success" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
+                name="status" value="APPROVED" type="submit">Zatwierdź</button>
+        <button class="btn btn-danger" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
+                name="status" value="REJECTED" type="submit">Odrzuć</button>
+      {% endif %}
+      {% if can_process_costs %}
+        <button class="btn btn-primary" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
+                name="status" value="PROCESSED" type="submit">Oznacz jako przetworzone</button>
+      {% endif %}
+      <button class="btn btn-outline-primary" formaction="{% url 'costs_csv_export' selected_year.pk %}"
+              type="submit">Eksportuj CSV</button>
+    </form>
+  </article>
+{% endblock %}

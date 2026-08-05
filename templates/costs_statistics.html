@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <article>
+    <h1 class="mt-3">{{ title }}</h1>
+    <form method="get" class="mb-3">
+      {% crispy filter_form %}
+    </form>
+
+    <p>Łącznie: {{ total|floatformat:2 }} zł</p>
+    <h2>Wydatki według kategorii</h2>
+    <div class="row align-items-center">
+      <div class="col-md-auto">
+        {% if has_statistics_data %}
+          <svg viewBox="0 0 100 100" role="img"
+               aria-labelledby="cost-chart-title cost-chart-description"
+               class="d-block mx-auto" width="272" height="272">
+            <title id="cost-chart-title">Wydatki według kategorii</title>
+            <desc id="cost-chart-description">Kolory wykresu odpowiadają kategoriom w tabeli.</desc>
+            {% for row in category_rows %}
+              {% if row.pie_path %}
+                <path d="{{ row.pie_path }}" fill="{{ row.color }}" stroke="white"
+                      stroke-width="1" />
+              {% endif %}
+            {% endfor %}
+            <circle cx="50" cy="50" r="24" fill="white" />
+            <text x="50" y="47" text-anchor="middle" font-size="6" fill="#6c757d">Łącznie</text>
+            <text x="50" y="55" text-anchor="middle" font-size="7" font-weight="bold"
+                  >{{ total|floatformat:2 }} zł</text>
+          </svg>
+        {% else %}
+          <p class="text-muted" role="status">Brak danych do wyświetlenia wykresu.</p>
+        {% endif %}
+      </div>
+      <div class="col">
+        <table class="table mt-3">
+          <thead>
+            <tr>
+              <th scope="col">Kategoria</th><th scope="col">Kwota</th><th scope="col">Udział</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in category_rows %}
+              <tr>
+                <td>
+                  <span aria-hidden="true" style="color: {{ row.color }};">&#9679;</span>
+                  {{ row.label }}
+                </td>
+                <td>{{ row.total|floatformat:2 }} zł</td><td>{{ row.percentage }}%</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+{% endblock %}

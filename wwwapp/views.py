@@ -1,10 +1,12 @@
 import datetime
 import hashlib
 import json
+import math
 import mimetypes
 import os
 import sys
 import random # Used for shuffling the workshops on the program page
+from decimal import Decimal
 from typing import Dict, Any, Optional
 from urllib.parse import urljoin
 
@@ -15,15 +17,17 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import SuspiciousOperation
-from django.db import OperationalError, ProgrammingError
-from django.db.models import Q, QuerySet, Exists, OuterRef
+from django.core.exceptions import PermissionDenied, SuspiciousOperation, ValidationError
+from django.db import OperationalError, ProgrammingError, transaction
+from django.db.models import Q, QuerySet, Exists, OuterRef, Sum
 from django.db.models.query import Prefetch
-from django.http import JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
+from django.core.files.uploadedfile import UploadedFile
+from django.http import Http404, JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
 from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.decorators.csrf import csrf_exempt
@@ -32,12 +36,53 @@ from django_bleach.utils import get_bleach_default_options
 from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
-from .forms import ArticleForm, UserProfileForm, UserForm, \
-    UserProfilePageForm, UserSecretNotesForm, WorkshopForm, UserCoverLetterForm, WorkshopParticipantPointsForm, \
-    TinyMCEUpload, SolutionFileFormSet, SolutionForm, CampInterestEmailForm
-from .models import Article, UserProfile, Workshop, WorkshopType, WorkshopParticipant, \
-    CampParticipant, ResourceYearPermission, Camp, Solution, CampInterestEmail
-from .templatetags.wwwtags import qualified_mark
+from wwwapp.costs import (
+    allocate_invoice_number,
+    approved_total_for,
+    balance_for,
+    invoice_csv_response,
+    pending_total_for,
+    reimbursed_total_for,
+    transition_invoices,
+)
+from wwwapp.forms import (
+    ArticleForm,
+    CampInterestEmailForm,
+    CostFilterForm,
+    CostItemFormSet,
+    InvoiceForm,
+    ReimbursementForm,
+    SettlementDetailsForm,
+    SolutionFileFormSet,
+    SolutionForm,
+    TinyMCEUpload,
+    UserCoverLetterForm,
+    UserForm,
+    UserProfileForm,
+    UserProfilePageForm,
+    UserSecretNotesForm,
+    StatisticsFilterForm,
+    WorkshopForm,
+    WorkshopParticipantPointsForm,
+)
+from wwwapp.models import (
+    Article,
+    Camp,
+    CampInterestEmail,
+    CampParticipant,
+    Invoice,
+    CostItem,
+    Reimbursement,
+    ResourceYearPermission,
+    SettlementDetails,
+    Solution,
+    UserProfile,
+    Workshop,
+    WorkshopParticipant,
+    WorkshopType,
+    settlement_details_for,
+)
+from wwwapp.templatetags.wwwtags import qualified_mark
 
 
 def get_context(request):
@@ -62,14 +107,414 @@ def get_context(request):
     return context
 
 
+def show_costs_for(user):
+    """Return whether a user's cost overview belongs in their profile navigation."""
+    if not user.is_authenticated:
+        return False
+    return (
+        Invoice.objects.filter(user=user).exists()
+        or user.user_profile.lecturer_workshops.exists()
+    )
+
+
 def redirect_to_view_for_latest_year(target_view_name):
     def view(request):
         url = reverse(target_view_name, args=[Camp.current().pk])
-        args = request.META.get('QUERY_STRING', '')
-        if args:
-            url = "%s?%s" % (url, args)
+        query_string = request.META.get('QUERY_STRING', '')
+        if query_string:
+            url = f'{url}?{query_string}'
         return redirect(url)
+
     return view
+
+
+@login_required
+def costs_mine_view(request, year):
+    camp = get_object_or_404(Camp, pk=year)
+    invoices = Invoice.objects.filter(user=request.user, camp=camp).order_by('-created_at')
+    settlement_details = settlement_details_for(user=request.user, camp=camp)
+    saved_account_number = (
+        settlement_details.account_number if settlement_details is not None else ''
+    )
+    settlement_details_form = SettlementDetailsForm(
+        request.POST or None,
+        instance=settlement_details,
+        user=request.user,
+        camp=camp,
+    )
+    if request.method == 'POST' and settlement_details_form.is_valid():
+        settlement_details_form.save()
+        messages.success(request, 'Zapisano dane rachunku bankowego.', extra_tags='auto-dismiss')
+        if request.GET.get('add_invoice') == '1':
+            return redirect('costs_invoice_add', year=camp.pk)
+        return redirect('costs_mine', year=camp.pk)
+    context = {
+        'title': 'Mój profil',
+        'selected_year': camp,
+        'show_costs': True,
+        'invoices': invoices,
+        'settlement_details_form': settlement_details_form,
+        'saved_account_number': saved_account_number,
+        'approved_total': approved_total_for(user=request.user, camp=camp),
+        'reimbursed_total': reimbursed_total_for(user=request.user, camp=camp),
+        'remaining_total': balance_for(user=request.user, camp=camp),
+        'pending_total': pending_total_for(user=request.user, camp=camp),
+    }
+    return render(request, 'costs_mine.html', context)
+
+
+@login_required
+def costs_invoice_add_view(request, year):
+    return _invoice_form_view(request, year=year)
+
+
+@login_required
+def costs_invoice_edit_view(request, year, invoice_id):
+    return _invoice_form_view(request, year=year, invoice_id=invoice_id)
+
+
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+@permission_required('wwwapp.change_invoice', raise_exception=True)
+def costs_admin_invoice_edit_view(request, year, invoice_id):
+    return _invoice_form_view(request, year=year, invoice_id=invoice_id, admin_edit=True)
+
+
+def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
+    camp = get_object_or_404(Camp, pk=year)
+    invoice = None
+    settlement_details = settlement_details_for(user=request.user, camp=camp)
+    if invoice_id is None and (
+        settlement_details is None or not settlement_details.account_number.strip()
+    ):
+        messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
+        return redirect(f"{reverse('costs_mine', args=[camp.pk])}?add_invoice=1")
+    if invoice_id is not None:
+        invoice_filters = {'pk': invoice_id, 'camp': camp}
+        if not admin_edit:
+            invoice_filters['user'] = request.user
+        invoice = get_object_or_404(Invoice, **invoice_filters)
+        if not admin_edit and not invoice.can_user_edit:
+            if request.method == 'POST':
+                raise PermissionDenied
+            raise Http404
+    invoice_form = InvoiceForm(
+        request.POST or None,
+        request.FILES or None,
+        instance=invoice,
+        user=invoice.user if invoice else request.user,
+        camp=camp,
+    )
+    invoice_form_is_valid = invoice_form.is_valid()
+    formset = CostItemFormSet(
+        request.POST or None,
+        instance=invoice_form.instance,
+        invoice_amount=invoice_form.cleaned_data['amount'] if invoice_form_is_valid else None,
+    )
+    if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
+        old_attachment_name = invoice.attachment.name if invoice else ''
+        invoice = invoice_form.save(commit=False)
+        if invoice_id is None:
+            invoice.internal_number = allocate_invoice_number(camp=camp)
+        else:
+            if admin_edit:
+                invoice.admin_modified_at = timezone.now()
+                invoice.admin_modified_by = request.user
+            else:
+                if invoice.status == Invoice.Status.REJECTED:
+                    invoice.status = Invoice.Status.RECEIVED
+                invoice.admin_modified_at = None
+                invoice.admin_modified_by = None
+        uploaded_attachment = invoice_form.cleaned_data['attachment']
+        if isinstance(uploaded_attachment, UploadedFile):
+            _, extension = os.path.splitext(uploaded_attachment.name)
+            invoice.attachment.name = f'{invoice.internal_number}{extension.lower()}'
+        stored_attachment_name = ''
+        try:
+            with transaction.atomic():
+                invoice.save()
+                stored_attachment_name = invoice.attachment.name
+                invoice_form.save_m2m()
+                formset.save()
+                if old_attachment_name and stored_attachment_name != old_attachment_name:
+                    transaction.on_commit(
+                        lambda: invoice.attachment.storage.delete(old_attachment_name),
+                    )
+        except Exception:
+            if stored_attachment_name and stored_attachment_name != old_attachment_name:
+                invoice.attachment.storage.delete(stored_attachment_name)
+            raise
+        message = 'Dodano fakturę.' if invoice_id is None else 'Zapisano fakturę.'
+        messages.success(request, message, extra_tags='auto-dismiss')
+        return redirect('costs_admin' if admin_edit else 'costs_mine', year=camp.pk)
+
+    title = 'Dodaj fakturę' if invoice_id is None else 'Edytuj fakturę'
+    return render(
+        request,
+        'costs_invoice_form.html',
+        {
+            'title': title,
+            'invoice_form': invoice_form,
+            'formset': formset,
+            'selected_year': camp,
+            'hide_year_navigation': invoice_id is not None,
+            'return_url': reverse('costs_admin' if admin_edit else 'costs_mine', args=[camp.pk]),
+            'return_label': 'Wróć do kosztów' if admin_edit else 'Wróć do moich kosztów',
+        },
+    )
+
+
+@login_required
+def costs_invoice_attachment_view(request, year, invoice_id):
+    invoice = get_object_or_404(Invoice, pk=invoice_id, camp_id=year)
+    if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
+        raise Http404
+
+    return sendfile(request, invoice.attachment.path)
+
+
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_admin_view(request, year):
+    camp = get_object_or_404(Camp, pk=year)
+    users = User.objects.filter(invoices__camp=camp).distinct().order_by(
+        'first_name',
+        'last_name',
+        'pk',
+    )
+    filter_form = CostFilterForm(request.GET or None, users=users)
+    invoices = Invoice.objects.filter(camp=camp).select_related('user').prefetch_related('cost_items')
+    if filter_form.is_valid():
+        filters = filter_form.cleaned_data
+        if filters['status']:
+            invoices = invoices.filter(status=filters['status'])
+        if filters['user']:
+            invoices = invoices.filter(user=filters['user'])
+        if filters['invoice_type']:
+            invoices = invoices.filter(invoice_type=filters['invoice_type'])
+    context = {
+        'title': 'Administracja kosztami',
+        'selected_year': camp,
+        'filter_form': filter_form,
+        'invoices': invoices.order_by('-created_at'),
+        'can_approve_costs': request.user.has_perm('wwwapp.approve_costs'),
+        'can_process_costs': request.user.has_perm('wwwapp.process_costs'),
+        'can_change_invoices': request.user.has_perm('wwwapp.change_invoice'),
+    }
+    return render(request, 'costs_admin.html', context)
+
+
+@require_POST
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_admin_transition_view(request, year):
+    target_status = request.POST.get('status')
+    if target_status in (Invoice.Status.APPROVED, Invoice.Status.REJECTED):
+        required_permission = 'wwwapp.approve_costs'
+    elif target_status == Invoice.Status.PROCESSED:
+        required_permission = 'wwwapp.process_costs'
+    else:
+        return HttpResponseBadRequest('Nieprawidłowy docelowy status faktury.')
+    if not request.user.has_perm(required_permission):
+        raise PermissionDenied
+
+    invoice_ids = request.POST.getlist('invoice_ids')
+    if invoice_ids == []:
+        return HttpResponseBadRequest('Wybierz co najmniej jedną fakturę.')
+    invoices = Invoice.objects.filter(pk__in=invoice_ids, camp_id=year)
+    if invoices.count() != len(set(invoice_ids)):
+        return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
+    try:
+        transition_invoices(
+            invoices=invoices,
+            target_status=target_status,
+            changed_by=request.user,
+        )
+    except ValidationError as error:
+        return HttpResponseBadRequest('; '.join(error.messages))
+    messages.success(request, 'Zmieniono status wybranych faktur.', extra_tags='auto-dismiss')
+    return redirect('costs_admin', year=year)
+
+
+@require_POST
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_csv_export_view(request, year):
+    invoice_ids = request.POST.getlist('invoice_ids')
+    invoices = Invoice.objects.filter(camp_id=year)
+    if invoice_ids:
+        invoices = invoices.filter(pk__in=invoice_ids)
+        if invoices.count() != len(set(invoice_ids)):
+            return HttpResponseBadRequest('Wybrano nieistniejącą fakturę.')
+    else:
+        invoices = invoices.filter(status=Invoice.Status.APPROVED)
+
+    return invoice_csv_response(invoices=invoices)
+
+
+@login_required
+@permission_required('wwwapp.register_reimbursements', raise_exception=True)
+def costs_reimbursements_view(request, year):
+    """Show reimbursement history and register a payment for a participant."""
+    camp = get_object_or_404(Camp, pk=year)
+    users = User.objects.filter(
+        invoices__camp=camp,
+        invoices__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+    ).distinct().order_by('first_name', 'last_name', 'pk')
+    selected_user_id = request.POST.get('user_id') or request.GET.get('user')
+    selected_user = (
+        get_object_or_404(users, pk=selected_user_id) if selected_user_id else None
+    )
+    form = None
+    balance_before = None
+    balance_after = None
+    if selected_user:
+        balance_before = balance_for(user=selected_user, camp=camp)
+        form = ReimbursementForm(
+            request.POST or None,
+            user=selected_user,
+            camp=camp,
+            registered_by=request.user,
+        )
+        if request.method == 'POST' and form.is_valid():
+            reimbursement = form.save()
+            balance_after = balance_for(user=selected_user, camp=camp)
+            messages.success(request, 'Zarejestrowano zwrot kosztów.', extra_tags='auto-dismiss')
+            if reimbursement.amount > balance_before:
+                messages.warning(request, 'Kwota zwrotu przekracza saldo.')
+            redirect_url = reverse('costs_reimbursements', args=[camp.pk])
+            return redirect(f'{redirect_url}?user={selected_user.pk}')
+    elif request.method == 'POST':
+        messages.error(request, 'Wybierz użytkownika do rozliczenia.')
+
+    reimbursements = Reimbursement.objects.filter(camp=camp).select_related('user', 'registered_by')
+    account_numbers = dict(
+        SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
+    )
+    approved_totals = dict(
+        Invoice.objects.filter(
+            camp=camp,
+            status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+        ).values('user_id').annotate(total=Sum('amount')).values_list('user_id', 'total'),
+    )
+    reimbursed_totals = dict(
+        Reimbursement.objects.filter(camp=camp)
+        .values('user_id').annotate(total=Sum('amount')).values_list('user_id', 'total'),
+    )
+    reimbursement_summary = [
+        {
+            'user': user,
+            'account_number': account_numbers.get(user.pk, ''),
+            'has_account_number': user.pk in account_numbers,
+            'approved_total': approved_totals.get(user.pk, Decimal('0.00')),
+            'reimbursed_total': reimbursed_totals.get(user.pk, Decimal('0.00')),
+            'remaining_total': (
+                approved_totals.get(user.pk, Decimal('0.00'))
+                - reimbursed_totals.get(user.pk, Decimal('0.00'))
+            ),
+        }
+        for user in users
+    ]
+    context = {
+        'title': 'Zwroty kosztów',
+        'selected_year': camp,
+        'users': users,
+        'selected_user': selected_user,
+        'reimbursement_form': form,
+        'reimbursement_summary': reimbursement_summary,
+        'reimbursements': reimbursements.order_by('-execution_date', '-created_at'),
+        'balance_before': balance_before,
+        'balance_after': balance_after,
+        'approved_total': approved_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
+        'reimbursed_total': reimbursed_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
+    }
+    return render(request, 'costs_reimbursements.html', context)
+
+
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_statistics_view(request, year):
+    """Summarize cost-item totals for the selected financial-report filters."""
+    camp = get_object_or_404(Camp, pk=year)
+
+    filter_form = StatisticsFilterForm(request.GET or None)
+    items = CostItem.objects.filter(invoice__camp=camp)
+    status = ''
+    if filter_form.is_valid():
+        status = filter_form.cleaned_data['status']
+    if status == '':
+        items = items.filter(
+            invoice__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+        )
+    else:
+        items = items.filter(invoice__status=status)
+
+    totals_by_category = {
+        row['category']: row['total']
+        for row in items.values('category').annotate(total=Sum('amount'))
+    }
+    category_totals = {
+        value: totals_by_category.get(value, Decimal('0.00'))
+        for value, _label in CostItem.Category.choices
+    }
+    total = sum(category_totals.values(), Decimal('0.00'))
+    category_percentages = {
+        value: _percentage(part=amount, whole=total)
+        for value, amount in category_totals.items()
+    }
+    category_rows = [
+        {
+            'value': value,
+            'label': label,
+            'total': category_totals[value],
+            'percentage': category_percentages[value],
+        }
+        for value, label in CostItem.Category.choices
+    ]
+    colors = ('#0072b2', '#e69f00', '#009e73', '#cc79a7', '#d55e00', '#56b4e9')
+    start_angle = -90
+    for row, color in zip(category_rows, colors):
+        row['color'] = color
+        angle = float(row['total'] / total * 360) if total else 0
+        row['pie_path'] = _pie_slice_path(start_angle=start_angle, angle=angle)
+        start_angle += angle
+    context = {
+        'title': 'Statystyki kosztów',
+        'selected_year': camp,
+        'filter_form': filter_form,
+        'category_totals': category_totals,
+        'category_percentages': category_percentages,
+        'category_rows': category_rows,
+        'total': total,
+        'has_statistics_data': bool(total),
+    }
+    return render(request, 'costs_statistics.html', context)
+
+
+def _percentage(*, part, whole):
+    if not whole:
+        return Decimal('0.00')
+    return (part / whole * 100).quantize(Decimal('0.01'))
+
+
+def _pie_slice_path(*, start_angle, angle):
+    """Return an SVG path describing a sector of a pie chart."""
+    if not angle:
+        return ''
+    if angle >= 360:
+        return 'M 50 50 L 50 10 A 40 40 0 1 1 50 90 A 40 40 0 1 1 50 10 Z'
+
+    start_radians = math.radians(start_angle)
+    end_radians = math.radians(start_angle + angle)
+    start_x = 50 + 40 * math.cos(start_radians)
+    start_y = 50 + 40 * math.sin(start_radians)
+    end_x = 50 + 40 * math.cos(end_radians)
+    end_y = 50 + 40 * math.sin(end_radians)
+    large_arc = 1 if angle > 180 else 0
+    return (
+        f'M 50 50 L {start_x:.4f} {start_y:.4f} '
+        f'A 40 40 0 {large_arc} 1 {end_x:.4f} {end_y:.4f} Z'
+    )
 
 
 def program_view(request, year):
@@ -279,6 +724,7 @@ def mydata_profile_view(request):
     context['user_form'] = user_form
     context['user_profile_form'] = user_profile_form
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_profile.html', context)
 
@@ -298,6 +744,7 @@ def mydata_profile_page_view(request):
 
     context['user_profile_page_form'] = user_profile_page_form
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_profilepage.html', context)
 
@@ -323,6 +770,7 @@ def mydata_cover_letter_view(request):
 
     context['user_cover_letter_form'] = user_cover_letter_form
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_coverletter.html', context)
 
@@ -353,6 +801,7 @@ def mydata_status_view(request):
     context['has_cover_letter'] = len(current_camp_participant.cover_letter) >= 50 if current_camp_participant else None
     context['current_status'] = current_status
     context['past_status'] = past_status
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_status.html', context)
 
@@ -363,6 +812,7 @@ def mydata_forms_view(request):
 
     context['user_info_forms'] = Form.visible_objects.all()
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_forms.html', context)
 

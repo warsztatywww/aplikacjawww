@@ -3,7 +3,6 @@ const webpack = require("webpack");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const MomentLocalesPlugin = require("moment-locales-webpack-plugin");
-const GoogleFontsPlugin = require("@beyonk/google-fonts-webpack-plugin");
 
 // based on https://pascalw.me/blog/2020/04/19/webpack-django.html
 module.exports = {
@@ -65,17 +64,6 @@ module.exports = {
   },
   plugins: [
     new MiniCssExtractPlugin(),
-    new GoogleFontsPlugin({
-      fonts: [
-        {
-          family: "Open Sans",
-          variants: ["300", "400", "700"],
-          display: "swap",
-          subsets: ["latin-ext"],
-        },
-      ],
-      apiUrl: "https://gwfh.mranftl.com/api/fonts",
-    }),
     new MomentLocalesPlugin({
       localesToKeep: ["pl"],
     }),

@@ -1,7 +1,9 @@
 import datetime
 import os
+import re
 import threading
 import urllib.parse
+from decimal import Decimal
 from typing import Set, Optional
 
 from django.conf import settings
@@ -577,6 +579,169 @@ class Workshop(models.Model):
         Should the workshop be publicly visible? (accepted or cancelled)
         """
         return self.status == 'Z' or self.status == 'X'
+
+
+class InvoiceSequence(models.Model):
+    camp = models.OneToOneField(
+        Camp,
+        on_delete=models.PROTECT,
+        related_name='invoice_sequence',
+    )
+    last_allocated = models.PositiveIntegerField(default=0)
+
+
+class Invoice(models.Model):
+    class Status(models.TextChoices):
+        RECEIVED = 'RECEIVED', 'Otrzymana'
+        APPROVED = 'APPROVED', 'Zatwierdzona'
+        PROCESSED = 'PROCESSED', 'Przetworzona'
+        REJECTED = 'REJECTED', 'Odrzucona'
+
+    class Type(models.TextChoices):
+        KSEF = 'KSEF', 'KSeF'
+        OUTSIDE_KSEF = 'OUTSIDE_KSEF', 'Poza KSeF'
+        RECEIPT_WITH_NIP = 'RECEIPT_WITH_NIP', 'Paragon z NIP'
+        NON_ACCOUNTING_RECEIPT = 'NON_ACCOUNTING_RECEIPT', 'Paragon nieksięgowy'
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='invoices')
+    camp = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='invoices')
+    attachment = models.FileField(upload_to='invoices', storage=UploadStorage())
+    document_number = models.CharField(max_length=255)
+    issue_date = models.DateField()
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    invoice_type = models.CharField(max_length=24, choices=Type.choices)
+    description = models.TextField()
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.RECEIVED)
+    internal_number = models.CharField(max_length=30, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    admin_modified_at = models.DateTimeField(null=True, blank=True)
+    admin_modified_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='admin_modified_invoices',
+    )
+
+    class Meta:
+        permissions = (
+            ('view_all_costs', 'Can view all costs'),
+            ('approve_costs', 'Can approve or reject costs'),
+            ('process_costs', 'Can process costs'),
+            ('register_reimbursements', 'Can register reimbursements'),
+        )
+
+    @property
+    def can_user_edit(self):
+        return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
+
+
+class CostItem(models.Model):
+    class Category(models.TextChoices):
+        WORKSHOPS = 'WORKSHOPS', 'Warsztaty'
+        OUTINGS = 'OUTINGS', 'Wyjścia'
+        LUNCHES = 'LUNCHES', 'Obiady'
+        BREAKFASTS = 'BREAKFASTS', 'Śniadania'
+        REGULAR_PURCHASES = 'REGULAR_PURCHASES', 'Zakupy stałe'
+        SUPPORTING_AND_TECHNICAL_MATERIALS = (
+            'SUPPORTING_AND_TECHNICAL_MATERIALS',
+            'Materiały pomocnicze i techniczne',
+        )
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name='cost_items')
+    workshop = models.ForeignKey(
+        Workshop,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='cost_items',
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    category = models.CharField(max_length=36, choices=Category.choices)
+
+    def clean(self):
+        super().clean()
+        if self.workshop_id and self.workshop.year_id != self.invoice.camp_id:
+            raise ValidationError({'workshop': 'Warsztat musi pochodzić z tej samej edycji co faktura.'})
+
+
+def normalize_polish_account_number(account_number):
+    """Return an NRB/IBAN value in the canonical Polish IBAN format."""
+    account_number = re.sub(r'\s+', '', account_number).upper()
+    return account_number if account_number.startswith('PL') else f'PL{account_number}'
+
+
+def validate_polish_account_number(account_number):
+    """Validate a Polish NRB/IBAN value, allowing optional formatting spaces."""
+    normalized = normalize_polish_account_number(account_number)
+    national_number = normalized.removeprefix('PL')
+    if not re.fullmatch(r'\d{26}', national_number):
+        raise ValidationError('Nieprawidłowy format polskiego numeru rachunku bankowego.')
+    if int(f'{national_number[2:]}2521{national_number[:2]}') % 97 != 1:
+        raise ValidationError('Nieprawidłowa suma kontrolna numeru rachunku bankowego.')
+
+
+class SettlementDetails(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='settlement_details',
+    )
+    camp = models.ForeignKey(
+        Camp,
+        on_delete=models.PROTECT,
+        related_name='settlement_details',
+    )
+    account_number = models.CharField(max_length=64, validators=[validate_polish_account_number])
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'camp')
+
+    def clean(self):
+        super().clean()
+        self.account_number = normalize_polish_account_number(self.account_number)
+
+    def save(self, *args, **kwargs):
+        self.account_number = normalize_polish_account_number(self.account_number)
+        super().save(*args, **kwargs)
+
+
+def settlement_details_for(*, user, camp) -> SettlementDetails | None:
+    """Return a user's unique bank-account details for one workshop edition."""
+    try:
+        return SettlementDetails.objects.get(user=user, camp=camp)
+    except SettlementDetails.DoesNotExist:
+        return None
+
+
+class Reimbursement(models.Model):
+    class Type(models.TextChoices):
+        ASSOCIATION = 'ASSOCIATION', 'Stowarzyszenie'
+        OTHER = 'OTHER', 'Inne'
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='reimbursements')
+    camp = models.ForeignKey(Camp, on_delete=models.PROTECT, related_name='reimbursements')
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+    )
+    type = models.CharField(max_length=11, choices=Type.choices)
+    comment = models.TextField(blank=True)
+    execution_date = models.DateField()
+    registered_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='registered_reimbursements')
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class WorkshopParticipantManager(models.Manager):

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+  <article>
+    <h1 class="mt-3">{{ title }}</h1>
+    <h2 class="mt-4">Podsumowanie zwrotów</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Użytkownik</th>
+          <th scope="col">Rachunek</th>
+          <th scope="col">Suma zatwierdzona</th>
+          <th scope="col">Suma zwrócona</th>
+          <th scope="col">Pozostało do zwrotu</th>
+          <th scope="col"><span class="sr-only">Działania</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in reimbursement_summary %}
+          <tr{% if selected_user == row.user %} class="table-primary"{% endif %}>
+            <td>{{ row.user.get_full_name }}</td>
+            <td>
+              {% if row.has_account_number %}
+                {{ row.account_number }}
+              {% else %}
+                <span class="text-danger">Brak numeru rachunku</span>
+              {% endif %}
+            </td>
+            <td>{{ row.approved_total|floatformat:2 }} zł</td>
+            <td>{{ row.reimbursed_total|floatformat:2 }} zł</td>
+            <td>{{ row.remaining_total|floatformat:2 }} zł</td>
+            <td>
+              <a class="btn btn-sm btn-outline-primary"
+                 href="{% url 'costs_reimbursements' selected_year.pk %}?user={{ row.user.pk }}"
+                 aria-label="Dodaj zwrot dla {{ row.user.get_full_name }}">+</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">Brak osób oczekujących na zwrot.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if selected_user %}
+      <h2>Nowy zwrot dla {{ selected_user.get_full_name }}</h2>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="user_id" value="{{ selected_user.pk }}">
+        {% crispy reimbursement_form %}
+      </form>
+    {% endif %}
+
+    <h2 class="mt-4">Historia zwrotów</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Data wykonania</th>
+          <th scope="col">Użytkownik</th>
+          <th scope="col">Kwota</th>
+          <th scope="col">Typ</th>
+          <th scope="col">Zarejestrował(a)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reimbursement in reimbursements %}
+          <tr>
+            <td>{{ reimbursement.execution_date }}</td>
+            <td>{{ reimbursement.user.get_full_name }}</td>
+            <td>{{ reimbursement.amount|floatformat:2 }} zł</td>
+            <td>{{ reimbursement.get_type_display }}</td>
+            <td>{{ reimbursement.registered_by.get_full_name }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">Brak zarejestrowanych zwrotów.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </article>
+{% endblock %}
