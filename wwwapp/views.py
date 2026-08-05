@@ -180,12 +180,6 @@ def costs_admin_invoice_edit_view(request, year, invoice_id):
     return _invoice_form_view(request, year=year, invoice_id=invoice_id, admin_edit=True)
 
 
-def attachment_name_for_invoice(*, invoice, uploaded_attachment):
-    """Return the storage filename for a new attachment based on the internal number."""
-    _, extension = os.path.splitext(uploaded_attachment.name)
-    return f'{invoice.internal_number}{extension.lower()}'
-
-
 def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
     camp = get_object_or_404(Camp, pk=year)
     invoice = None
@@ -233,10 +227,8 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
                 invoice.admin_modified_by = None
         uploaded_attachment = invoice_form.cleaned_data['attachment']
         if isinstance(uploaded_attachment, UploadedFile):
-            invoice.attachment.name = attachment_name_for_invoice(
-                invoice=invoice,
-                uploaded_attachment=uploaded_attachment,
-            )
+            _, extension = os.path.splitext(uploaded_attachment.name)
+            invoice.attachment.name = f'{invoice.internal_number}{extension.lower()}'
         stored_attachment_name = ''
         try:
             with transaction.atomic():
@@ -399,20 +391,6 @@ def costs_reimbursements_view(request, year):
     account_numbers = dict(
         SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
     )
-    missing_account_user_ids = set(users.values_list('pk', flat=True)) - account_numbers.keys()
-    if missing_account_user_ids:
-        missing_users = User.objects.filter(pk__in=missing_account_user_ids).order_by(
-            'first_name',
-            'last_name',
-            'pk',
-        )
-        messages.warning(
-            request,
-            'Brak numeru rachunku dla: ' + ', '.join(
-                user.get_full_name() for user in missing_users
-            ),
-            extra_tags='auto-dismiss',
-        )
     approved_totals = dict(
         Invoice.objects.filter(
             camp=camp,
