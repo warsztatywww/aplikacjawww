@@ -33,6 +33,7 @@
         </div>
       {% endif %}
       <div class="alert alert-info" id="cost-item-total" aria-live="polite" role="status"></div>
+      <div class="text-muted mb-2" id="cost-item-message" aria-live="polite"></div>
       <div id="cost-item-forms">
         {% for form in formset %}
         <fieldset class="cost-item-form card mb-2"{% if forloop.first and formset.initial_form_count == 0 %}
@@ -72,6 +73,12 @@
                 <button class="btn btn-outline-secondary btn-sm" data-fill-remaining-cost-item
                   type="button">Reszta</button>
               </div>
+              <div class="col-12 mt-2 form-check">
+                {{ formset.empty_form.DELETE }}
+                <label class="form-check-label" for="{{ formset.empty_form.DELETE.id_for_label }}">
+                  Usuń pozycję
+                </label>
+              </div>
             </div>
           </div>
         </fieldset>
@@ -94,24 +101,17 @@
       const emptyForm = document.getElementById('cost-item-empty-form');
       const addCostItem = document.getElementById('add-cost-item');
       const totalDisplay = document.getElementById('cost-item-total');
+      const messageDisplay = document.getElementById('cost-item-message');
       if (!forms || !invoiceAmount || !invoiceForm || !totalForms || !emptyForm || !addCostItem
-        || !totalDisplay) {
+        || !totalDisplay || !messageDisplay) {
         return;
       }
 
       const amountInGrosze = (input) => {
-        const value = input.value.trim();
-        if (!/^\d+(?:[,.]\d{0,2})?$/.test(value)) {
+        if (!Number.isFinite(input.valueAsNumber)) {
           return null;
         }
-        return Math.round(Number(value.replace(',', '.')) * 100);
-      };
-      const formatMoney = (input) => {
-        const value = input.value.trim();
-        if (!/^\d+(?:[,.]\d{0,2})?$/.test(value)) {
-          return;
-        }
-        input.value = Number.parseFloat(value.replace(',', '.')).toFixed(2);
+        return Math.round(input.valueAsNumber * 100);
       };
       const costItemFieldsets = () => [...forms.querySelectorAll(':scope > fieldset')];
       const costItemAmount = (fieldset) => fieldset.querySelector('input[name$="-amount"]');
@@ -124,13 +124,18 @@
         maximumFractionDigits: 2,
       });
       const updateTotalDisplay = () => {
+        messageDisplay.textContent = '';
         const expected = amountInGrosze(invoiceAmount);
         const inputs = costItemFieldsets()
           .filter((fieldset) => !isDeleted(fieldset))
           .map(costItemAmount);
         const amounts = inputs.map(amountInGrosze);
         if (expected === null || amounts.includes(null)) {
-          totalDisplay.textContent = 'Uzupełnij poprawne kwoty, aby sprawdzić sumę pozycji.';
+          const validTotal = amounts.reduce((sum, amount) => sum + (amount ?? 0), 0);
+          totalDisplay.textContent = (
+            `Suma poprawnie wpisanych pozycji: ${formatGrosze(validTotal)} zł.`
+          );
+          messageDisplay.textContent = 'Uzupełnij poprawnie wszystkie kwoty.';
           return;
         }
         const total = amounts.reduce((sum, amount) => sum + amount, 0);
@@ -143,26 +148,10 @@
         }
         totalDisplay.textContent = `Suma pozycji: ${formatGrosze(total)} zł. ${status}`;
       };
-      invoiceForm.addEventListener('submit', () => {
-        invoiceForm.querySelectorAll('[data-money-input]').forEach(formatMoney);
-      });
-      invoiceForm.querySelectorAll('[data-money-input]').forEach((input) => {
-        input.addEventListener('blur', () => {
-          formatMoney(input);
-          updateTotalDisplay();
-        });
-      });
-
       addCostItem.addEventListener('click', () => {
         const index = totalForms.value;
-        forms.insertAdjacentHTML('beforeend', emptyForm.innerHTML.replaceAll('__prefix__', index));
+        forms.insertAdjacentHTML('beforeend', emptyForm.innerHTML.replace(/__prefix__/g, index));
         totalForms.value = String(Number.parseInt(index, 10) + 1);
-        forms.lastElementChild.querySelectorAll('[data-money-input]').forEach((input) => {
-          input.addEventListener('blur', () => {
-            formatMoney(input);
-            updateTotalDisplay();
-          });
-        });
         updateTotalDisplay();
       });
 
@@ -185,12 +174,14 @@
           .map(costItemAmount)
           .map(amountInGrosze);
         if (otherAmounts.includes(null)) {
-          totalDisplay.textContent = 'Najpierw uzupełnij poprawne kwoty w pozostałych pozycjach.';
+          messageDisplay.textContent = (
+            'Najpierw uzupełnij poprawnie kwoty w pozostałych pozycjach.'
+          );
           return;
         }
         const remaining = invoiceInGrosze - otherAmounts.reduce((sum, amount) => sum + amount, 0);
         if (remaining < 1) {
-          totalDisplay.textContent = 'Pozostałe pozycje wyczerpują kwotę faktury.';
+          messageDisplay.textContent = 'Pozostałe pozycje wyczerpują kwotę faktury.';
           return;
         }
         itemAmount.value = (remaining / 100).toFixed(2);
@@ -202,9 +193,7 @@
         ? syncContainer.querySelector('input[name$="-amount"]')
         : null;
       let syncAmount = Boolean(
-        invoiceAmount
-        && itemAmount
-        && (!itemAmount.value || itemAmount.value === invoiceAmount.value)
+        itemAmount && (!itemAmount.value || itemAmount.value === invoiceAmount.value)
       );
       if (syncAmount) {
         itemAmount.value = invoiceAmount.value;
@@ -218,6 +207,7 @@
           }
         });
       }
+      totalForms.value = String(costItemFieldsets().length);
       updateTotalDisplay();
       document.getElementById('cost-item-total-error')?.focus();
     })();

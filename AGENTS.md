@@ -85,6 +85,8 @@ be exercised meaningfully with the existing fixtures.
   are unrelated to the requested work.
 - Keep Django view, form, and model behavior covered by app-local tests.
 - Render Django forms and formsets with django-crispy-forms.
+- Pass `None`, not a new unsaved model instance, when a model form has no
+  existing instance. This preserves field initial values and Django defaults.
 - Put cross-field and cross-form validation in the owning form or formset's
   `clean()` method. Use Django's form and formset save APIs instead of manually
   reproducing their persistence behavior.
@@ -96,6 +98,8 @@ be exercised meaningfully with the existing fixtures.
 - Treat database transactions and file storage as separate systems: rolling
   back a database transaction does not remove files already written to storage.
   Cover replacement and failure paths when changing uploaded-file handling.
+- Use plain, controlled technical language following ASD-STE100 principles:
+  short sentences, consistent terms, and no promotional adjectives.
 - Keep frontend entry-point changes in `frontend/`; do not hand-edit build
   output.
 - Never commit secrets, local databases, uploaded media, virtual environments,

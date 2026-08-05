@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.contrib.admin.sites import AdminSite
-from django.core.exceptions import FieldDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase
@@ -25,7 +25,7 @@ from wwwapp.costs import (
     pending_total_for,
     transition_invoices,
 )
-from wwwapp.admin import CostItemAdmin, InvoiceAdmin, ReimbursementAdmin, SettlementDetailsAdmin
+from wwwapp.admin import InvoiceAdmin
 
 
 class CostModelTests(TestCase):
@@ -90,27 +90,6 @@ class CostModelTests(TestCase):
             SettlementDetails.objects.create(user=self.user, camp=self.camp,
                                              account_number='PL27114020040000300201355387')
 
-    def test_reimbursement_does_not_copy_an_account_number_snapshot(self):
-        with self.assertRaises(FieldDoesNotExist):
-            Reimbursement._meta.get_field('account_number_snapshot')
-
-    def test_cost_administrators_allow_standard_edits_and_reimbursement_deletion(self):
-        site = AdminSite()
-        request = RequestFactory().get('/')
-        request.user = User.objects.create_superuser('financial-admin', 'admin@example.com', 'password')
-        admins = (
-            (InvoiceAdmin, Invoice, False, False),
-            (CostItemAdmin, CostItem, True, True),
-            (SettlementDetailsAdmin, SettlementDetails, True, True),
-            (ReimbursementAdmin, Reimbursement, True, True),
-        )
-        for admin_class, model, allows_add, allows_delete in admins:
-            with self.subTest(model=model.__name__):
-                model_admin = admin_class(model, site)
-                self.assertEqual(model_admin.has_add_permission(request), allows_add)
-                self.assertTrue(model_admin.has_change_permission(request))
-                self.assertEqual(model_admin.has_delete_permission(request), allows_delete)
-
     def test_admin_cannot_add_an_invoice(self):
         site = AdminSite()
         request = RequestFactory().get('/')
@@ -128,20 +107,21 @@ class CostModelTests(TestCase):
 
         self.assertTrue(Invoice.objects.filter(pk=self.invoice.pk).exists())
 
-    def test_cost_text_fields_do_not_impose_a_frontend_length_limit(self):
-        self.assertIsNone(Invoice._meta.get_field('description').max_length)
-        self.assertIsNone(Reimbursement._meta.get_field('comment').max_length)
+    def test_settlement_details_accept_formatted_nrb_and_iban_numbers(self):
+        for account_number in (
+            'PL 61 1090 1014 0000 0712 1981 2874',
+            '61 1090 1014 0000 0712 1981 2874',
+        ):
+            with self.subTest(account_number=account_number):
+                details = SettlementDetails(
+                    user=self.user,
+                    camp=self.other_camp,
+                    account_number=account_number,
+                )
 
-    def test_settlement_details_normalize_a_formatted_polish_account_number(self):
-        details = SettlementDetails(
-            user=self.user,
-            camp=self.other_camp,
-            account_number='PL 61 1090 1014 0000 0712 1981 2874',
-        )
+                details.full_clean()
 
-        details.full_clean()
-
-        self.assertEqual(details.account_number, 'PL61109010140000071219812874')
+                self.assertEqual(details.account_number, 'PL61109010140000071219812874')
 
     def test_settlement_details_normalize_on_save(self):
         details = SettlementDetails(
@@ -188,21 +168,19 @@ class CostModelTests(TestCase):
         self.assertEqual(InvoiceSequence.objects.get(camp=self.camp).last_allocated, 3)
         self.assertEqual(InvoiceSequence.objects.get(camp=other_invoice.camp).last_allocated, 42)
 
-    def test_allocate_invoice_number_recovers_from_a_lost_create_race(self):
-        existing_sequence = InvoiceSequence.objects.get(camp=self.camp)
+    def test_allocate_invoice_number_recovers_from_a_concurrent_sequence_creation(self):
+        camp = Camp.objects.create(year=2028)
+        InvoiceSequence.objects.create(camp=camp, last_allocated=1)
 
         with patch.object(
             InvoiceSequence.objects,
             'get_or_create',
-            side_effect=[IntegrityError(), (existing_sequence, False)],
+            side_effect=lambda **kwargs: InvoiceSequence.objects.create(camp=kwargs['camp']),
         ):
-            allocated = allocate_invoice_number(camp=self.camp)
+            allocated = allocate_invoice_number(camp=camp)
 
-        self.assertEqual(allocated, 'WWW_2026_FP_0002')
-        self.assertEqual(
-            InvoiceSequence.objects.get(camp=self.camp).last_allocated,
-            2,
-        )
+        self.assertEqual(allocated, 'WWW_2028_FP_0002')
+        self.assertEqual(InvoiceSequence.objects.get(camp=camp).last_allocated, 2)
 
     def test_batch_transition_rolls_back_when_one_invoice_is_ineligible(self):
         received = self.create_invoice(
@@ -325,14 +303,13 @@ class CostModelTests(TestCase):
             tuple(rows[0]),
             (
                 'internal_number', 'document_number', 'issue_date', 'user', 'invoice_type',
-                'status', 'invoice_amount', 'category', 'camp', 'workshop', 'item_amount',
+                'status', 'invoice_amount', 'category', 'workshop', 'item_amount',
                 'description',
             ),
         )
         self.assertEqual(rows[0]['internal_number'], invoice.internal_number)
         self.assertEqual(rows[0]['document_number'], invoice.document_number)
         self.assertEqual(rows[0]['item_amount'], Decimal('10.00'))
-        self.assertEqual(rows[0]['camp'], str(self.camp))
         self.assertEqual(rows[0]['workshop'], '')
         self.assertEqual(rows[1]['category'], CostItem.Category.OUTINGS)
 

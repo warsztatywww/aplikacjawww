@@ -86,8 +86,8 @@
       <div class="card-body">
       <h2 class="h4" id="settlement-details-heading">Dane rachunku bankowego</h2>
       {% if settlement_details_form.instance.pk %}
-        <p class="font-weight-bold">{{ settlement_details_form.instance.account_number|polish_account_number }}</p>
-        <details>
+        <p class="font-weight-bold">{{ saved_account_number|polish_account_number }}</p>
+        <details{% if settlement_details_form.errors %} open{% endif %}>
           <summary class="btn btn-outline-primary">Zmień dane rachunku bankowego</summary>
           {% crispy settlement_details_form %}
         </details>

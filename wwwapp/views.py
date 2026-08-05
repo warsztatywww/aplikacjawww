@@ -53,7 +53,6 @@ from wwwapp.forms import (
     CostItemFormSet,
     InvoiceForm,
     ReimbursementForm,
-    ReimbursementUserForm,
     SettlementDetailsForm,
     SolutionFileFormSet,
     SolutionForm,
@@ -119,17 +118,28 @@ def show_costs_for(user):
     )
 
 
-def _has_settlement_details(*, user, camp):
-    details = settlement_details_for(user=user, camp=camp)
-    return details is not None and bool(details.account_number.strip())
+def redirect_to_view_for_latest_year(target_view_name):
+    def view(request):
+        url = reverse(target_view_name, args=[Camp.current().pk])
+        query_string = request.META.get('QUERY_STRING', '')
+        if query_string:
+            url = f'{url}?{query_string}'
+        return redirect(url)
+
+    return view
 
 
 @login_required
 def costs_mine_view(request, year):
     camp = get_object_or_404(Camp, pk=year)
     invoices = Invoice.objects.filter(user=request.user, camp=camp).order_by('-created_at')
+    settlement_details = settlement_details_for(user=request.user, camp=camp)
+    saved_account_number = (
+        settlement_details.account_number if settlement_details is not None else ''
+    )
     settlement_details_form = SettlementDetailsForm(
         request.POST or None,
+        instance=settlement_details,
         user=request.user,
         camp=camp,
     )
@@ -145,6 +155,7 @@ def costs_mine_view(request, year):
         'show_costs': True,
         'invoices': invoices,
         'settlement_details_form': settlement_details_form,
+        'saved_account_number': saved_account_number,
         'approved_total': approved_total_for(user=request.user, camp=camp),
         'reimbursed_total': reimbursed_total_for(user=request.user, camp=camp),
         'remaining_total': balance_for(user=request.user, camp=camp),
@@ -173,7 +184,10 @@ def costs_admin_invoice_edit_view(request, year, invoice_id):
 def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
     camp = get_object_or_404(Camp, pk=year)
     invoice = None
-    if invoice_id is None and not _has_settlement_details(user=request.user, camp=camp):
+    settlement_details = settlement_details_for(user=request.user, camp=camp)
+    if invoice_id is None and (
+        settlement_details is None or not settlement_details.account_number.strip()
+    ):
         messages.info(request, 'Najpierw podaj dane rachunku bankowego.', extra_tags='auto-dismiss')
         return redirect(f"{reverse('costs_mine', args=[camp.pk])}?add_invoice=1")
     if invoice_id is not None:
@@ -199,30 +213,42 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         invoice_amount=invoice_form.cleaned_data['amount'] if invoice_form_is_valid else None,
     )
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
-        with transaction.atomic():
-            old_attachment_name = invoice.attachment.name if invoice else ''
-            invoice = invoice_form.save(commit=False)
-            if invoice_id is None:
-                invoice.internal_number = allocate_invoice_number(camp=camp)
+        old_attachment_name = invoice.attachment.name if invoice else ''
+        invoice = invoice_form.save(commit=False)
+        if invoice_id is None:
+            invoice.internal_number = allocate_invoice_number(camp=camp)
+        else:
+            uploaded_attachment = invoice_form.cleaned_data['attachment']
+            if (
+                isinstance(uploaded_attachment, UploadedFile)
+                and os.path.basename(uploaded_attachment.name)
+                == os.path.basename(old_attachment_name)
+            ):
+                filename, extension = os.path.splitext(uploaded_attachment.name)
+                invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
+            if admin_edit:
+                invoice.admin_modified_at = timezone.now()
+                invoice.admin_modified_by = request.user
             else:
-                uploaded_attachment = invoice_form.cleaned_data['attachment']
-                if (
-                    isinstance(uploaded_attachment, UploadedFile)
-                    and os.path.basename(uploaded_attachment.name) == os.path.basename(old_attachment_name)
-                ):
-                    filename, extension = os.path.splitext(uploaded_attachment.name)
-                    invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
-                if admin_edit:
-                    invoice.admin_modified_at = timezone.now()
-                    invoice.admin_modified_by = request.user
-                elif invoice.status == Invoice.Status.REJECTED:
+                if invoice.status == Invoice.Status.REJECTED:
                     invoice.status = Invoice.Status.RECEIVED
-                    invoice.admin_modified_at = None
-                    invoice.admin_modified_by = None
-            invoice.save()
-            formset.save()
-            if old_attachment_name and invoice.attachment.name != old_attachment_name:
-                transaction.on_commit(lambda: invoice.attachment.storage.delete(old_attachment_name))
+                invoice.admin_modified_at = None
+                invoice.admin_modified_by = None
+        stored_attachment_name = ''
+        try:
+            with transaction.atomic():
+                invoice.save()
+                stored_attachment_name = invoice.attachment.name
+                invoice_form.save_m2m()
+                formset.save()
+                if old_attachment_name and stored_attachment_name != old_attachment_name:
+                    transaction.on_commit(
+                        lambda: invoice.attachment.storage.delete(old_attachment_name),
+                    )
+        except Exception:
+            if stored_attachment_name and stored_attachment_name != old_attachment_name:
+                invoice.attachment.storage.delete(stored_attachment_name)
+            raise
         message = 'Dodano fakturę.' if invoice_id is None else 'Zapisano fakturę.'
         messages.success(request, message, extra_tags='auto-dismiss')
         return redirect('costs_admin' if admin_edit else 'costs_mine', year=camp.pk)
@@ -236,7 +262,7 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
             'invoice_form': invoice_form,
             'formset': formset,
             'selected_year': camp,
-            'hide_year_switcher': invoice_id is not None,
+            'hide_year_navigation': invoice_id is not None,
             'return_url': reverse('costs_admin' if admin_edit else 'costs_mine', args=[camp.pk]),
             'return_label': 'Wróć do kosztów' if admin_edit else 'Wróć do moich kosztów',
         },
@@ -249,20 +275,19 @@ def costs_invoice_attachment_view(request, year, invoice_id):
     if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
         raise Http404
 
-    mimetype, encoding = mimetypes.guess_type(invoice.attachment.path)
-    return sendfile(
-        request,
-        invoice.attachment.path,
-        mimetype=mimetype or 'application/octet-stream',
-        encoding=encoding,
-    )
+    return sendfile(request, invoice.attachment.path)
 
 
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
 def costs_admin_view(request, year):
     camp = get_object_or_404(Camp, pk=year)
-    filter_form = CostFilterForm(request.GET or None)
+    users = User.objects.filter(invoices__camp=camp).distinct().order_by(
+        'first_name',
+        'last_name',
+        'pk',
+    )
+    filter_form = CostFilterForm(request.GET or None, users=users)
     invoices = Invoice.objects.filter(camp=camp).select_related('user').prefetch_related('cost_items')
     if filter_form.is_valid():
         filters = filter_form.cleaned_data
@@ -341,16 +366,13 @@ def costs_reimbursements_view(request, year):
         invoices__camp=camp,
         invoices__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
     ).distinct().order_by('first_name', 'last_name', 'pk')
-    user_form = ReimbursementUserForm(request.GET or None, users=users)
-    selected_user = None
+    selected_user_id = request.POST.get('user_id') or request.GET.get('user')
+    selected_user = (
+        get_object_or_404(users, pk=selected_user_id) if selected_user_id else None
+    )
     form = None
     balance_before = None
     balance_after = None
-    user_id = request.POST.get('user_id')
-    if user_form.is_valid():
-        selected_user = user_form.cleaned_data['user']
-    if user_id:
-        selected_user = get_object_or_404(users, pk=user_id)
     if selected_user:
         balance_before = balance_for(user=selected_user, camp=camp)
         form = ReimbursementForm(
@@ -374,6 +396,11 @@ def costs_reimbursements_view(request, year):
     account_numbers = dict(
         SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
     )
+    missing_account_user_ids = set(users.values_list('pk', flat=True)) - account_numbers.keys()
+    if missing_account_user_ids:
+        raise SettlementDetails.DoesNotExist(
+            f'Brak numeru rachunku dla użytkowników: {sorted(missing_account_user_ids)}',
+        )
     approved_totals = dict(
         Invoice.objects.filter(
             camp=camp,
@@ -397,19 +424,14 @@ def costs_reimbursements_view(request, year):
         }
         for user in users
     ]
-    reimbursement_rows = [
-        {'reimbursement': reimbursement, 'account_number': account_numbers.get(reimbursement.user_id, '')}
-        for reimbursement in reimbursements.order_by('-execution_date', '-created_at')
-    ]
     context = {
         'title': 'Zwroty kosztów',
         'selected_year': camp,
         'users': users,
-        'user_form': user_form,
         'selected_user': selected_user,
         'reimbursement_form': form,
         'reimbursement_summary': reimbursement_summary,
-        'reimbursement_rows': reimbursement_rows,
+        'reimbursements': reimbursements.order_by('-execution_date', '-created_at'),
         'balance_before': balance_before,
         'balance_after': balance_after,
         'approved_total': approved_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
@@ -427,22 +449,14 @@ def costs_statistics_view(request, year):
     filter_form = StatisticsFilterForm(request.GET or None)
     items = CostItem.objects.filter(invoice__camp=camp)
     status = ''
-    item_context = ''
     if filter_form.is_valid():
         status = filter_form.cleaned_data['status']
-        item_context = filter_form.cleaned_data['context']
     if status == '':
         items = items.filter(
             invoice__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
         )
-    elif status in Invoice.Status.values:
-        items = items.filter(invoice__status=status)
-    if item_context == 'workshop':
-        items = items.filter(workshop__isnull=False)
-    elif item_context == 'camp':
-        items = items.filter(workshop__isnull=True)
     else:
-        item_context = ''
+        items = items.filter(invoice__status=status)
 
     totals_by_category = {
         row['category']: row['total']
@@ -466,7 +480,7 @@ def costs_statistics_view(request, year):
         }
         for value, label in CostItem.Category.choices
     ]
-    colors = ('#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997')
+    colors = ('#0072b2', '#e69f00', '#009e73', '#cc79a7', '#d55e00', '#56b4e9')
     start_angle = -90
     for row, color in zip(category_rows, colors):
         row['color'] = color
@@ -510,22 +524,6 @@ def _pie_slice_path(*, start_angle, angle):
         f'M 50 50 L {start_x:.4f} {start_y:.4f} '
         f'A 40 40 0 {large_arc} 1 {end_x:.4f} {end_y:.4f} Z'
     )
-
-
-def latest_program_redirect_view(request):
-    url = reverse('program', args=[Camp.current().pk])
-    args = request.META.get('QUERY_STRING', '')
-    if args:
-        url = f'{url}?{args}'
-    return redirect(url)
-
-
-def legacy_workshop_add_redirect_view(request):
-    url = reverse('workshops_add', args=[Camp.current().pk])
-    args = request.META.get('QUERY_STRING', '')
-    if args:
-        url = f'{url}?{args}'
-    return redirect(url)
 
 
 def program_view(request, year):

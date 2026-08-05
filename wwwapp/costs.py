@@ -20,7 +20,6 @@ CSV_FIELDS = (
     'status',
     'invoice_amount',
     'category',
-    'camp',
     'workshop',
     'item_amount',
     'description',
@@ -31,7 +30,8 @@ CSV_FIELDS = (
 def allocate_invoice_number(*, camp):
     """Allocate the next internal invoice number for a workshop edition."""
     try:
-        sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
+        with transaction.atomic():
+            sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
     except IntegrityError:
         created = False
     if not created:
@@ -92,7 +92,6 @@ def invoice_csv_rows(*, invoices):
                 'status': invoice.status,
                 'invoice_amount': invoice.amount,
                 'category': item.category,
-                'camp': str(invoice.camp),
                 'workshop': str(item.workshop) if item.workshop_id else '',
                 'item_amount': item.amount,
                 'description': invoice.description,

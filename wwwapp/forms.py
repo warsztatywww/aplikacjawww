@@ -13,7 +13,7 @@ from django.forms import ModelForm, FileInput, FileField
 from django.forms.fields import ImageField, ChoiceField, DateField, EmailField
 from django.forms.forms import Form
 from django.forms.models import inlineformset_factory, BaseInlineFormSet
-from django.forms.widgets import DateInput, TextInput, Textarea, Widget
+from django.forms.widgets import DateInput, NumberInput, TextInput, Textarea, Widget
 from django.template import Template, Context
 from django.urls import reverse
 from django.utils.html import format_html
@@ -30,12 +30,11 @@ from .models import Article, Camp, CampParticipant, CostItem, Invoice, Reimburse
 from wwwapp.models import settlement_details_for
 
 
-MONEY_INPUT_ATTRS = {
-    'data-money-input': '',
-    'inputmode': 'decimal',
+AMOUNT_WIDGET = NumberInput(attrs={
+    'data-amount-input': '',
     'min': '0.01',
     'step': '0.01',
-}
+})
 
 
 class InitializedTinyMCE(tinymce.widgets.TinyMCE):
@@ -611,10 +610,7 @@ class InvoiceForm(ModelForm):
             'invoice_type': 'Wybierz rodzaj dokumentu, który przekazujesz do rozliczenia.',
             'description': 'Krótko wyjaśnij, czego dotyczy wydatek i dlaczego był potrzebny.',
         }
-        widgets = {
-            'issue_date': DateInput(),
-            'amount': TextInput(attrs=MONEY_INPUT_ATTRS),
-        }
+        widgets = {'amount': AMOUNT_WIDGET}
 
     def __init__(self, *args, user, camp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -662,7 +658,7 @@ class CostItemForm(ModelForm):
             'amount': 'Kwota brutto przypisana do tej pozycji. Suma wszystkich pozycji musi równać się kwocie dokumentu.',
             'category': 'Wybierz kategorię najlepiej opisującą ten wydatek.',
         }
-        widgets = {'amount': TextInput(attrs=MONEY_INPUT_ATTRS)}
+        widgets = {'amount': AMOUNT_WIDGET}
 
     def __init__(self, *args, camp, **kwargs):
         super().__init__(*args, **kwargs)
@@ -689,7 +685,11 @@ class BaseCostItemInlineFormSet(BaseInlineFormSet):
         if any(self.errors):
             return
 
-        items = self._cost_items_data()
+        items = [
+            form.cleaned_data
+            for form in self.forms
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
+        ]
         if not items:
             raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
 
@@ -697,21 +697,15 @@ class BaseCostItemInlineFormSet(BaseInlineFormSet):
         if total != self.invoice_amount:
             raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
 
-    def _cost_items_data(self):
-        return [
-            form.cleaned_data
-            for form in self.forms
-            if form.cleaned_data and not form.cleaned_data.get('DELETE', False)
-        ]
-
-
 CostItemFormSet = inlineformset_factory(
     Invoice,
     CostItem,
     form=CostItemForm,
     formset=BaseCostItemInlineFormSet,
-    extra=1,
+    extra=0,
     can_delete=True,
+    min_num=1,
+    validate_min=True,
 )
 
 
@@ -722,10 +716,15 @@ class SettlementDetailsForm(ModelForm):
         model = SettlementDetails
         fields = ['account_number']
         labels = {'account_number': 'Numer rachunku bankowego'}
+        widgets = {
+            'account_number': TextInput(
+                attrs={'placeholder': '00 0000 0000 0000 0000 0000 0000'},
+            ),
+        }
 
     def __init__(self, *args, user, camp, **kwargs):
         if 'instance' not in kwargs:
-            kwargs['instance'] = settlement_details_for(user=user, camp=camp) or SettlementDetails()
+            kwargs['instance'] = settlement_details_for(user=user, camp=camp)
         super().__init__(*args, **kwargs)
         self.instance.user = user
         self.instance.camp = camp
@@ -763,7 +762,7 @@ class ReimbursementForm(ModelForm):
             'comment': 'Komentarz',
             'execution_date': 'Data wykonania',
         }
-        widgets = {'amount': TextInput(attrs=MONEY_INPUT_ATTRS)}
+        widgets = {'amount': AMOUNT_WIDGET}
 
     def __init__(self, *args, user, camp, registered_by, **kwargs):
         super().__init__(*args, **kwargs)
@@ -791,27 +790,10 @@ class FullNameUserChoiceField(ModelChoiceField):
         return user.get_full_name()
 
 
-class ReimbursementUserForm(Form):
-    """Choose a participant whose reimbursement is being registered."""
-
-    user = FullNameUserChoiceField(label='Użytkownik', queryset=User.objects.none(), required=True)
-
-    def __init__(self, *args, users, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['user'].queryset = users
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.include_media = False
-        self.helper.layout = Layout(
-            'user',
-            FormActions(StrictButton('Wybierz', type='submit', css_class='btn-secondary')),
-        )
-
-
 class CostFilterForm(Form):
     """Provide optional invoice administration filters."""
 
-    user = ModelChoiceField(label='Użytkownik', queryset=User.objects.all(), required=False)
+    user = FullNameUserChoiceField(label='Użytkownik', queryset=None, required=False)
     status = ChoiceField(
         label='Status',
         choices=(('', 'Wszystkie'), *Invoice.Status.choices),
@@ -823,8 +805,9 @@ class CostFilterForm(Form):
         required=False,
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, users, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['user'].queryset = users
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.include_media = False
@@ -841,15 +824,12 @@ class StatisticsFilterForm(Form):
 
     status = ChoiceField(
         label='Status faktury',
-        choices=(('', 'Zatwierdzone i przetworzone'), *Invoice.Status.choices),
-        required=False,
-    )
-    context = ChoiceField(
-        label='Zakres',
         choices=(
-            ('', 'Edycja i warsztaty'),
-            ('camp', 'Edycja'),
-            ('workshop', 'Warsztaty'),
+            ('', 'Zatwierdzone i przetworzone'),
+            (Invoice.Status.RECEIVED, 'Otrzymane'),
+            (Invoice.Status.APPROVED, 'Zatwierdzone'),
+            (Invoice.Status.REJECTED, 'Odrzucone'),
+            (Invoice.Status.PROCESSED, 'Przetworzone'),
         ),
         required=False,
     )

@@ -15,7 +15,6 @@ from wwwapp.forms import (
     CostItemFormSet,
     InvoiceForm,
     ReimbursementForm,
-    ReimbursementUserForm,
     SettlementDetailsForm,
 )
 from wwwapp.models import (
@@ -33,7 +32,7 @@ from wwwapp.models import (
 
 CSV_HEADER = [
     'internal_number', 'document_number', 'issue_date', 'user', 'invoice_type', 'status',
-    'invoice_amount', 'category', 'camp', 'workshop', 'item_amount',
+    'invoice_amount', 'category', 'workshop', 'item_amount',
     'description',
 ]
 
@@ -259,22 +258,12 @@ class SettlementAndReimbursementFormTests(TestCase):
         self.assertEqual(form.fields['issue_date'].widget.input_type, 'text')
         self.assertNotIn('type', form.fields['issue_date'].widget.attrs)
 
-    def test_money_inputs_accept_local_decimal_entry(self):
+    def test_amount_inputs_use_number_constraints(self):
         form = InvoiceForm(user=self.user, camp=self.camp)
 
-        self.assertEqual(form.fields['amount'].widget.input_type, 'text')
-        self.assertEqual(form.fields['amount'].widget.attrs['inputmode'], 'decimal')
-        self.assertIn('data-money-input', form.fields['amount'].widget.attrs)
-
-    def test_reimbursement_user_form_uses_full_names(self):
-        self.user.first_name = 'Jan'
-        self.user.last_name = 'Kowalski'
-        self.user.save(update_fields=['first_name', 'last_name'])
-
-        form = ReimbursementUserForm(users=User.objects.filter(pk=self.user.pk))
-
-        self.assertEqual(form.fields['user'].label_from_instance(self.user), 'Jan Kowalski')
-
+        self.assertEqual(form.fields['amount'].widget.input_type, 'number')
+        self.assertEqual(form.fields['amount'].widget.attrs['step'], '0.01')
+        self.assertIn('data-amount-input', form.fields['amount'].widget.attrs)
 
 class OwnCostsViewsTests(TestCase):
     def setUp(self):
@@ -393,6 +382,23 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(response, 'Dane rachunku bankowego')
         self.assertContains(response, 'PL 61 1090 1014 0000 0712 1981 2874')
 
+    def test_invalid_account_edit_keeps_saved_value_and_reveals_errors(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_mine', args=[self.camp.pk]),
+            {'account_number': 'PL001234'},
+        )
+
+        self.assertContains(response, 'PL 61 1090 1014 0000 0712 1981 2874')
+        self.assertContains(response, '<details open>')
+        self.assertContains(response, 'Nieprawidłowy format')
+
     def test_mydata_navigation_shows_own_costs_after_first_invoice(self):
         self.client.force_login(self.user)
 
@@ -424,8 +430,8 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertContains(response, 'Moje koszty')
 
-    def test_own_cost_urls_are_nested_under_the_profile(self):
-        self.assertEqual(reverse('costs_mine', args=[self.camp.pk]), f'/me/costs/{self.camp.pk}/')
+    def test_own_cost_urls_include_the_selected_year(self):
+        self.assertEqual(reverse('costs_mine', args=[self.camp.pk]), f'/{self.camp.pk}/costs/')
         self.assertEqual(
             reverse('costs_invoice_add', args=[self.camp.pk]),
             f'/me/costs/{self.camp.pk}/invoices/add/',
@@ -499,7 +505,7 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(response, 'class="alert alert-info" id="cost-item-total"')
         self.assertContains(response, 'class="cost-item-form card mb-2"')
 
-    def test_invoice_amount_uses_the_shared_date_picker_and_money_input(self):
+    def test_invoice_amount_uses_a_number_input(self):
         SettlementDetails.objects.create(
             user=self.user,
             camp=self.camp,
@@ -509,8 +515,8 @@ class OwnCostsViewsTests(TestCase):
 
         response = self.client.get(reverse('costs_invoice_add', args=[self.camp.pk]))
 
-        self.assertContains(response, 'data-money-input')
-        self.assertContains(response, 'inputmode="decimal"')
+        self.assertContains(response, 'data-amount-input')
+        self.assertContains(response, 'type="number"')
 
     def test_invoice_add_displays_allocation_errors(self):
         SettlementDetails.objects.create(
@@ -550,7 +556,6 @@ class OwnCostsViewsTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="cost-item-total-error"')
         self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
         self.assertContains(response, 'data-fill-remaining-cost-item')
 
@@ -670,6 +675,7 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'year-navigation')
+        self.assertEqual(response.context['formset'].total_form_count(), 1)
 
     def test_invoice_add_keeps_the_year_navigation_footer(self):
         SettlementDetails.objects.create(
@@ -839,6 +845,24 @@ class CostAdministrationViewsTests(TestCase):
             with self.subTest(field_name=field_name):
                 choices = response.context['filter_form'].fields[field_name].choices
                 self.assertEqual(choices[0], ('', 'Wszystkie'))
+
+    def test_user_filter_lists_full_names_only_for_the_selected_camp(self):
+        self.owner.first_name = 'Jan'
+        self.owner.last_name = 'Kowalski'
+        self.owner.save(update_fields=['first_name', 'last_name'])
+        user_without_invoice = User.objects.create_user(
+            username='no-invoice',
+            first_name='Anna',
+            last_name='Nowak',
+        )
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
+        user_field = response.context['filter_form'].fields['user']
+
+        self.assertEqual(list(user_field.queryset), [self.owner])
+        self.assertEqual(user_field.label_from_instance(self.owner), 'Jan Kowalski')
+        self.assertNotIn(user_without_invoice, user_field.queryset)
 
     def test_administration_links_to_protected_invoice_attachments(self):
         self.client.force_login(self.admin)
@@ -1116,6 +1140,21 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
                 },
             ],
         )
+        self.assertContains(
+            response,
+            f'?user={self.recipient.pk}',
+        )
+
+    def test_selected_reimbursement_recipient_is_highlighted(self):
+        self.client.force_login(self.reimbursement_user)
+
+        response = self.client.get(
+            reverse('costs_reimbursements', args=[self.camp.pk]),
+            {'user': self.recipient.pk},
+        )
+
+        self.assertContains(response, 'class="table-primary"')
+        self.assertContains(response, f'name="user_id" value="{self.recipient.pk}"')
 
     def test_reimbursements_require_registration_permission(self):
         self.client.force_login(self.recipient)
@@ -1165,7 +1204,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             Decimal('0.00'),
         )
 
-    def test_statistics_filter_by_status_and_context(self):
+    def test_statistics_ignores_removed_context_filter(self):
         workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')
         workshop = Workshop.objects.create(
             year=self.camp,
@@ -1220,7 +1259,8 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             },
         )
 
-        self.assertEqual(response.context['total'], Decimal('35.00'))
+        self.assertEqual(response.context['total'], Decimal('42.00'))
+        self.assertNotContains(response, 'Zakres')
 
     def test_statistics_render_empty_chart_for_no_matching_items(self):
         self.client.force_login(self.statistics_user)

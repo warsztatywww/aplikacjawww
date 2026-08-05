@@ -4,15 +4,28 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.utils.text import slugify
 
-from wwwapp.models import UserProfile, Article, ArticleContentHistory, Workshop, \
-    WorkshopCategory, \
-    WorkshopType, WorkshopParticipant, Camp, CampParticipant, Solution
+from wwwapp.models import (
+    Article,
+    ArticleContentHistory,
+    Camp,
+    CampParticipant,
+    CostItem,
+    Invoice,
+    SettlementDetails,
+    Solution,
+    UserProfile,
+    Workshop,
+    WorkshopCategory,
+    WorkshopParticipant,
+    WorkshopType,
+)
 
 from typing import Tuple, List, Union, Callable, Dict
 from faker import Faker
 from faker.providers import profile, person, date_time, internet
 import datetime
 import random
+from decimal import Decimal
 from wwwforms.models import Form, FormQuestion
 
 """
@@ -598,6 +611,35 @@ class Command(BaseCommand):
             all_workshops.extend(workshops)
             self.debug_print(
                 f"Completed camp for year {year_number} with {len(workshops)} workshops")
+
+        current_camp = Camp.objects.get(year=current_year)
+        for sequence, (user, status) in enumerate(
+            zip(users, Invoice.Status.values),
+            start=1,
+        ):
+            SettlementDetails.objects.create(
+                user=user,
+                camp=current_camp,
+                account_number='PL61109010140000071219812874',
+            )
+            amount = Decimal(f'{sequence * 10}.00')
+            invoice = Invoice.objects.create(
+                user=user,
+                camp=current_camp,
+                attachment=f'invoices/test-{sequence}.pdf',
+                document_number=f'TEST/{sequence}/{current_year}',
+                issue_date=current_date,
+                amount=amount,
+                invoice_type=Invoice.Type.KSEF,
+                description='Testowy koszt do sprawdzenia widoków rozliczeń.',
+                status=status,
+                internal_number=f'WWW_{current_year}_FP_{sequence:04d}',
+            )
+            CostItem.objects.create(
+                invoice=invoice,
+                amount=amount,
+                category=CostItem.Category.REGULAR_PURCHASES,
+            )
 
         self.debug_print(
             f"Data population complete. Created {len(all_workshops)} total workshops across {len(camp_years)} years.")

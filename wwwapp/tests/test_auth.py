@@ -45,11 +45,6 @@ class AuthViews(TestCase):
     def test_login_page_anonymous(self):
         self.login_page_anonymous()
 
-    def test_login_page_uses_no_third_party_font_stylesheet(self):
-        response = self.client.get(reverse('login'))
-
-        self.assertNotContains(response, 'fonts.googleapis.com')
-
     def facebook_login(self, uid, first_name, last_name, email, test_login=True, test_merge=False):
         fake_responses = [mock.Mock(), mock.Mock()]
         fake_responses[0].json.return_value = {'access_token': '123'}

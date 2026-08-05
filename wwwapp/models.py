@@ -685,9 +685,9 @@ def validate_polish_account_number(account_number):
     normalized = normalize_polish_account_number(account_number)
     national_number = normalized.removeprefix('PL')
     if not re.fullmatch(r'\d{26}', national_number):
-        raise ValidationError('Podaj poprawny polski numer rachunku bankowego.')
+        raise ValidationError('Nieprawidłowy format polskiego numeru rachunku bankowego.')
     if int(f'{national_number[2:]}2521{national_number[:2]}') % 97 != 1:
-        raise ValidationError('Podaj poprawny polski numer rachunku bankowego.')
+        raise ValidationError('Nieprawidłowa suma kontrolna numeru rachunku bankowego.')
 
 
 class SettlementDetails(models.Model):
@@ -717,7 +717,7 @@ class SettlementDetails(models.Model):
         super().save(*args, **kwargs)
 
 
-def settlement_details_for(*, user, camp):
+def settlement_details_for(*, user, camp) -> SettlementDetails | None:
     """Return a user's unique bank-account details for one workshop edition."""
     try:
         return SettlementDetails.objects.get(user=user, camp=camp)

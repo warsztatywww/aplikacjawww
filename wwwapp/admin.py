@@ -22,11 +22,10 @@ class UserProfileInline(admin.StackedInline):
     show_change_link = True
 
 
+@admin.register(User)
 class MyUserAdmin(UserAdmin):
+    model = User
     inlines = [UserProfileInline, ]
-
-
-admin.site.register(User, MyUserAdmin)
 
 
 class WorkshopInline(admin.TabularInline):
@@ -47,15 +46,15 @@ class WorkshopParticipantInline(admin.TabularInline):
     show_change_link = True
 
 
+@admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     model = UserProfile
     inlines = [CampParticipantInline, WorkshopInline]
 
 
-admin.site.register(UserProfile, UserProfileAdmin)
-
-
+@admin.register(Workshop)
 class WorkshopAdmin(admin.ModelAdmin):
+    model = Workshop
     def make_acccepted(self, _request, queryset):
         queryset.update(status='Z')
     make_acccepted.short_description = "Zmień status na Zaakceptowane"
@@ -76,9 +75,6 @@ class WorkshopAdmin(admin.ModelAdmin):
     inlines = [WorkshopParticipantInline]
 
 
-admin.site.register(Workshop, WorkshopAdmin)
-
-
 class WorkshopCategoryAdminInline(admin.TabularInline):
     model = WorkshopCategory
     extra = 0
@@ -89,6 +85,7 @@ class WorkshopTypeAdminInline(admin.TabularInline):
     extra = 0
 
 
+@admin.register(Camp)
 class CampAdmin(admin.ModelAdmin):
     model = Camp
     inlines = [WorkshopTypeAdminInline, WorkshopCategoryAdminInline]
@@ -112,9 +109,6 @@ class CampAdmin(admin.ModelAdmin):
         return form
 
 
-admin.site.register(Camp, CampAdmin)
-
-
 class ArticleContentHistoryInlineAdmin(admin.TabularInline):
     model = ArticleContentHistory
     fields = ('version', 'modified_by', 'time')
@@ -131,6 +125,7 @@ class ArticleContentHistoryInlineAdmin(admin.TabularInline):
         return False
 
 
+@admin.register(ArticleContentHistory)
 class ArticleContentHistoryAdmin(admin.ModelAdmin):
     model = ArticleContentHistory
 
@@ -146,6 +141,7 @@ class ArticleContentHistoryAdmin(admin.ModelAdmin):
         return False
 
 
+@admin.register(Article)
 class ArticleAdmin(SortableAdminMixin, admin.ModelAdmin):
     model = Article
     inlines = [ArticleContentHistoryInlineAdmin]
@@ -154,21 +150,19 @@ class ArticleAdmin(SortableAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'title', 'on_menubar',)
 
 
-admin.site.register(Article, ArticleAdmin)
-admin.site.register(ArticleContentHistory, ArticleContentHistoryAdmin)
-
-
 class SolutionInline(admin.StackedInline):
     model = Solution
     extra = 0
     show_change_link = True
 
 
+@admin.register(WorkshopParticipant)
 class WorkshopParticipantAdmin(admin.ModelAdmin):
     model = WorkshopParticipant
     inlines = [SolutionInline]
 
 
+@admin.register(CampParticipant)
 class CampParticipantAdmin(admin.ModelAdmin):
     model = CampParticipant
     inlines = [WorkshopParticipantInline]
@@ -218,6 +212,7 @@ class SolutionFileInline(admin.TabularInline):
         return queryset
 
 
+@admin.register(Solution)
 class SolutionAdmin(admin.ModelAdmin):
     model = Solution
     inlines = [SolutionFileInline]
@@ -229,16 +224,14 @@ class SolutionAdmin(admin.ModelAdmin):
             return []
 
 
-admin.site.register(WorkshopParticipant, WorkshopParticipantAdmin)
-admin.site.register(CampParticipant, CampParticipantAdmin)
 admin.site.register(CampInterestEmail)
-admin.site.register(Solution, SolutionAdmin)
 
 admin.site.register(ResourceYearPermission)
 
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
+    model = Invoice
     list_display = ('internal_number', 'document_number', 'user', 'camp', 'amount', 'status')
     list_filter = ('camp', 'status', 'invoice_type')
 
@@ -251,15 +244,16 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 @admin.register(CostItem)
 class CostItemAdmin(admin.ModelAdmin):
+    model = CostItem
     list_display = ('invoice', 'category', 'workshop', 'amount')
     list_filter = ('category',)
 
 
 @admin.register(SettlementDetails)
 class SettlementDetailsAdmin(admin.ModelAdmin):
-    pass
+    model = SettlementDetails
 
 
 @admin.register(Reimbursement)
 class ReimbursementAdmin(admin.ModelAdmin):
-    pass
+    model = Reimbursement

@@ -162,7 +162,7 @@
       {% block content %}{% endblock %}
     </main>
 
-    {% if selected_year and not hide_year_switcher %}
+    {% if selected_year and not hide_year_navigation %}
     <footer class="footer">
       <div class="container">
         <nav class="year-navigation" aria-label="Wybór edycji">
@@ -190,10 +190,6 @@
       </div>
     </footer>
     {% endif %}
-
-    <div id="csrftoken" style="display: none;">
-      {% csrf_token %}
-    </div>
 
     {% include "_analytics.html" %}
 

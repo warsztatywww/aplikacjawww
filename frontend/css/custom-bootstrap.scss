@@ -1,16 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300..700&display=swap");
+
 // Theme colors
 $primary: #46342f;
 $dark: #01093a;
 $light: #eae3c5;
 $light-darker: #fef6c5;
-
-@font-face {
-  font-family: "Open Sans";
-  font-style: normal;
-  font-weight: 300 700;
-  font-display: swap;
-  src: url("../fonts/open-sans-latin.woff2") format("woff2");
-}
 
 // Headings font
 $headings-font-family: "Open Sans", Helvetica, Arial;
