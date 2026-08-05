@@ -191,6 +191,10 @@
     </footer>
     {% endif %}
 
+    <div id="csrftoken" style="display: none;">
+      {% csrf_token %}
+    </div>
+
     {% include "_analytics.html" %}
 
     <script src="{% static 'dist/main.js' %}"></script>
