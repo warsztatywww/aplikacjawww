@@ -20,7 +20,13 @@
         {% for row in reimbursement_summary %}
           <tr{% if selected_user == row.user %} class="table-primary"{% endif %}>
             <td>{{ row.user.get_full_name }}</td>
-            <td>{{ row.account_number }}</td>
+            <td>
+              {% if row.has_account_number %}
+                {{ row.account_number }}
+              {% else %}
+                <span class="text-danger">Brak numeru rachunku</span>
+              {% endif %}
+            </td>
             <td>{{ row.approved_total|floatformat:2 }} zł</td>
             <td>{{ row.reimbursed_total|floatformat:2 }} zł</td>
             <td>{{ row.remaining_total|floatformat:2 }} zł</td>

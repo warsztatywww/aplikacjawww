@@ -6,7 +6,6 @@ import mimetypes
 import os
 import sys
 import random # Used for shuffling the workshops on the program page
-import uuid
 from decimal import Decimal
 from typing import Dict, Any, Optional
 from urllib.parse import urljoin
@@ -181,6 +180,12 @@ def costs_admin_invoice_edit_view(request, year, invoice_id):
     return _invoice_form_view(request, year=year, invoice_id=invoice_id, admin_edit=True)
 
 
+def attachment_name_for_invoice(*, invoice, uploaded_attachment):
+    """Return the storage filename for a new attachment based on the internal number."""
+    _, extension = os.path.splitext(uploaded_attachment.name)
+    return f'{invoice.internal_number}{extension.lower()}'
+
+
 def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
     camp = get_object_or_404(Camp, pk=year)
     invoice = None
@@ -218,14 +223,6 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         if invoice_id is None:
             invoice.internal_number = allocate_invoice_number(camp=camp)
         else:
-            uploaded_attachment = invoice_form.cleaned_data['attachment']
-            if (
-                isinstance(uploaded_attachment, UploadedFile)
-                and os.path.basename(uploaded_attachment.name)
-                == os.path.basename(old_attachment_name)
-            ):
-                filename, extension = os.path.splitext(uploaded_attachment.name)
-                invoice.attachment.name = f'{filename}-{uuid.uuid4().hex}{extension}'
             if admin_edit:
                 invoice.admin_modified_at = timezone.now()
                 invoice.admin_modified_by = request.user
@@ -234,6 +231,12 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
                     invoice.status = Invoice.Status.RECEIVED
                 invoice.admin_modified_at = None
                 invoice.admin_modified_by = None
+        uploaded_attachment = invoice_form.cleaned_data['attachment']
+        if isinstance(uploaded_attachment, UploadedFile):
+            invoice.attachment.name = attachment_name_for_invoice(
+                invoice=invoice,
+                uploaded_attachment=uploaded_attachment,
+            )
         stored_attachment_name = ''
         try:
             with transaction.atomic():
@@ -398,8 +401,17 @@ def costs_reimbursements_view(request, year):
     )
     missing_account_user_ids = set(users.values_list('pk', flat=True)) - account_numbers.keys()
     if missing_account_user_ids:
-        raise SettlementDetails.DoesNotExist(
-            f'Brak numeru rachunku dla użytkowników: {sorted(missing_account_user_ids)}',
+        missing_users = User.objects.filter(pk__in=missing_account_user_ids).order_by(
+            'first_name',
+            'last_name',
+            'pk',
+        )
+        messages.warning(
+            request,
+            'Brak numeru rachunku dla: ' + ', '.join(
+                user.get_full_name() for user in missing_users
+            ),
+            extra_tags='auto-dismiss',
         )
     approved_totals = dict(
         Invoice.objects.filter(
@@ -415,6 +427,7 @@ def costs_reimbursements_view(request, year):
         {
             'user': user,
             'account_number': account_numbers.get(user.pk, ''),
+            'has_account_number': user.pk in account_numbers,
             'approved_total': approved_totals.get(user.pk, Decimal('0.00')),
             'reimbursed_total': reimbursed_totals.get(user.pk, Decimal('0.00')),
             'remaining_total': (

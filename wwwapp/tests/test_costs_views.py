@@ -1134,6 +1134,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
                 {
                     'user': self.recipient,
                     'account_number': self.details.account_number,
+                    'has_account_number': True,
                     'approved_total': Decimal('30.00'),
                     'reimbursed_total': Decimal('0.00'),
                     'remaining_total': Decimal('30.00'),

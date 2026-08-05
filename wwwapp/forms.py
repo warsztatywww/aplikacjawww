@@ -841,6 +841,5 @@ class StatisticsFilterForm(Form):
         self.helper.include_media = False
         self.helper.layout = Layout(
             'status',
-            'context',
             FormActions(StrictButton('Filtruj', type='submit', css_class='btn-secondary')),
         )
