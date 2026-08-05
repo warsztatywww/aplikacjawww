@@ -1,4 +1,5 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.contrib.admin.sites import AdminSite
@@ -97,17 +98,35 @@ class CostModelTests(TestCase):
         site = AdminSite()
         request = RequestFactory().get('/')
         request.user = User.objects.create_superuser('financial-admin', 'admin@example.com', 'password')
-        for admin_class, model in (
-            (InvoiceAdmin, Invoice),
-            (CostItemAdmin, CostItem),
-            (SettlementDetailsAdmin, SettlementDetails),
-            (ReimbursementAdmin, Reimbursement),
-        ):
+        admins = (
+            (InvoiceAdmin, Invoice, False, False),
+            (CostItemAdmin, CostItem, True, True),
+            (SettlementDetailsAdmin, SettlementDetails, True, True),
+            (ReimbursementAdmin, Reimbursement, True, True),
+        )
+        for admin_class, model, allows_add, allows_delete in admins:
             with self.subTest(model=model.__name__):
                 model_admin = admin_class(model, site)
-                self.assertTrue(model_admin.has_add_permission(request))
+                self.assertEqual(model_admin.has_add_permission(request), allows_add)
                 self.assertTrue(model_admin.has_change_permission(request))
-                self.assertTrue(model_admin.has_delete_permission(request))
+                self.assertEqual(model_admin.has_delete_permission(request), allows_delete)
+
+    def test_admin_cannot_add_an_invoice(self):
+        site = AdminSite()
+        request = RequestFactory().get('/')
+        request.user = User.objects.create_superuser('financial-admin', 'admin@example.com', 'password')
+
+        self.assertFalse(InvoiceAdmin(Invoice, site).has_add_permission(request))
+
+    def test_invoice_with_cost_items_is_protected_from_deletion(self):
+        CostItem.objects.create(invoice=self.invoice, amount=Decimal('10.00'),
+                                category=CostItem.Category.WORKSHOPS)
+
+        with self.assertRaises(ProtectedError):
+            with transaction.atomic():
+                self.invoice.delete()
+
+        self.assertTrue(Invoice.objects.filter(pk=self.invoice.pk).exists())
 
     def test_cost_text_fields_do_not_impose_a_frontend_length_limit(self):
         self.assertIsNone(Invoice._meta.get_field('description').max_length)
@@ -121,6 +140,17 @@ class CostModelTests(TestCase):
         )
 
         details.full_clean()
+
+        self.assertEqual(details.account_number, 'PL61109010140000071219812874')
+
+    def test_settlement_details_normalize_on_save(self):
+        details = SettlementDetails(
+            user=self.user,
+            camp=self.other_camp,
+            account_number='61 1090 1014 0000 0712 1981 2874',
+        )
+
+        details.save()
 
         self.assertEqual(details.account_number, 'PL61109010140000071219812874')
 
@@ -158,43 +188,21 @@ class CostModelTests(TestCase):
         self.assertEqual(InvoiceSequence.objects.get(camp=self.camp).last_allocated, 3)
         self.assertEqual(InvoiceSequence.objects.get(camp=other_invoice.camp).last_allocated, 42)
 
-    def test_invoice_deletion_is_protected_for_available_django_apis(self):
-        invoices = [
-            self.invoice,
-            Invoice.objects.create(
-                user=self.user,
-                camp=self.camp,
-                document_number='FV/2/2026',
-                issue_date='2026-07-24',
-                amount=Decimal('10.00'),
-                invoice_type=Invoice.Type.KSEF,
-                attachment='invoices/fv-2.pdf',
-                description='Materiały do warsztatów',
-                internal_number='WWW_2026_FP_0002',
-            ),
-            Invoice.objects.create(
-                user=self.user,
-                camp=self.camp,
-                document_number='FV/3/2026',
-                issue_date='2026-07-24',
-                amount=Decimal('10.00'),
-                invoice_type=Invoice.Type.KSEF,
-                attachment='invoices/fv-3.pdf',
-                description='Materiały do warsztatów',
-                internal_number='WWW_2026_FP_0003',
-            ),
-        ]
+    def test_allocate_invoice_number_recovers_from_a_lost_create_race(self):
+        existing_sequence = InvoiceSequence.objects.get(camp=self.camp)
 
-        deletion_calls = (
-            invoices[0].delete,
-            lambda: Invoice.objects.filter(pk=invoices[1].pk).delete(),
+        with patch.object(
+            InvoiceSequence.objects,
+            'get_or_create',
+            side_effect=[IntegrityError(), (existing_sequence, False)],
+        ):
+            allocated = allocate_invoice_number(camp=self.camp)
+
+        self.assertEqual(allocated, 'WWW_2026_FP_0002')
+        self.assertEqual(
+            InvoiceSequence.objects.get(camp=self.camp).last_allocated,
+            2,
         )
-        for delete in deletion_calls:
-            with self.subTest(delete=delete), self.assertRaises(ProtectedError):
-                with transaction.atomic():
-                    delete()
-
-        self.assertEqual(Invoice.objects.filter(pk__in=[invoice.pk for invoice in invoices]).count(), 3)
 
     def test_batch_transition_rolls_back_when_one_invoice_is_ineligible(self):
         received = self.create_invoice(

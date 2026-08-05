@@ -1,4 +1,3 @@
-import mimetypes
 import os
 from decimal import Decimal
 
@@ -585,7 +584,6 @@ class InvoiceForm(ModelForm):
     """Validate an invoice attachment before it is stored."""
 
     MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024
-    ATTACHMENT_TYPES = {'application/pdf', 'image/jpeg'}
 
     class Meta:
         model = Invoice
@@ -631,12 +629,23 @@ class InvoiceForm(ModelForm):
         if not isinstance(attachment, UploadedFile):
             return attachment
 
-        content_type, _encoding = mimetypes.guess_type(attachment.name)
-        if content_type not in self.ATTACHMENT_TYPES:
+        if not self._looks_like_supported_document(attachment):
             raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
         if attachment.size > self.MAX_ATTACHMENT_SIZE:
             raise ValidationError('Załącznik nie może być większy niż 50 MiB.')
         return attachment
+
+    @staticmethod
+    def _looks_like_supported_document(attachment):
+        try:
+            attachment.seek(0)
+            header = attachment.read(8)
+            attachment.seek(0)
+        except (OSError, ValueError):
+            return False
+        return header.startswith(b'%PDF-') or header[:3] in (
+            b'\xff\xd8\xff',
+        )
 
 
 class CostItemForm(ModelForm):
@@ -668,6 +677,10 @@ class CostItemForm(ModelForm):
 class BaseCostItemInlineFormSet(BaseInlineFormSet):
     """Require a complete, camp-scoped allocation of the invoice amount."""
 
+    def __init__(self, *args, invoice_amount=None, **kwargs):
+        self.invoice_amount = invoice_amount
+        super().__init__(*args, **kwargs)
+
     def get_form_kwargs(self, index):
         kwargs = super().get_form_kwargs(index)
         kwargs['camp'] = self.instance.camp
@@ -683,7 +696,7 @@ class BaseCostItemInlineFormSet(BaseInlineFormSet):
             raise ValidationError('Faktura musi zawierać co najmniej jedną pozycję kosztową.')
 
         total = sum((item['amount'] for item in items), Decimal('0.00'))
-        if total != self.instance.amount:
+        if total != self.invoice_amount:
             raise ValidationError('Suma pozycji kosztowych musi być równa kwocie faktury.')
 
     def _cost_items_data(self):

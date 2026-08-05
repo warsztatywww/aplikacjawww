@@ -242,6 +242,12 @@ class InvoiceAdmin(admin.ModelAdmin):
     list_display = ('internal_number', 'document_number', 'user', 'camp', 'amount', 'status')
     list_filter = ('camp', 'status', 'invoice_type')
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(CostItem)
 class CostItemAdmin(admin.ModelAdmin):

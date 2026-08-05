@@ -72,6 +72,11 @@ For behavior changes, add or update a focused test. Exercise error and boundary
 cases when the modified code handles them. For model changes, run the migration
 check; create and commit the migration when Django reports one is needed.
 
+Assert user-visible behavior or persisted state rather than implementation
+details such as model metadata, admin defaults, HTML element IDs, or internal
+helper calls. Add development fixture data when a new data-driven screen cannot
+be exercised meaningfully with the existing fixtures.
+
 ## Code and template conventions
 
 - Follow the existing Python style: 4-space indentation, `snake_case` for
@@ -80,6 +85,17 @@ check; create and commit the migration when Django reports one is needed.
   are unrelated to the requested work.
 - Keep Django view, form, and model behavior covered by app-local tests.
 - Render Django forms and formsets with django-crispy-forms.
+- Put cross-field and cross-form validation in the owning form or formset's
+  `clean()` method. Use Django's form and formset save APIs instead of manually
+  reproducing their persistence behavior.
+- Do not persist values that can be derived reliably from their source records.
+  Store a copy only when the product requires an immutable historical snapshot,
+  and document which event creates that snapshot.
+- Keep database queries out of global template context unless every page needs
+  the result. Compute page-specific context in the owning view.
+- Treat database transactions and file storage as separate systems: rolling
+  back a database transaction does not remove files already written to storage.
+  Cover replacement and failure paths when changing uploaded-file handling.
 - Keep frontend entry-point changes in `frontend/`; do not hand-edit build
   output.
 - Never commit secrets, local databases, uploaded media, virtual environments,

@@ -91,11 +91,6 @@ def get_context(request):
     context = {}
 
     if request.user.is_authenticated:
-        context['has_invoices'] = Invoice.objects.filter(user=request.user).exists()
-        context['show_costs'] = (
-            context['has_invoices']
-            or request.user.user_profile.lecturer_workshops.exists()
-        )
         visible_resources = ResourceYearPermission.objects.exclude(access_url__exact="")
         if request.user.has_perm('wwwapp.access_all_resources'):
             context['resources'] = visible_resources
@@ -112,6 +107,16 @@ def get_context(request):
     context['current_year'] = Camp.current()
 
     return context
+
+
+def show_costs_for(user):
+    """Return whether a user's cost overview belongs in their profile navigation."""
+    if not user.is_authenticated:
+        return False
+    return (
+        Invoice.objects.filter(user=user).exists()
+        or user.user_profile.lecturer_workshops.exists()
+    )
 
 
 def _has_settlement_details(*, user, camp):
@@ -137,6 +142,7 @@ def costs_mine_view(request, year):
     context = {
         'title': 'Mój profil',
         'selected_year': camp,
+        'show_costs': True,
         'invoices': invoices,
         'settlement_details_form': settlement_details_form,
         'approved_total': approved_total_for(user=request.user, camp=camp),
@@ -186,10 +192,12 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         user=invoice.user if invoice else request.user,
         camp=camp,
     )
-    formset = CostItemFormSet(request.POST or None, instance=invoice_form.instance)
     invoice_form_is_valid = invoice_form.is_valid()
-    if invoice_form_is_valid:
-        formset.instance.amount = invoice_form.cleaned_data['amount']
+    formset = CostItemFormSet(
+        request.POST or None,
+        instance=invoice_form.instance,
+        invoice_amount=invoice_form.cleaned_data['amount'] if invoice_form_is_valid else None,
+    )
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
         with transaction.atomic():
             old_attachment_name = invoice.attachment.name if invoice else ''
@@ -228,6 +236,7 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
             'invoice_form': invoice_form,
             'formset': formset,
             'selected_year': camp,
+            'hide_year_switcher': invoice_id is not None,
             'return_url': reverse('costs_admin' if admin_edit else 'costs_mine', args=[camp.pk]),
             'return_label': 'Wróć do kosztów' if admin_edit else 'Wróć do moich kosztów',
         },
@@ -365,13 +374,26 @@ def costs_reimbursements_view(request, year):
     account_numbers = dict(
         SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
     )
+    approved_totals = dict(
+        Invoice.objects.filter(
+            camp=camp,
+            status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
+        ).values('user_id').annotate(total=Sum('amount')).values_list('user_id', 'total'),
+    )
+    reimbursed_totals = dict(
+        Reimbursement.objects.filter(camp=camp)
+        .values('user_id').annotate(total=Sum('amount')).values_list('user_id', 'total'),
+    )
     reimbursement_summary = [
         {
             'user': user,
             'account_number': account_numbers.get(user.pk, ''),
-            'approved_total': approved_total_for(user=user, camp=camp),
-            'reimbursed_total': reimbursed_total_for(user=user, camp=camp),
-            'remaining_total': balance_for(user=user, camp=camp),
+            'approved_total': approved_totals.get(user.pk, Decimal('0.00')),
+            'reimbursed_total': reimbursed_totals.get(user.pk, Decimal('0.00')),
+            'remaining_total': (
+                approved_totals.get(user.pk, Decimal('0.00'))
+                - reimbursed_totals.get(user.pk, Decimal('0.00'))
+            ),
         }
         for user in users
     ]
@@ -390,8 +412,8 @@ def costs_reimbursements_view(request, year):
         'reimbursement_rows': reimbursement_rows,
         'balance_before': balance_before,
         'balance_after': balance_after,
-        'approved_total': approved_total_for(user=selected_user, camp=camp) if selected_user else None,
-        'reimbursed_total': reimbursed_total_for(user=selected_user, camp=camp) if selected_user else None,
+        'approved_total': approved_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
+        'reimbursed_total': reimbursed_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
     }
     return render(request, 'costs_reimbursements.html', context)
 
@@ -713,6 +735,7 @@ def mydata_profile_view(request):
     context['user_form'] = user_form
     context['user_profile_form'] = user_profile_form
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_profile.html', context)
 
@@ -732,6 +755,7 @@ def mydata_profile_page_view(request):
 
     context['user_profile_page_form'] = user_profile_page_form
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_profilepage.html', context)
 
@@ -757,6 +781,7 @@ def mydata_cover_letter_view(request):
 
     context['user_cover_letter_form'] = user_cover_letter_form
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_coverletter.html', context)
 
@@ -787,6 +812,7 @@ def mydata_status_view(request):
     context['has_cover_letter'] = len(current_camp_participant.cover_letter) >= 50 if current_camp_participant else None
     context['current_status'] = current_status
     context['past_status'] = past_status
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_status.html', context)
 
@@ -797,6 +823,7 @@ def mydata_forms_view(request):
 
     context['user_info_forms'] = Form.visible_objects.all()
     context['title'] = 'Mój profil'
+    context['show_costs'] = show_costs_for(request.user)
 
     return render(request, 'mydata_forms.html', context)
 

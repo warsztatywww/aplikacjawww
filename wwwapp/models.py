@@ -12,7 +12,6 @@ from django.core.exceptions import ValidationError, SuspiciousOperation
 from django.core.files.storage import FileSystemStorage
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models.deletion import ProtectedError
 from django.db.models import QuerySet, Count, F, When, Case, Max, DecimalField
 from django.db.models.functions import Greatest, Least
 from django.db.models.query_utils import Q
@@ -642,11 +641,6 @@ class Invoice(models.Model):
         return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
 
 
-@receiver(pre_delete, sender=Invoice)
-def prevent_invoice_deletion(*, instance, **kwargs):
-    raise ProtectedError('Faktury nie mogą zostać usunięte.', [instance])
-
-
 class CostItem(models.Model):
     class Category(models.TextChoices):
         WORKSHOPS = 'WORKSHOPS', 'Warsztaty'
@@ -717,6 +711,10 @@ class SettlementDetails(models.Model):
     def clean(self):
         super().clean()
         self.account_number = normalize_polish_account_number(self.account_number)
+
+    def save(self, *args, **kwargs):
+        self.account_number = normalize_polish_account_number(self.account_number)
+        super().save(*args, **kwargs)
 
 
 def settlement_details_for(*, user, camp):

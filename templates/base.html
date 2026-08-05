@@ -162,7 +162,7 @@
       {% block content %}{% endblock %}
     </main>
 
-    {% if selected_year and request.resolver_match.view_name != 'costs_invoice_edit' and request.resolver_match.view_name != 'costs_admin_invoice_edit' %}
+    {% if selected_year and not hide_year_switcher %}
     <footer class="footer">
       <div class="container">
         <nav class="year-navigation" aria-label="Wybór edycji">

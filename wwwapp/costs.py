@@ -3,7 +3,7 @@
 import csv
 from decimal import Decimal
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.utils import timezone
@@ -30,9 +30,12 @@ CSV_FIELDS = (
 @transaction.atomic
 def allocate_invoice_number(*, camp):
     """Allocate the next internal invoice number for a workshop edition."""
-    sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
+    try:
+        sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
+    except IntegrityError:
+        created = False
     if not created:
-        sequence = InvoiceSequence.objects.select_for_update().get(pk=sequence.pk)
+        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp)
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
     return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
