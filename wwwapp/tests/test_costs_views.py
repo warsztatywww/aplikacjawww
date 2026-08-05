@@ -345,6 +345,17 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(response, 'id="invoices-heading">Faktury</h2>')
         self.assertContains(response, '4,00 zł')
 
+    def test_cost_list_uses_datatables(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
+
+        self.assertContains(response, '<span class="sr-only">Wiersz</span>')
+        self.assertContains(response, '/static/dist/datatables.css')
+        self.assertContains(response, '/static/dist/datatables.js')
+        self.assertContains(response, 'data-searchable="false"')
+        self.assertContains(response, 'data-orderable="false"')
+
     def test_invoice_add_requires_settlement_details(self):
         self.client.force_login(self.user)
 
@@ -803,6 +814,17 @@ class CostAdministrationViewsTests(TestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    def test_administration_uses_datatables(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
+
+        self.assertContains(response, '<span class="sr-only">Wiersz</span>')
+        self.assertContains(response, '/static/dist/datatables.css')
+        self.assertContains(response, '/static/dist/datatables.js')
+        self.assertContains(response, 'data-searchable="false"')
+        self.assertContains(response, 'data-orderable="false"')
+
     def test_administration_filters_invoices_by_status(self):
         self.client.force_login(self.admin)
 
@@ -1146,6 +1168,17 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             f'?user={self.recipient.pk}',
         )
 
+    def test_reimbursements_use_datatables(self):
+        self.client.force_login(self.reimbursement_user)
+
+        response = self.client.get(reverse('costs_reimbursements', args=[self.camp.pk]))
+
+        self.assertContains(response, '<span class="sr-only">Wiersz</span>', count=2)
+        self.assertContains(response, '/static/dist/datatables.css')
+        self.assertContains(response, '/static/dist/datatables.js')
+        self.assertContains(response, 'Brak osób oczekujących na zwrot.')
+        self.assertContains(response, 'Brak zarejestrowanych zwrotów.')
+
     def test_selected_reimbursement_recipient_is_highlighted(self):
         self.client.force_login(self.reimbursement_user)
 
@@ -1275,6 +1308,15 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
 
         self.assertFalse(response.context['has_statistics_data'])
         self.assertContains(response, 'Brak danych do wyświetlenia wykresu.')
+
+    def test_statistics_use_datatables(self):
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(reverse('costs_statistics', args=[self.camp.pk]))
+
+        self.assertContains(response, '<span class="sr-only">Wiersz</span>')
+        self.assertContains(response, '/static/dist/datatables.css')
+        self.assertContains(response, '/static/dist/datatables.js')
 
     def test_statistics_require_permission(self):
         self.client.force_login(self.recipient)

@@ -1,5 +1,6 @@
 {% extends "mydata_base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 {% load wwwtags %}
 
 {% block mydata_page_content %}
@@ -46,19 +47,26 @@
       </header>
       {% if invoices %}
       <div class="table-responsive">
-      <table class="table table-hover mb-0">
+      <table id="cost-invoices-table" class="table table-hover mb-0"
+             style="width:100%!important;">
         <thead>
           <tr>
+            <th scope="col" data-searchable="false" data-orderable="false">
+              <span class="sr-only">Wiersz</span>
+            </th>
             <th scope="col">Numer</th>
             <th scope="col">Data</th>
             <th scope="col">Kwota</th>
             <th scope="col">Status</th>
-            <th scope="col">Załącznik</th>
+            <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
+              Załącznik
+            </th>
           </tr>
         </thead>
         <tbody>
           {% for invoice in invoices %}
             <tr>
+              <td></td>
               <th scope="row">
                 {% if invoice.can_user_edit %}
                   <a href="{% url 'costs_invoice_edit' year=selected_year.pk invoice_id=invoice.pk %}">{{ invoice.document_number }}</a>
@@ -97,4 +105,19 @@
       </div>
     </section>
   </article>
+{% endblock %}
+
+{% block styles %}
+  {{ block.super }}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+  <script>
+    $(document).ready(() => {
+      $('#cost-invoices-table').DataTable(gen_datatables_config({}));
+    });
+  </script>
 {% endblock %}

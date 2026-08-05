@@ -17,10 +17,14 @@ window.gen_datatables_config = (myConfig_) => {
   const myConfig = Object.assign({
     paging: true,
     filters: true,
+    stateSave: true,
     vcardEnable: false,
     vcardName: null,
+    language: {},
   }, myConfig_);
 
+  // Templates hardcode the noVis class on a <th> to keep a column visible on
+  // screen while excluding it from the copy/excel/pdf/print exports.
   const column_selector = (idx, data, node) => {
     // https://datatables.net/forums/discussion/42192/exporting-data-with-buttons-and-responsive-extensions-controlled-by-column-visibility
     // When the colvis/responsive plugin hides a column this might be done in one of 2 ways:
@@ -102,14 +106,16 @@ window.gen_datatables_config = (myConfig_) => {
         },
       ],
     },
-    "language": datatables_Polish,
+    // Deep copy so page-level language overrides (e.g. empty-table messages)
+    // do not leak between tables or mutate the shared Polish defaults.
+    "language": $.extend(true, {}, datatables_Polish, myConfig.language),
     "fnRowCallback" : function(nRow, aData, iDisplayIndex){
       $("td:first", nRow).html(iDisplayIndex +1);
       return nRow;
     },
     "pageLength": 50,
     "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-    "stateSave": true,
+    "stateSave": myConfig.stateSave,
     "stateSaveCallback": function(settings, data) {
       window.location.hash = '#' + Base64.encode(JSON.stringify(data));
     },

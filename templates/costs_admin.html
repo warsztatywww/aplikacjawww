@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
   <article>
@@ -12,57 +13,71 @@
       {% crispy filter_form %}
     </form>
 
-    <form method="post">
+    <form id="cost-admin-form" method="post">
       {% csrf_token %}
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Wybór</th>
-            <th scope="col">Numer wew.</th>
-            <th scope="col">Numer</th>
-            <th scope="col">Data</th>
-            <th scope="col">Użytkownik</th>
-            <th scope="col">Kwota</th>
-            <th scope="col">Status</th>
-            <th scope="col">Załącznik</th>
-            <th scope="col">Opis i pozycje</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for invoice in invoices %}
+      <div class="table-responsive">
+        <table id="cost-admin-table" class="table" style="width:100%!important;">
+          <thead>
             <tr>
-              <td><input type="checkbox" name="invoice_ids" value="{{ invoice.pk }}"></td>
-              <td>
-                {{ invoice.internal_number }}
-                {% if can_change_invoices %}
-                  <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">Edytuj</a>
-                {% endif %}
-              </td>
-              <td>{{ invoice.document_number }}</td>
-              <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
-              <td><a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a></td>
-              <td>{{ invoice.amount|floatformat:2 }} zł</td>
-              <td>{{ invoice.get_status_display }}</td>
-              <td>
-                <a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">Pobierz</a>
-              </td>
-              <td>
-                {{ invoice.description|linebreaksbr }}
-                <ul class="mb-0">
-                  {% for item in invoice.cost_items.all %}
-                    <li>
-                      {{ item.get_category_display }}: {{ item.amount|floatformat:2 }} zł
-                      {% if item.workshop %} — {{ item.workshop }}{% endif %}
-                    </li>
-                  {% endfor %}
-                </ul>
-              </td>
+              <th scope="col" data-searchable="false" data-orderable="false">
+                <span class="sr-only">Wiersz</span>
+              </th>
+              <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
+                Wybór
+              </th>
+              <th scope="col">Numer wew.</th>
+              <th scope="col">Numer</th>
+              <th scope="col">Data</th>
+              <th scope="col">Użytkownik</th>
+              <th scope="col">Kwota</th>
+              <th scope="col">Status</th>
+              <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
+                Załącznik
+              </th>
+              <th scope="col">Opis i pozycje</th>
             </tr>
-          {% empty %}
-            <tr><td colspan="9">Brak faktur spełniających kryteria.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {% for invoice in invoices %}
+              <tr>
+                <td></td>
+                <td><input type="checkbox" name="invoice_ids" value="{{ invoice.pk }}"></td>
+                <td>
+                  {{ invoice.internal_number }}
+                  {% if can_change_invoices %}
+                    <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">
+                      Edytuj
+                    </a>
+                  {% endif %}
+                </td>
+                <td>{{ invoice.document_number }}</td>
+                <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
+                <td>
+                  <a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a>
+                </td>
+                <td>{{ invoice.amount|floatformat:2 }} zł</td>
+                <td>{{ invoice.get_status_display }}</td>
+                <td>
+                  <a href="{% url 'costs_invoice_attachment' selected_year.pk invoice.pk %}">
+                    Pobierz
+                  </a>
+                </td>
+                <td>
+                  {{ invoice.description|linebreaksbr }}
+                  <ul class="mb-0">
+                    {% for item in invoice.cost_items.all %}
+                      <li>
+                        {{ item.get_category_display }}: {{ item.amount|floatformat:2 }} zł
+                        {% if item.workshop %} — {{ item.workshop }}{% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       {% if can_approve_costs %}
         <button class="btn btn-success" formaction="{% url 'costs_admin_transition' selected_year.pk %}"
                 name="status" value="APPROVED" type="submit">Zatwierdź</button>
@@ -77,4 +92,35 @@
               type="submit">Eksportuj CSV</button>
     </form>
   </article>
+{% endblock %}
+
+{% block styles %}
+  {{ block.super }}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+  <script>
+    $(document).ready(() => {
+      const table = $('#cost-admin-table').DataTable(gen_datatables_config({
+        language: {
+          zeroRecords: 'Brak faktur spełniających kryteria.',
+          emptyTable: 'Brak faktur spełniających kryteria.',
+        },
+      }));
+      $('#cost-admin-form').on('submit', function () {
+        $(this).find('[data-datatables-selection]').remove();
+        table.$('input[name="invoice_ids"]:checked').each((_, checkbox) => {
+          if (!$.contains(document, checkbox)) {
+            $('<input>')
+              .attr({type: 'hidden', name: 'invoice_ids', value: checkbox.value})
+              .attr('data-datatables-selection', '')
+              .appendTo(this);
+          }
+        });
+      });
+    });
+  </script>
 {% endblock %}
