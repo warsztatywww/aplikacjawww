@@ -430,8 +430,8 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertContains(response, 'Moje koszty')
 
-    def test_own_cost_urls_include_the_selected_year(self):
-        self.assertEqual(reverse('costs_mine', args=[self.camp.pk]), f'/{self.camp.pk}/costs/')
+    def test_own_cost_urls_are_nested_under_the_profile(self):
+        self.assertEqual(reverse('costs_mine', args=[self.camp.pk]), f'/me/costs/{self.camp.pk}/')
         self.assertEqual(
             reverse('costs_invoice_add', args=[self.camp.pk]),
             f'/me/costs/{self.camp.pk}/invoices/add/',

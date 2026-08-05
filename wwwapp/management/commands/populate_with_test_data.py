@@ -11,6 +11,7 @@ from wwwapp.models import (
     CampParticipant,
     CostItem,
     Invoice,
+    InvoiceSequence,
     SettlementDetails,
     Solution,
     UserProfile,
@@ -640,6 +641,10 @@ class Command(BaseCommand):
                 amount=amount,
                 category=CostItem.Category.REGULAR_PURCHASES,
             )
+        InvoiceSequence.objects.create(
+            camp=current_camp,
+            last_allocated=len(Invoice.Status.values),
+        )
 
         self.debug_print(
             f"Data population complete. Created {len(all_workshops)} total workshops across {len(camp_years)} years.")

@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from wwwapp.management.commands.populate_with_test_data import Command
-from wwwapp.models import Invoice, UserProfile, Workshop
+from wwwapp.models import Invoice, InvoiceSequence, UserProfile, Workshop
 
 
 @override_settings(DEBUG=True, PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
@@ -26,3 +26,5 @@ class PopulateWithTestData(TestCase):
 
         self.assertEqual(set(invoices.values_list('status', flat=True)), set(Invoice.Status.values))
         self.assertEqual(invoices.values('user_id').distinct().count(), len(Invoice.Status.values))
+        sequence = InvoiceSequence.objects.get(camp=invoices.first().camp)
+        self.assertEqual(sequence.last_allocated, len(Invoice.Status.values))
