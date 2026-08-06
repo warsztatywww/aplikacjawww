@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
 {% load static %}
 
 {% block content %}
@@ -9,9 +8,6 @@
       <a class="btn btn-outline-secondary" href="{% url 'costs_reimbursements' selected_year.pk %}">Zwroty kosztów</a>
       <a class="btn btn-outline-secondary" href="{% url 'costs_statistics' selected_year.pk %}">Statystyki</a>
     </p>
-    <form method="get" class="mb-3">
-      {% crispy filter_form %}
-    </form>
 
     <form id="cost-admin-form" method="post">
       {% csrf_token %}
@@ -28,9 +24,9 @@
               <th scope="col">Numer wew.</th>
               <th scope="col">Numer</th>
               <th scope="col">Data</th>
-              <th scope="col">Użytkownik</th>
+              <th scope="col" data-search-panes='{"show": true, "initCollapsed": false}'>Użytkownik</th>
               <th scope="col">Kwota</th>
-              <th scope="col">Status</th>
+              <th scope="col" data-search-panes='{"show": true, "initCollapsed": false}'>Status</th>
               <th scope="col">Opis i pozycje</th>
               <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
                 <span class="sr-only">Załącznik</span>
@@ -38,7 +34,7 @@
               <th scope="col" data-visible="false">Warsztaty</th>
               <th scope="col" data-visible="false">Kategoria</th>
               <th scope="col" data-visible="false">Data dodania</th>
-              <th scope="col" data-visible="false">Typ dokumentu</th>
+              <th scope="col" data-visible="false" data-search-panes='{"show": true, "initCollapsed": false}'>Typ dokumentu</th>
             </tr>
           </thead>
           <tbody>

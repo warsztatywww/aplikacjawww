@@ -48,7 +48,6 @@ from wwwapp.costs import (
 from wwwapp.forms import (
     ArticleForm,
     CampInterestEmailForm,
-    CostFilterForm,
     CostItemFormSet,
     InvoiceForm,
     ReimbursementForm,
@@ -279,27 +278,12 @@ def costs_invoice_attachment_view(request, year, invoice_id):
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
 def costs_admin_view(request, year):
     camp = get_object_or_404(Camp, pk=year)
-    users = User.objects.filter(invoices__camp=camp).distinct().order_by(
-        'first_name',
-        'last_name',
-        'pk',
-    )
-    filter_form = CostFilterForm(request.GET or None, users=users)
     invoices = Invoice.objects.filter(camp=camp).select_related('user').prefetch_related(
         'cost_items__workshop'
     )
-    if filter_form.is_valid():
-        filters = filter_form.cleaned_data
-        if filters['status']:
-            invoices = invoices.filter(status=filters['status'])
-        if filters['user']:
-            invoices = invoices.filter(user=filters['user'])
-        if filters['invoice_type']:
-            invoices = invoices.filter(invoice_type=filters['invoice_type'])
     context = {
         'title': 'Administracja kosztami',
         'selected_year': camp,
-        'filter_form': filter_form,
         'invoices': invoices.order_by('-created_at'),
         'can_approve_costs': request.user.has_perm('wwwapp.approve_costs'),
         'can_process_costs': request.user.has_perm('wwwapp.process_costs'),

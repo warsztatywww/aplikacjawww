@@ -832,71 +832,22 @@ class CostAdministrationViewsTests(TestCase):
         self.assertContains(response, '/static/dist/datatables.js')
         self.assertContains(response, 'data-searchable="false"')
         self.assertContains(response, 'data-visible="false"', count=4)
+        self.assertContains(response, 'data-search-panes=', count=3)
         for column in ('Opis i pozycje', 'Warsztaty', 'Kategoria', 'Data dodania',
                        'Typ dokumentu'):
             with self.subTest(column=column):
                 self.assertContains(response, column)
 
-    def test_administration_filters_invoices_by_status(self):
-        self.client.force_login(self.admin)
-
-        response = self.client.get(
-            reverse('costs_admin', args=[self.camp.pk]),
-            {'status': Invoice.Status.APPROVED},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(list(response.context['invoices']), [self.split_invoice, self.approved_invoice])
-
-    def test_administration_filters_invoices_by_camp_user_and_type(self):
-        other_owner = User.objects.create_user(username='other-cost-owner')
-        other_invoice = self.create_invoice(
-            camp=self.other_camp,
-            document_number='FV/other',
-            internal_number='WWW_2027_FP_0001',
-            invoice_type=Invoice.Type.OUTSIDE_KSEF,
-            user=other_owner,
-        )
-        self.client.force_login(self.admin)
-
-        response = self.client.get(
-            reverse('costs_admin', args=[self.other_camp.pk]),
-            {
-                'user': other_owner.pk,
-                'invoice_type': Invoice.Type.OUTSIDE_KSEF,
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(list(response.context['invoices']), [other_invoice])
-
-    def test_filter_choices_include_polish_all_option(self):
+    def test_administration_lists_all_invoices_without_server_side_filters(self):
         self.client.force_login(self.admin)
 
         response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
 
-        for field_name in ('status', 'invoice_type'):
-            with self.subTest(field_name=field_name):
-                choices = response.context['filter_form'].fields[field_name].choices
-                self.assertEqual(choices[0], ('', 'Wszystkie'))
-
-    def test_user_filter_lists_full_names_only_for_the_selected_camp(self):
-        self.owner.first_name = 'Jan'
-        self.owner.last_name = 'Kowalski'
-        self.owner.save(update_fields=['first_name', 'last_name'])
-        user_without_invoice = User.objects.create_user(
-            username='no-invoice',
-            first_name='Anna',
-            last_name='Nowak',
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.context['invoices']),
+            [self.split_invoice, self.approved_invoice, self.received_invoice],
         )
-        self.client.force_login(self.admin)
-
-        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
-        user_field = response.context['filter_form'].fields['user']
-
-        self.assertEqual(list(user_field.queryset), [self.owner])
-        self.assertEqual(user_field.label_from_instance(self.owner), 'Jan Kowalski')
-        self.assertNotIn(user_without_invoice, user_field.queryset)
 
     def test_administration_links_to_protected_invoice_attachments(self):
         self.client.force_login(self.admin)

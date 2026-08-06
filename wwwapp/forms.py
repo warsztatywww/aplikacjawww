@@ -783,42 +783,6 @@ class ReimbursementForm(ModelForm):
         )
 
 
-class FullNameUserChoiceField(ModelChoiceField):
-    """Render a user choice with the participant's full name."""
-
-    def label_from_instance(self, user):
-        return user.get_full_name()
-
-
-class CostFilterForm(Form):
-    """Provide optional invoice administration filters."""
-
-    user = FullNameUserChoiceField(label='Użytkownik', queryset=None, required=False)
-    status = ChoiceField(
-        label='Status',
-        choices=(('', 'Wszystkie'), *Invoice.Status.choices),
-        required=False,
-    )
-    invoice_type = ChoiceField(
-        label='Typ dokumentu',
-        choices=(('', 'Wszystkie'), *Invoice.Type.choices),
-        required=False,
-    )
-
-    def __init__(self, *args, users, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['user'].queryset = users
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.include_media = False
-        self.helper.layout = Layout(
-            'user',
-            'status',
-            'invoice_type',
-            FormActions(StrictButton('Filtruj', type='submit', css_class='btn-secondary')),
-        )
-
-
 class StatisticsFilterForm(Form):
     """Filter cost statistics for one workshop edition."""
 
