@@ -471,6 +471,17 @@ def costs_statistics_view(request, year):
         }
         for value, label in CostItem.Category.choices
     ]
+    non_accounting_total = items.filter(
+        invoice__invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT,
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    accounting_total = total - non_accounting_total
+    workshop_rows = list(
+        items.filter(workshop__isnull=False)
+        .values('workshop_id', 'workshop__title')
+        .annotate(total=Sum('amount'))
+        .exclude(total=Decimal('0.00'))
+        .order_by('-total', 'workshop__title', 'workshop_id')
+    )
     colors = ('#0072b2', '#e69f00', '#009e73', '#cc79a7', '#d55e00', '#56b4e9')
     start_angle = -90
     for row, color in zip(category_rows, colors):
@@ -486,6 +497,9 @@ def costs_statistics_view(request, year):
         'category_percentages': category_percentages,
         'category_rows': category_rows,
         'total': total,
+        'non_accounting_total': non_accounting_total,
+        'accounting_total': accounting_total,
+        'workshop_rows': workshop_rows,
         'has_statistics_data': bool(total),
     }
     return render(request, 'costs_statistics.html', context)
