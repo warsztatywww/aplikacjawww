@@ -603,7 +603,7 @@ class InvoiceForm(ModelForm):
             'description': 'Opis',
         }
         help_texts = {
-            'attachment': 'Załącz skan lub plik PDF dokumentu (PDF, JPG lub JPEG; maks. 50 MiB).',
+            'attachment': 'Załącz skan lub plik PDF dokumentu (PDF, JPG, JPEG lub PNG; maks. 50 MiB).',
             'document_number': 'Przepisz numer widoczny na fakturze lub rachunku.',
             'issue_date': 'Wybierz datę wystawienia widoczną na dokumencie.',
             'amount': 'Łączna kwota brutto dokumentu. Musi być równa sumie pozycji kosztowych.',
@@ -626,7 +626,7 @@ class InvoiceForm(ModelForm):
             return attachment
 
         if not self._looks_like_supported_document(attachment):
-            raise ValidationError('Załącznik musi być plikiem PDF, JPG lub JPEG.')
+            raise ValidationError('Załącznik musi być plikiem PDF, JPG, JPEG lub PNG.')
         if attachment.size > self.MAX_ATTACHMENT_SIZE:
             raise ValidationError('Załącznik nie może być większy niż 50 MiB.')
         return attachment
@@ -639,7 +639,11 @@ class InvoiceForm(ModelForm):
             attachment.seek(0)
         except (OSError, ValueError):
             return False
-        return header.startswith(b'%PDF-') or header[:3] == b'\xff\xd8\xff'
+        return (
+            header.startswith(b'%PDF-')
+            or header[:3] == b'\xff\xd8\xff'
+            or header == b'\x89PNG\r\n\x1a\n'
+        )
 
 
 class CostItemForm(ModelForm):

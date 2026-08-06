@@ -103,10 +103,11 @@ class InvoiceFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('attachment', form.errors)
 
-    def test_attachment_accepts_pdf_and_jpeg_signatures(self):
+    def test_attachment_accepts_pdf_jpeg_and_png_signatures(self):
         for name, content, content_type in (
             ('invoice.pdf', b'%PDF-1.7', 'application/pdf'),
             ('invoice.jpeg', b'\xff\xd8\xff\xe0', 'image/jpeg'),
+            ('invoice.png', b'\x89PNG\r\n\x1a\n', 'image/png'),
         ):
             with self.subTest(name=name):
                 form = InvoiceForm(
@@ -551,13 +552,13 @@ class OwnCostsViewsTests(TestCase):
             {
                 **self.invoice_post_data(),
                 'attachment': SimpleUploadedFile(
-                    'invoice.png', b'\x89PNG\r\n\x1a\n', content_type='image/png',
+                    'invoice.gif', b'GIF89a', content_type='image/gif',
                 ),
             },
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Załącznik musi być plikiem PDF, JPG lub JPEG.')
+        self.assertContains(response, 'Załącznik musi być plikiem PDF, JPG, JPEG lub PNG.')
         self.assertNotContains(
             response,
             'Suma pozycji kosztowych musi być równa kwocie faktury.',
