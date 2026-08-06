@@ -45,9 +45,9 @@
                 <td>
                   {{ invoice.internal_number }}
                   {% if can_change_invoices %}
-                    <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">
-                      Edytuj
-                    </a>
+                    <a class="btn btn-sm btn-outline-secondary ml-2"
+                       href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}"
+                       aria-label="Edytuj"><i class="fas fa-pencil-alt"></i></a>
                   {% endif %}
                 </td>
                 <td>{{ invoice.document_number }}</td>
