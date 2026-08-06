@@ -1,9 +1,16 @@
 {% load static %}
 {% load wwwtags %}
 
-<a href="{% url 'social:begin' provider %}{% if next %}?next={{ next }}{% endif %}" class="btn btn-outline-{{ provider | provider_friendly_name }}" role="button" style="display: block; box-sizing: border-box; height: 52px; padding: 11px;">
+<form method="post" action="{% url 'social:begin' provider %}"{% if next %}>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ next }}">
+{% else %}>
+  {% csrf_token %}
+{% endif %}
+<button type="submit" class="btn btn-outline-{{ provider | provider_friendly_name }}" style="display: block; box-sizing: border-box; height: 52px; padding: 11px; width: 100%;">
   <div style="height: 24px; line-height: 24px; vertical-align: middle;">
     <span style="float: left; line-height: 24px;"><img src="{% static 'images/login_buttons/'|add:provider|add:'.svg' %}" style="width: 18px; height: 18px;"></span>
     <span style="display: inline-block; vertical-align: middle;">{{ provider | provider_signin_text }}</span>
   </div>
-</a>
+</button>
+</form>

@@ -28,6 +28,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'social_django',
     'crispy_forms',
+    'crispy_bootstrap4',
     'phonenumber_field',
     'django_select2',
     'adminsortable2',
@@ -144,8 +145,6 @@ LANGUAGE_CODE = 'pl'
 TIME_ZONE = 'Europe/Warsaw'
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 

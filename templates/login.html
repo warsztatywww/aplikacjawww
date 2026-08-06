@@ -5,10 +5,10 @@
     <h2 class="heading text-center m-5">Wybierz metodę logowania: </h2>
     <div class="row">
       <div class="col-md-6" style="padding-bottom: 2em;">
-        {% include "_socialButton.html" with provider="facebook" next=request.GET.next only %}
+        {% include "_socialButton.html" with provider="facebook" next=request.GET.next csrf_token=csrf_token only %}
       </div>
       <div class="col-md-6" style="padding-bottom: 2em;">
-        {% include "_socialButton.html" with provider="google-oauth2" next=request.GET.next only %}
+        {% include "_socialButton.html" with provider="google-oauth2" next=request.GET.next csrf_token=csrf_token only %}
       </div>
       {% if debug %}
       <div class="col-md-6" style="padding-bottom: 2em;">

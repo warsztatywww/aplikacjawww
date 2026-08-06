@@ -18,13 +18,13 @@ class AuthViews(TestCase):
 
     def test_available_backends(self):
         for backend in self.supported_backends:
-            response = self.client.get(reverse('social:begin', kwargs={'backend': backend}))
+            response = self.client.post(reverse('social:begin', kwargs={'backend': backend}))
             self.assertEqual(response.status_code, 302, msg=backend)
 
         not_supported_backends = ['linkedin', 'your_mom', 'furaffinity']
         for backend in not_supported_backends:
             url = reverse('social:begin', kwargs={'backend': backend})
-            response = self.client.get(url)
+            response = self.client.post(url)
             self.assertEqual(response.status_code, 404, msg=backend)
 
     def login_page_anonymous(self):
@@ -35,7 +35,7 @@ class AuthViews(TestCase):
         self.assertTrue("Zaloguj się przez Facebooka" in content)
         self.assertTrue("Zaloguj się przez Google" in content)
         for backend in self.supported_backends:
-            self.assertTrue("href=\"{}\"".format(reverse('social:begin', kwargs={'backend': backend})) in content, msg=backend)
+            self.assertTrue("action=\"{}\"".format(reverse('social:begin', kwargs={'backend': backend})) in content, msg=backend)
 
     def login_page_user(self, first_name, last_name):
         response = self.client.get(reverse('index'))
@@ -52,7 +52,7 @@ class AuthViews(TestCase):
         with mock.patch('social_core.backends.base.BaseAuth.request', side_effect=fake_responses):
             response = self.client.get(reverse('login'))
             self.assertEqual(response.status_code, 200)
-            response = self.client.get(reverse('social:begin', kwargs={'backend': 'facebook'}))
+            response = self.client.post(reverse('social:begin', kwargs={'backend': 'facebook'}))
             self.assertEqual(response.status_code, 302)
 
             url = reverse('social:complete', kwargs={'backend': 'facebook'})
@@ -83,7 +83,7 @@ class AuthViews(TestCase):
         with mock.patch('social_core.backends.base.BaseAuth.request', side_effect=fake_responses):
             response = self.client.get(reverse('login'))
             self.assertEqual(response.status_code, 200)
-            response = self.client.get(reverse('social:begin', kwargs={'backend': 'google-oauth2'}))
+            response = self.client.post(reverse('social:begin', kwargs={'backend': 'google-oauth2'}))
             self.assertEqual(response.status_code, 302)
 
             url = reverse('social:complete', kwargs={'backend': 'google-oauth2'})
@@ -107,7 +107,7 @@ class AuthViews(TestCase):
                 return response
 
     def logout(self):
-        response = self.client.get(reverse('logout'))
+        response = self.client.post(reverse('logout'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
         self.login_page_anonymous()

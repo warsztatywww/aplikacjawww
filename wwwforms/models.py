@@ -111,7 +111,7 @@ class FormQuestion(models.Model):
 
     @property
     def has_any_answers(self):
-        return self.answers.count() > 0
+        return self.pk is not None and self.answers.exists()
 
     @property
     def is_searchable(self):
@@ -154,7 +154,7 @@ class FormQuestion(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
-        if self.value_field_name() != 'value_choices':
+        if self.pk is not None and self.value_field_name() != 'value_choices':
             self.options.all().delete()
         super().save(*args, **kwargs)
 

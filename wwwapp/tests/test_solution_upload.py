@@ -2,7 +2,7 @@ import datetime
 import os
 
 import mock
-import pytz
+from datetime import timezone
 from django.contrib.auth.models import User
 from django.contrib.messages.api import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -147,11 +147,11 @@ class SolutionUploadViews(TestCase):
 
         solution = Solution.objects.get(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile))
         self.assertEqual(solution.message, 'To są testy')
-        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
+        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
         files = solution.files.all()
         self.assertEqual(len(files), 2)
-        self.assertEqual(files[0].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
-        self.assertEqual(files[1].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
+        self.assertEqual(files[0].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
+        self.assertEqual(files[1].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
 
     @freeze_time('2020-05-01 12:00:00')
     def test_solution_upload_accessible_edit(self):
@@ -164,11 +164,11 @@ class SolutionUploadViews(TestCase):
         solution = Solution.objects.get(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile))
         self.assertEqual(solution.pk, initial_solution.pk)
         self.assertEqual(solution.message, 'To są testy')
-        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
+        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
         files = solution.files.all()
         self.assertEqual(len(files), 2)
-        self.assertEqual(files[0].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
-        self.assertEqual(files[1].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
+        self.assertEqual(files[0].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
+        self.assertEqual(files[1].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
 
     @freeze_time('2020-05-01 12:00:00')
     def test_solution_add_file(self):
@@ -195,11 +195,11 @@ class SolutionUploadViews(TestCase):
         solution = Solution.objects.get(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile))
         self.assertEqual(solution.pk, initial_solution.pk)
         self.assertEqual(solution.message, 'To są testy')
-        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))  # even though the message has not changed, the attachments did
+        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))  # even though the message has not changed, the attachments did
         files = solution.files.all()
         self.assertEqual(len(files), 2)
-        self.assertEqual(files[0].last_changed, datetime.datetime(2020, 1, 1, 00, 00, 00, tzinfo=pytz.utc))  # this file has not changed, so the modification date should stay
-        self.assertEqual(files[1].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))
+        self.assertEqual(files[0].last_changed, datetime.datetime(2020, 1, 1, 00, 00, 00, tzinfo=timezone.utc))  # this file has not changed, so the modification date should stay
+        self.assertEqual(files[1].last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))
 
     @freeze_time('2020-05-01 12:00:00')
     def test_solution_delete_file(self):
@@ -225,7 +225,7 @@ class SolutionUploadViews(TestCase):
         solution = Solution.objects.get(workshop_participant=WorkshopParticipant.objects.get(workshop=self.workshop, camp_participation__user_profile=self.participant_user.user_profile))
         self.assertEqual(solution.pk, initial_solution.pk)
         self.assertEqual(solution.message, 'To są testy')
-        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=pytz.utc))  # even though the message has not changed, the attachments did
+        self.assertEqual(solution.last_changed, datetime.datetime(2020, 5, 1, 12, 00, 00, tzinfo=timezone.utc))  # even though the message has not changed, the attachments did
         files = solution.files.all()
         self.assertEqual(len(files), 0)
 

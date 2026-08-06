@@ -123,7 +123,7 @@ class WorkshopEditViews(TestCase):
             })
             save.assert_not_called()
             self.assertEqual(response.status_code, 200)
-            self.assertFormError(response, 'form', 'type', 'Wybierz poprawną wartość. Podana nie jest jednym z dostępnych wyborów.')
+            self.assertFormError(response.context['form'], 'type', 'Wybierz poprawną wartość. Podana nie jest jednym z dostępnych wyborów.')
 
     @freeze_time('2020-03-01 12:00:00')
     def test_create_proposal_wrong_category_year(self):
@@ -140,7 +140,7 @@ class WorkshopEditViews(TestCase):
             })
             save.assert_not_called()
             self.assertEqual(response.status_code, 200)
-            self.assertFormError(response, 'form', 'category', 'Wybierz poprawną wartość. 1 nie jest żadną z dostępnych opcji.')
+            self.assertFormError(response.context['form'], 'category', 'Wybierz poprawną wartość. 1 nie jest żadną z dostępnych opcji.')
 
     def test_model_save_workshop_wrong_type_year(self):
         workshop = Workshop.objects.create(
@@ -152,7 +152,7 @@ class WorkshopEditViews(TestCase):
         workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 1'))
         workshop.category.add(WorkshopCategory.objects.get(year=self.year_2020, name='This category 2'))
         workshop.lecturer.add(self.normal_user.user_profile)
-        with self.assertRaisesRegexp(ValidationError, 'Typ warsztatów nie jest z tego roku'):
+        with self.assertRaisesRegex(ValidationError, 'Typ warsztatów nie jest z tego roku'):
             workshop.full_clean()
 
     def test_model_save_workshop_wrong_category_year(self):
@@ -165,7 +165,7 @@ class WorkshopEditViews(TestCase):
         workshop.category.add(WorkshopCategory.objects.get(year=self.year_2019, name='Not this category'))
         workshop.lecturer.add(self.normal_user.user_profile)
         workshop.save()
-        with self.assertRaisesRegexp(ValidationError, 'Kategoria warsztatów nie jest z tego roku'):
+        with self.assertRaisesRegex(ValidationError, 'Kategoria warsztatów nie jest z tego roku'):
             workshop.full_clean()
 
     @freeze_time('2020-03-01 12:00:00')
@@ -183,7 +183,11 @@ class WorkshopEditViews(TestCase):
             })
             save.assert_not_called()
             self.assertEqual(response.status_code, 200)
-            self.assertFormError(response, 'form', None, 'Workshop z tymi Year i Name już istnieje.')
+            self.assertFormError(
+                response.context['form'],
+                None,
+                'Istnieje już instancja modelu Workshop mająca takie same pole/pola Year i Name.',
+            )
 
     @freeze_time('2021-03-01 12:00:00')
     def test_create_proposal_duplicate_slug_different_year(self):
@@ -646,7 +650,7 @@ class WorkshopEditViews(TestCase):
             'page_content_is_public': '',
         })
         self.assertEqual(response.status_code, 200)
-        self.assertFormError(response, 'form', 'qualification_problems', 'Rozszerzenie pliku „js” jest niedozwolone. Dozwolone rozszerzenia to: pdf.')
+        self.assertFormError(response.context['form'], 'qualification_problems', 'Rozszerzenie pliku „js” jest niedozwolone. Dozwolone rozszerzenia to: pdf.')
 
     def test_edit_qual_problems_change(self):
         self.workshop.qualification_problems = SimpleUploadedFile('problems.pdf', os.urandom(1024 * 1024))

@@ -6,7 +6,7 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 from django.conf import settings
-from django.utils.datetime_safe import datetime
+from datetime import datetime
 
 
 def forwards_func(apps, schema_editor):

@@ -10,7 +10,7 @@
           {% for provider in match.providers %}
           <div class="row">
             <div class="col-md-6">
-              {% include "_socialButton.html" with provider=provider next="/accounts/verified/" only %}
+              {% include "_socialButton.html" with provider=provider next="/accounts/verified/" csrf_token=csrf_token only %}
             </div>
           </div>
           {% empty %}
