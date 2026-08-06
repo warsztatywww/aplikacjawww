@@ -361,6 +361,7 @@ class OwnCostsViewsTests(TestCase):
                        'Typ dokumentu'):
             with self.subTest(column=column):
                 self.assertContains(response, column)
+        self.assertContains(response, 'data-order="')
 
     def test_invoice_add_requires_settlement_details(self):
         self.client.force_login(self.user)
@@ -833,6 +834,7 @@ class CostAdministrationViewsTests(TestCase):
         self.assertContains(response, 'data-searchable="false"')
         self.assertContains(response, 'data-visible="false"', count=4)
         self.assertContains(response, 'data-search-panes=', count=3)
+        self.assertContains(response, 'data-order="')
         for column in ('Opis i pozycje', 'Warsztaty', 'Kategoria', 'Data dodania',
                        'Typ dokumentu'):
             with self.subTest(column=column):

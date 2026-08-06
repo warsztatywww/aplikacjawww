@@ -51,7 +51,7 @@
                   {% endif %}
                 </td>
                 <td>{{ invoice.document_number }}</td>
-                <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
+                <td data-order="{{ invoice.issue_date|date:'U' }}">{{ invoice.issue_date|date:"d.m.Y" }}</td>
                 <td>
                   <a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a>
                 </td>
@@ -75,7 +75,7 @@
                 </td>
                 <td>{{ invoice.workshops_summary }}</td>
                 <td>{{ invoice.categories_summary }}</td>
-                <td>{{ invoice.created_at|date:"d.m.Y" }}</td>
+                <td data-order="{{ invoice.created_at|date:'U' }}">{{ invoice.created_at|date:"d.m.Y" }}</td>
                 <td>{{ invoice.get_invoice_type_display }}</td>
               </tr>
             {% endfor %}
