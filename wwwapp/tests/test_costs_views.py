@@ -1205,6 +1205,68 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             Decimal('0.00'),
         )
 
+    def test_statistics_filter_applies_to_summary_and_workshop_costs(self):
+        workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')
+        expensive_workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='expensive-workshop',
+            title='Expensive workshop',
+        )
+        inexpensive_workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='inexpensive-workshop',
+            title='Inexpensive workshop',
+        )
+        Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='workshop-without-costs',
+            title='Workshop without costs',
+        )
+        non_accounting_invoice = self.create_invoice(
+            amount=Decimal('40.00'),
+            status=Invoice.Status.RECEIVED,
+        )
+        non_accounting_invoice.invoice_type = Invoice.Type.NON_ACCOUNTING_RECEIPT
+        non_accounting_invoice.save(update_fields=['invoice_type'])
+        non_accounting_invoice.cost_items.update(workshop=expensive_workshop)
+        accounting_invoice = self.create_invoice(
+            amount=Decimal('15.00'),
+            status=Invoice.Status.RECEIVED,
+        )
+        accounting_invoice.cost_items.update(workshop=inexpensive_workshop)
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(
+            reverse('costs_statistics', args=[self.camp.pk]),
+            {'status': Invoice.Status.RECEIVED},
+        )
+
+        self.assertEqual(response.context['total'], Decimal('55.00'))
+        self.assertEqual(response.context.get('non_accounting_total'), Decimal('40.00'))
+        self.assertEqual(response.context.get('accounting_total'), Decimal('15.00'))
+        self.assertEqual(
+            response.context.get('workshop_rows'),
+            [
+                {
+                    'workshop_id': expensive_workshop.pk,
+                    'workshop__title': expensive_workshop.title,
+                    'total': Decimal('40.00'),
+                },
+                {
+                    'workshop_id': inexpensive_workshop.pk,
+                    'workshop__title': inexpensive_workshop.title,
+                    'total': Decimal('15.00'),
+                },
+            ],
+        )
+        self.assertContains(response, 'Podsumowanie kosztów')
+        self.assertContains(response, 'Paragony nieksięgowe')
+        self.assertContains(response, 'Pozostałe koszty')
+        self.assertNotContains(response, 'Workshop without costs')
+
     def test_statistics_ignores_removed_context_filter(self):
         workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')
         workshop = Workshop.objects.create(
