@@ -58,9 +58,14 @@
             <th scope="col">Data</th>
             <th scope="col">Kwota</th>
             <th scope="col">Status</th>
+            <th scope="col">Opis i pozycje</th>
             <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
-              Załącznik
+              <span class="sr-only">Załącznik</span>
             </th>
+            <th scope="col" data-visible="false">Warsztaty</th>
+            <th scope="col" data-visible="false">Kategoria</th>
+            <th scope="col" data-visible="false">Data dodania</th>
+            <th scope="col" data-visible="false">Typ dokumentu</th>
           </tr>
         </thead>
         <tbody>
@@ -77,7 +82,26 @@
               <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
               <td>{{ invoice.amount|floatformat:2 }} zł</td>
               <td>{{ invoice.get_status_display }}</td>
-              <td><a href="{% url 'costs_invoice_attachment' year=selected_year.pk invoice_id=invoice.pk %}">Pobierz</a></td>
+              <td>
+                {{ invoice.description|linebreaksbr }}
+                <ul class="mb-0">
+                  {% for item in invoice.cost_items.all %}
+                    <li>
+                      {{ item.get_category_display }}: {{ item.amount|floatformat:2 }} zł
+                      {% if item.workshop %} — {{ item.workshop }}{% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+              </td>
+              <td>
+                <a class="btn btn-sm btn-outline-secondary"
+                   href="{% url 'costs_invoice_attachment' year=selected_year.pk invoice_id=invoice.pk %}"
+                   aria-label="Pobierz załącznik"><i class="fas fa-download"></i></a>
+              </td>
+              <td>{{ invoice.workshops_summary }}</td>
+              <td>{{ invoice.categories_summary }}</td>
+              <td>{{ invoice.created_at|date:"d.m.Y" }}</td>
+              <td>{{ invoice.get_invoice_type_display }}</td>
             </tr>
           {% endfor %}
         </tbody>

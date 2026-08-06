@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% load static %}
 
 {% block content %}
   <article>
@@ -35,49 +34,25 @@
         {% endif %}
       </div>
       <div class="col">
-        <div class="table-responsive">
-          <table id="cost-statistics-table" class="table mt-3" style="width:100%!important;">
-            <thead>
+        <table class="table mt-3">
+          <thead>
+            <tr>
+              <th scope="col">Kategoria</th><th scope="col">Kwota</th><th scope="col">Udział</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in category_rows %}
               <tr>
-                <th scope="col" data-searchable="false" data-orderable="false">
-                  <span class="sr-only">Wiersz</span>
-                </th>
-                <th scope="col">Kategoria</th>
-                <th scope="col">Kwota</th>
-                <th scope="col">Udział</th>
+                <td>
+                  <span aria-hidden="true" style="color: {{ row.color }};">&#9679;</span>
+                  {{ row.label }}
+                </td>
+                <td>{{ row.total|floatformat:2 }} zł</td><td>{{ row.percentage }}%</td>
               </tr>
-            </thead>
-            <tbody>
-              {% for row in category_rows %}
-                <tr>
-                  <td></td>
-                  <td>
-                    <span aria-hidden="true" style="color: {{ row.color }};">&#9679;</span>
-                    {{ row.label }}
-                  </td>
-                  <td>{{ row.total|floatformat:2 }} zł</td>
-                  <td>{{ row.percentage }}%</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </article>
-{% endblock %}
-
-{% block styles %}
-  {{ block.super }}
-  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
-{% endblock %}
-
-{% block script %}
-  {{ block.super }}
-  <script src="{% static 'dist/datatables.js' %}"></script>
-  <script>
-    $(document).ready(() => {
-      $('#cost-statistics-table').DataTable(gen_datatables_config({}));
-    });
-  </script>
 {% endblock %}

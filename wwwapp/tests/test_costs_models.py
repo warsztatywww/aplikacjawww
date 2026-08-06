@@ -141,6 +141,39 @@ class CostModelTests(TestCase):
 
         self.assertFalse(self.invoice.can_user_edit)
 
+    def test_invoice_summarizes_distinct_workshops_and_categories(self):
+        workshop_type = WorkshopType.objects.create(year=self.camp, name='Warsztaty')
+        workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='workshop-a',
+            title='Warsztat A',
+        )
+        CostItem.objects.create(
+            invoice=self.invoice,
+            amount=Decimal('5.00'),
+            category=CostItem.Category.WORKSHOPS,
+            workshop=workshop,
+        )
+        CostItem.objects.create(
+            invoice=self.invoice,
+            amount=Decimal('3.00'),
+            category=CostItem.Category.WORKSHOPS,
+            workshop=workshop,
+        )
+        CostItem.objects.create(
+            invoice=self.invoice,
+            amount=Decimal('2.00'),
+            category=CostItem.Category.OUTINGS,
+        )
+
+        self.assertEqual(self.invoice.workshops_summary, 'Warsztat A')
+        self.assertEqual(self.invoice.categories_summary, 'Warsztaty, Wyjścia')
+
+    def test_invoice_summaries_are_empty_without_cost_items(self):
+        self.assertEqual(self.invoice.workshops_summary, '')
+        self.assertEqual(self.invoice.categories_summary, '')
+
     def test_invoice_numbers_start_from_one_when_the_sequence_is_created(self):
         other_invoice = Invoice.objects.create(
             user=self.user,

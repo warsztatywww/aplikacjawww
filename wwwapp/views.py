@@ -131,7 +131,9 @@ def redirect_to_view_for_latest_year(target_view_name):
 @login_required
 def costs_mine_view(request, year):
     camp = get_object_or_404(Camp, pk=year)
-    invoices = Invoice.objects.filter(user=request.user, camp=camp).order_by('-created_at')
+    invoices = Invoice.objects.filter(user=request.user, camp=camp).prefetch_related(
+        'cost_items__workshop'
+    ).order_by('-created_at')
     settlement_details = settlement_details_for(user=request.user, camp=camp)
     saved_account_number = (
         settlement_details.account_number if settlement_details is not None else ''
@@ -283,7 +285,9 @@ def costs_admin_view(request, year):
         'pk',
     )
     filter_form = CostFilterForm(request.GET or None, users=users)
-    invoices = Invoice.objects.filter(camp=camp).select_related('user').prefetch_related('cost_items')
+    invoices = Invoice.objects.filter(camp=camp).select_related('user').prefetch_related(
+        'cost_items__workshop'
+    )
     if filter_form.is_valid():
         filters = filter_form.cleaned_data
         if filters['status']:
