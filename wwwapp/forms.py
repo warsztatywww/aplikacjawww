@@ -682,7 +682,7 @@ class BaseCostItemInlineFormSet(BaseInlineFormSet):
 
     def clean(self):
         super().clean()
-        if any(self.errors):
+        if any(self.errors) or self.invoice_amount is None:
             return
 
         items = [

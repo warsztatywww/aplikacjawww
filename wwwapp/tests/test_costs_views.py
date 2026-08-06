@@ -538,6 +538,31 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
 
+    def test_invoice_add_displays_attachment_error_without_allocation_error(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_invoice_add', args=[self.camp.pk]),
+            {
+                **self.invoice_post_data(),
+                'attachment': SimpleUploadedFile(
+                    'invoice.png', b'\x89PNG\r\n\x1a\n', content_type='image/png',
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Załącznik musi być plikiem PDF, JPG lub JPEG.')
+        self.assertNotContains(
+            response,
+            'Suma pozycji kosztowych musi być równa kwocie faktury.',
+        )
+
     def test_invoice_edit_displays_allocation_error_and_remaining_amount_action(self):
         cost_item = CostItem.objects.create(
             invoice=self.invoice,
