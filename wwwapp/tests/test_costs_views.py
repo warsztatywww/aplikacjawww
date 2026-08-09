@@ -579,6 +579,24 @@ class OwnCostsViewsTests(TestCase):
         self.assertEqual(invoice.user, self.user)
         self.assertEqual(invoice.cost_items.get().amount, Decimal('10.00'))
 
+    def test_invoice_add_uses_non_accounting_receipt_numbering(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse('costs_invoice_add', args=[self.camp.pk]), {
+            **self.invoice_post_data(invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT),
+            'attachment': SimpleUploadedFile(
+                'receipt.pdf', b'%PDF-1.7', content_type='application/pdf'
+            ),
+        })
+
+        self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
+        self.assertTrue(Invoice.objects.filter(internal_number='WWW_2026_FPZ_0001').exists())
+
     def test_rejected_invoice_edit_resets_it_to_received(self):
         SettlementDetails.objects.create(
             user=self.user,

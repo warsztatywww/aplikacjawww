@@ -582,12 +582,25 @@ class Workshop(models.Model):
 
 
 class InvoiceSequence(models.Model):
-    camp = models.OneToOneField(
+    class Series(models.TextChoices):
+        FP = 'FP', 'FP'
+        FPZ = 'FPZ', 'FPZ'
+
+    camp = models.ForeignKey(
         Camp,
         on_delete=models.PROTECT,
-        related_name='invoice_sequence',
+        related_name='invoice_sequences',
     )
+    series = models.CharField(max_length=3, choices=Series.choices, default=Series.FP)
     last_allocated = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('camp', 'series'),
+                name='unique_invoice_sequence_series_per_camp',
+            ),
+        )
 
 
 class Invoice(models.Model):

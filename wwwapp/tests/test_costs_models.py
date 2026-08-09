@@ -156,10 +156,16 @@ class CostModelTests(TestCase):
         InvoiceSequence.objects.create(camp=self.other_camp, last_allocated=41)
         empty_camp = Camp.objects.create(year=2028)
 
-        first_number = allocate_invoice_number(camp=self.camp)
-        second_number = allocate_invoice_number(camp=self.camp)
-        other_number = allocate_invoice_number(camp=self.other_camp)
-        empty_camp_number = allocate_invoice_number(camp=empty_camp)
+        first_number = allocate_invoice_number(camp=self.camp, invoice_type=Invoice.Type.KSEF)
+        second_number = allocate_invoice_number(camp=self.camp, invoice_type=Invoice.Type.KSEF)
+        other_number = allocate_invoice_number(
+            camp=self.other_camp,
+            invoice_type=Invoice.Type.KSEF,
+        )
+        empty_camp_number = allocate_invoice_number(
+            camp=empty_camp,
+            invoice_type=Invoice.Type.KSEF,
+        )
 
         self.assertEqual(first_number, 'WWW_2026_FP_0002')
         self.assertEqual(second_number, 'WWW_2026_FP_0003')
@@ -167,6 +173,26 @@ class CostModelTests(TestCase):
         self.assertEqual(empty_camp_number, 'WWW_2028_FP_0001')
         self.assertEqual(InvoiceSequence.objects.get(camp=self.camp).last_allocated, 3)
         self.assertEqual(InvoiceSequence.objects.get(camp=other_invoice.camp).last_allocated, 42)
+
+    def test_invoice_types_use_separate_numbering_series(self):
+        non_accounting_number = allocate_invoice_number(
+            camp=self.camp,
+            invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT,
+        )
+        receipt_with_nip_number = allocate_invoice_number(
+            camp=self.camp,
+            invoice_type=Invoice.Type.RECEIPT_WITH_NIP,
+        )
+
+        self.assertEqual(non_accounting_number, 'WWW_2026_FPZ_0001')
+        self.assertEqual(receipt_with_nip_number, 'WWW_2026_FP_0002')
+        self.assertEqual(
+            set(InvoiceSequence.objects.filter(camp=self.camp).values_list(
+                'series',
+                'last_allocated',
+            )),
+            {('FP', 2), ('FPZ', 1)},
+        )
 
     def test_allocate_invoice_number_recovers_from_a_concurrent_sequence_creation(self):
         camp = Camp.objects.create(year=2028)
@@ -177,7 +203,7 @@ class CostModelTests(TestCase):
             'get_or_create',
             side_effect=lambda **kwargs: InvoiceSequence.objects.create(camp=kwargs['camp']),
         ):
-            allocated = allocate_invoice_number(camp=camp)
+            allocated = allocate_invoice_number(camp=camp, invoice_type=Invoice.Type.KSEF)
 
         self.assertEqual(allocated, 'WWW_2028_FP_0002')
         self.assertEqual(InvoiceSequence.objects.get(camp=camp).last_allocated, 2)

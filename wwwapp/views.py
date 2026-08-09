@@ -215,7 +215,10 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         old_attachment_name = invoice.attachment.name if invoice else ''
         invoice = invoice_form.save(commit=False)
         if invoice_id is None:
-            invoice.internal_number = allocate_invoice_number(camp=camp)
+            invoice.internal_number = allocate_invoice_number(
+                camp=camp,
+                invoice_type=invoice.invoice_type,
+            )
         else:
             if admin_edit:
                 invoice.admin_modified_at = timezone.now()

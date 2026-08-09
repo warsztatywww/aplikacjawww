@@ -27,18 +27,23 @@ CSV_FIELDS = (
 
 
 @transaction.atomic
-def allocate_invoice_number(*, camp):
+def allocate_invoice_number(*, camp, invoice_type):
     """Allocate the next internal invoice number for a workshop edition."""
+    series = (
+        InvoiceSequence.Series.FPZ
+        if invoice_type == Invoice.Type.NON_ACCOUNTING_RECEIPT
+        else InvoiceSequence.Series.FP
+    )
     try:
         with transaction.atomic():
-            sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
+            sequence, created = InvoiceSequence.objects.get_or_create(camp=camp, series=series)
     except IntegrityError:
         created = False
     if not created:
-        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp)
+        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp, series=series)
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
-    return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
+    return f'WWW_{camp.year}_{series}_{sequence.last_allocated:04d}'
 
 
 @transaction.atomic
