@@ -3,13 +3,23 @@ from PIL import Image
 
 
 class ImageFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
 
     def validate(self, value):
         return super.validate(value)
 
 
+class ImageFileField(forms.FileField):
+    def clean(self, data, initial=None):
+        if not data:
+            return super().clean(data, initial)
+        if isinstance(data, (list, tuple)):
+            return [super(ImageFileField, self).clean(item, initial) for item in data]
+        return [super().clean(data, initial)]
+
+
 class ImageCreateForm(forms.Form):
-    data = forms.FileField(widget=ImageFileInput(attrs={'multiple': True}))
+    data = ImageFileField(widget=ImageFileInput(attrs={'multiple': True}))
 
     def clean(self):
         """ Validate files by checking they can be opened by PIL """

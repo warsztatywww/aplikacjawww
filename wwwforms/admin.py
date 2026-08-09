@@ -1,4 +1,4 @@
-from adminsortable2.admin import SortableInlineAdminMixin
+from adminsortable2.admin import SortableAdminBase, SortableInlineAdminMixin
 from django.contrib import admin, messages
 from django.contrib.admin.exceptions import DisallowedModelAdminToField
 from django.contrib.admin.options import csrf_protect_m, TO_FIELD_VAR, IS_POPUP_VAR
@@ -44,7 +44,7 @@ class FormQuestionInline(SortableInlineAdminMixin, admin.TabularInline):
     #     return readonly_fields
 
 
-class FormAdmin(admin.ModelAdmin):
+class FormAdmin(SortableAdminBase, admin.ModelAdmin):
     model = Form
     inlines = [FormQuestionInline]
     fields = ('name', 'title', 'description', 'is_visible', 'reset_answers_action')
@@ -171,7 +171,7 @@ class FormQuestionOptionInline(SortableInlineAdminMixin, admin.TabularInline):
     show_change_link = False
 
 
-class FormQuestionAdmin(admin.ModelAdmin):
+class FormQuestionAdmin(SortableAdminBase, admin.ModelAdmin):
     model = FormQuestion
     fields = ('form', 'title', 'data_type', 'is_required', 'is_locked', 'reset_answers_action')
     readonly_fields = ('reset_answers_action',)
