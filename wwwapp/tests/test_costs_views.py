@@ -104,10 +104,11 @@ class InvoiceFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('attachment', form.errors)
 
-    def test_attachment_accepts_pdf_and_jpeg_signatures(self):
+    def test_attachment_accepts_pdf_jpeg_and_png_signatures(self):
         for name, content, content_type in (
             ('invoice.pdf', b'%PDF-1.7', 'application/pdf'),
             ('invoice.jpeg', b'\xff\xd8\xff\xe0', 'image/jpeg'),
+            ('invoice.png', b'\x89PNG\r\n\x1a\n', 'image/png'),
         ):
             with self.subTest(name=name):
                 form = InvoiceForm(
@@ -550,6 +551,31 @@ class OwnCostsViewsTests(TestCase):
         )
 
         self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
+
+    def test_invoice_add_displays_attachment_error_without_allocation_error(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_invoice_add', args=[self.camp.pk]),
+            {
+                **self.invoice_post_data(),
+                'attachment': SimpleUploadedFile(
+                    'invoice.gif', b'GIF89a', content_type='image/gif',
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Załącznik musi być plikiem PDF, JPG, JPEG lub PNG.')
+        self.assertNotContains(
+            response,
+            'Suma pozycji kosztowych musi być równa kwocie faktury.',
+        )
 
     def test_invoice_edit_displays_allocation_error_and_remaining_amount_action(self):
         cost_item = CostItem.objects.create(
