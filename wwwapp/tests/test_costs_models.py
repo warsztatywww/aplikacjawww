@@ -97,6 +97,48 @@ class CostModelTests(TestCase):
 
         self.assertFalse(InvoiceAdmin(Invoice, site).has_add_permission(request))
 
+    def test_admin_approval_allocates_an_invoice_number(self):
+        invoice = Invoice.objects.create(
+            user=self.user,
+            camp=self.other_camp,
+            document_number='FV/admin/2027',
+            issue_date='2027-07-24',
+            amount=Decimal('1.00'),
+            invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT,
+            attachment='invoices/admin.pdf',
+            description='Admin approval',
+            internal_number=None,
+            status=Invoice.Status.APPROVED,
+        )
+        request = RequestFactory().post('/')
+        request.user = self.admin
+
+        InvoiceAdmin(Invoice, AdminSite()).save_model(
+            request,
+            invoice,
+            form=None,
+            change=True,
+        )
+
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.internal_number, 'WWW_2027_FPZ_0001')
+
+    def test_admin_can_reject_numbered_invoice(self):
+        self.invoice.status = Invoice.Status.REJECTED
+        request = RequestFactory().post('/')
+        request.user = self.admin
+
+        InvoiceAdmin(Invoice, AdminSite()).save_model(
+            request,
+            self.invoice,
+            form=None,
+            change=True,
+        )
+
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.status, Invoice.Status.REJECTED)
+        self.assertEqual(self.invoice.internal_number, 'WWW_2026_FP_0001')
+
     def test_invoice_with_cost_items_is_protected_from_deletion(self):
         CostItem.objects.create(invoice=self.invoice, amount=Decimal('10.00'),
                                 category=CostItem.Category.WORKSHOPS)
@@ -234,12 +276,49 @@ class CostModelTests(TestCase):
         received.refresh_from_db()
         self.assertEqual(received.status, Invoice.Status.RECEIVED)
 
+    def test_approval_allocates_numbers_from_the_invoice_type_series(self):
+        camp = Camp.objects.create(year=2028)
+        expected_numbers = (
+            (Invoice.Type.KSEF, 'WWW_2028_FP_0001'),
+            (Invoice.Type.NON_ACCOUNTING_RECEIPT, 'WWW_2028_FPZ_0001'),
+            (Invoice.Type.RECEIPT_WITH_NIP, 'WWW_2028_FP_0002'),
+        )
+
+        for index, (invoice_type, expected_number) in enumerate(expected_numbers):
+            invoice = Invoice.objects.create(
+                user=self.user,
+                camp=camp,
+                attachment=f'invoices/{index}.pdf',
+                document_number=f'FV/{index}/2028',
+                issue_date='2028-07-24',
+                amount=Decimal('10.00'),
+                invoice_type=invoice_type,
+                description='Approval numbering test',
+                internal_number='',
+            )
+
+            transition_invoices(
+                invoices=Invoice.objects.filter(pk=invoice.pk),
+                target_status=Invoice.Status.APPROVED,
+                changed_by=self.admin,
+            )
+
+            invoice.refresh_from_db()
+            self.assertEqual(invoice.internal_number, expected_number)
+
+        self.assertEqual(
+            set(InvoiceSequence.objects.filter(camp=camp).values_list(
+                'series',
+                'last_allocated',
+            )),
+            {('FP', 2), ('FPZ', 1)},
+        )
+
     def test_transition_allows_only_the_defined_state_graph(self):
         allowed = {
             (Invoice.Status.RECEIVED, Invoice.Status.APPROVED),
             (Invoice.Status.RECEIVED, Invoice.Status.REJECTED),
             (Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
-            (Invoice.Status.APPROVED, Invoice.Status.REJECTED),
             (Invoice.Status.REJECTED, Invoice.Status.APPROVED),
         }
 

@@ -4,11 +4,13 @@ from adminsortable2.admin import SortableAdminMixin
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.db.models.base import Model
 from django.forms.models import BaseInlineFormSet
 from django.http.request import HttpRequest
 
 import wwwforms.models
+from wwwapp.costs import allocate_invoice_number
 from .models import Article, UserProfile, ArticleContentHistory, \
     WorkshopCategory, Workshop, WorkshopType, WorkshopParticipant, \
     CampParticipant, ResourceYearPermission, Camp, Solution, SolutionFile, CampInterestEmail, \
@@ -240,6 +242,20 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.internal_number:
+            return ('camp', 'invoice_type')
+        return ()
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        if obj.status == Invoice.Status.APPROVED and not obj.internal_number:
+            obj.internal_number = allocate_invoice_number(
+                camp=obj.camp,
+                invoice_type=obj.invoice_type,
+            )
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(CostItem)

@@ -5,6 +5,7 @@ import django.db.models.deletion
 FP = 'FP'
 FPZ = 'FPZ'
 NON_ACCOUNTING_RECEIPT = 'NON_ACCOUNTING_RECEIPT'
+NUMBERED_STATUSES = ('APPROVED', 'PROCESSED')
 
 
 def renumber_invoices(apps, schema_editor):
@@ -18,6 +19,10 @@ def renumber_invoices(apps, schema_editor):
     _replace_numbers_with_temporary_values(invoices, database)
     allocated = {}
     for invoice in invoices:
+        if invoice.status not in NUMBERED_STATUSES:
+            invoice.internal_number = None
+            invoice.save(using=database, update_fields=['internal_number'])
+            continue
         series = FPZ if invoice.invoice_type == NON_ACCOUNTING_RECEIPT else FP
         key = (invoice.camp_id, series)
         allocated[key] = allocated.get(key, 0) + 1
@@ -107,6 +112,17 @@ class Migration(migrations.Migration):
             constraint=models.UniqueConstraint(
                 fields=('camp', 'series'),
                 name='unique_invoice_sequence_series_per_camp',
+            ),
+        ),
+        migrations.AlterField(
+            model_name='invoice',
+            name='internal_number',
+            field=models.CharField(
+                blank=True,
+                editable=False,
+                max_length=30,
+                null=True,
+                unique=True,
             ),
         ),
         migrations.RunPython(renumber_invoices, restore_single_invoice_series),

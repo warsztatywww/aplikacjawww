@@ -629,7 +629,13 @@ class Invoice(models.Model):
     invoice_type = models.CharField(max_length=24, choices=Type.choices)
     description = models.TextField()
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.RECEIVED)
-    internal_number = models.CharField(max_length=30, unique=True, editable=False)
+    internal_number = models.CharField(
+        max_length=30,
+        unique=True,
+        editable=False,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     admin_modified_at = models.DateTimeField(null=True, blank=True)

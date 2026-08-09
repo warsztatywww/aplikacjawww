@@ -616,6 +616,8 @@ class InvoiceForm(ModelForm):
         super().__init__(*args, **kwargs)
         self.instance.user = user
         self.instance.camp = camp
+        if self.instance.internal_number:
+            self.fields['invoice_type'].disabled = True
         self.helper = FormHelper(self)
         self.helper.form_tag = False
         self.helper.include_media = False

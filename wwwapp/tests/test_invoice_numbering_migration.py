@@ -30,12 +30,16 @@ class InvoiceNumberingMigrationTests(TransactionTestCase):
         Invoice = self.apps.get_model('wwwapp', 'Invoice')
         InvoiceSequence = self.apps.get_model('wwwapp', 'InvoiceSequence')
 
-        numbers_by_type = dict(Invoice.objects.values_list('invoice_type', 'internal_number'))
+        numbers_by_document = dict(Invoice.objects.values_list(
+            'document_number',
+            'internal_number',
+        ))
 
-        self.assertEqual(numbers_by_type, {
-            'KSEF': 'WWW_2026_FP_0001',
-            'NON_ACCOUNTING_RECEIPT': 'WWW_2026_FPZ_0001',
-            'RECEIPT_WITH_NIP': 'WWW_2026_FP_0002',
+        self.assertEqual(numbers_by_document, {
+            'TEST/1/2026': 'WWW_2026_FP_0001',
+            'TEST/2/2026': None,
+            'TEST/3/2026': 'WWW_2026_FPZ_0001',
+            'TEST/4/2026': 'WWW_2026_FP_0002',
         })
         self.assertEqual(
             set(InvoiceSequence.objects.filter(camp_id=2026).values_list(
@@ -52,8 +56,14 @@ class InvoiceNumberingMigrationTests(TransactionTestCase):
         InvoiceSequence = apps.get_model('wwwapp', 'InvoiceSequence')
         user = User.objects.create(username='migration-user')
         camp, _ = Camp.objects.get_or_create(year=2026)
-        for sequence, invoice_type in enumerate(
-            ('KSEF', 'NON_ACCOUNTING_RECEIPT', 'RECEIPT_WITH_NIP'),
+        invoice_data = (
+            ('KSEF', 'APPROVED'),
+            ('NON_ACCOUNTING_RECEIPT', 'RECEIVED'),
+            ('NON_ACCOUNTING_RECEIPT', 'APPROVED'),
+            ('RECEIPT_WITH_NIP', 'PROCESSED'),
+        )
+        for sequence, (invoice_type, status) in enumerate(
+            invoice_data,
             start=1,
         ):
             Invoice.objects.create(
@@ -64,7 +74,8 @@ class InvoiceNumberingMigrationTests(TransactionTestCase):
                 issue_date='2026-07-24',
                 amount='10.00',
                 invoice_type=invoice_type,
+                status=status,
                 description='Migration test',
                 internal_number=f'WWW_2026_FP_{sequence:04d}',
             )
-        InvoiceSequence.objects.create(camp=camp, last_allocated=3)
+        InvoiceSequence.objects.create(camp=camp, last_allocated=4)
