@@ -28,7 +28,7 @@ class PopulateWithTestData(TestCase):
         self.assertEqual(invoices.values('user_id').distinct().count(), len(Invoice.Status.values))
         sequence = InvoiceSequence.objects.get(
             camp=invoices.first().camp,
-            series=InvoiceSequence.Series.KSEF,
+            invoice_type=Invoice.Type.KSEF,
         )
         self.assertEqual(sequence.last_allocated, 2)
         self.assertEqual(

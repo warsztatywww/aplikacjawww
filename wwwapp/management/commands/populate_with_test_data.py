@@ -648,7 +648,7 @@ class Command(BaseCommand):
             )
         InvoiceSequence.objects.create(
             camp=current_camp,
-            series=InvoiceSequence.Series.KSEF,
+            invoice_type=Invoice.Type.KSEF,
             last_allocated=last_allocated,
         )
 

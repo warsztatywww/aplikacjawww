@@ -32,13 +32,14 @@
           {% for invoice in invoices %}
             <tr>
               <td><input type="checkbox" name="invoice_ids" value="{{ invoice.pk }}"></td>
+              <td>{{ invoice.internal_number }}</td>
               <td>
-                {{ invoice.internal_number }}
                 {% if can_change_invoices %}
-                  <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">Edytuj</a>
+                  <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">{{ invoice.document_number }}</a>
+                {% else %}
+                  {{ invoice.document_number }}
                 {% endif %}
               </td>
-              <td>{{ invoice.document_number }}</td>
               <td>{{ invoice.issue_date|date:"d.m.Y" }}</td>
               <td><a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a></td>
               <td>{{ invoice.amount|floatformat:2 }} zł</td>

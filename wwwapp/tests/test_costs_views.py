@@ -298,7 +298,7 @@ class OwnCostsViewsTests(TestCase):
         )
         InvoiceSequence.objects.create(
             camp=self.camp,
-            series=InvoiceSequence.Series.KSEF,
+            invoice_type=Invoice.Type.KSEF,
             last_allocated=1,
         )
 
@@ -659,7 +659,7 @@ class OwnCostsViewsTests(TestCase):
         self.assertIsNone(invoice.internal_number)
         self.assertFalse(InvoiceSequence.objects.filter(
             camp=self.camp,
-            series=InvoiceSequence.Series.NON_ACCOUNTING_RECEIPT,
+            invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT,
         ).exists())
 
     def test_rejected_invoice_edit_resets_it_to_received(self):
@@ -1019,6 +1019,24 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(self.received_invoice.amount, Decimal('12.00'))
         self.assertEqual(self.received_invoice.admin_modified_by, self.admin)
         self.assertIsNotNone(self.received_invoice.admin_modified_at)
+
+    def test_admin_cost_list_links_unnumbered_invoice_document_number_to_edit_form(self):
+        self.received_invoice.internal_number = None
+        self.received_invoice.save(update_fields=['internal_number'])
+        self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
+
+        change_url = reverse(
+            'costs_admin_invoice_edit',
+            args=[self.camp.pk, self.received_invoice.pk],
+        )
+        self.assertContains(
+            response,
+            f'<a href="{change_url}">{self.received_invoice.document_number}</a>',
+            html=True,
+        )
 
     def test_admin_invoice_edit_does_not_render_year_switches_without_an_invoice_id(self):
         self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))

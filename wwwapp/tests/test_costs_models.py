@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models.deletion import ProtectedError
 from django.test import RequestFactory, TestCase
-from django.urls import reverse
 
 from wwwapp.models import (
     Camp,
@@ -60,7 +59,7 @@ class CostModelTests(TestCase):
         )
         InvoiceSequence.objects.create(
             camp=self.camp,
-            series='K',
+            invoice_type=Invoice.Type.KSEF,
             last_allocated=1,
         )
         workshop_type = WorkshopType.objects.create(year=self.other_camp, name='Type')
@@ -144,25 +143,6 @@ class CostModelTests(TestCase):
         self.assertEqual(self.invoice.status, Invoice.Status.REJECTED)
         self.assertEqual(self.invoice.internal_number, 'WWW_2026_K_0001')
 
-    def test_admin_changelist_links_unnumbered_invoice_document_number_to_edit_form(self):
-        self.invoice.internal_number = None
-        self.invoice.save(update_fields=['internal_number'])
-        financial_admin = User.objects.create_superuser(
-            'financial-admin',
-            'admin@example.com',
-            'password',
-        )
-        self.client.force_login(financial_admin)
-
-        response = self.client.get(reverse('admin:wwwapp_invoice_changelist'))
-
-        change_url = reverse('admin:wwwapp_invoice_change', args=[self.invoice.pk])
-        self.assertContains(
-            response,
-            f'<a href="{change_url}">{self.invoice.document_number}</a>',
-            html=True,
-        )
-
     def test_invoice_with_cost_items_is_protected_from_deletion(self):
         CostItem.objects.create(invoice=self.invoice, amount=Decimal('10.00'),
                                 category=CostItem.Category.WORKSHOPS)
@@ -221,7 +201,7 @@ class CostModelTests(TestCase):
         )
         InvoiceSequence.objects.create(
             camp=self.other_camp,
-            series='K',
+            invoice_type=Invoice.Type.KSEF,
             last_allocated=41,
         )
         empty_camp = Camp.objects.create(year=2028)
@@ -242,11 +222,17 @@ class CostModelTests(TestCase):
         self.assertEqual(other_number, 'WWW_2027_K_0042')
         self.assertEqual(empty_camp_number, 'WWW_2028_K_0001')
         self.assertEqual(
-            InvoiceSequence.objects.get(camp=self.camp, series='K').last_allocated,
+            InvoiceSequence.objects.get(
+                camp=self.camp,
+                invoice_type=Invoice.Type.KSEF,
+            ).last_allocated,
             3,
         )
         self.assertEqual(
-            InvoiceSequence.objects.get(camp=other_invoice.camp, series='K').last_allocated,
+            InvoiceSequence.objects.get(
+                camp=other_invoice.camp,
+                invoice_type=Invoice.Type.KSEF,
+            ).last_allocated,
             42,
         )
 
@@ -269,26 +255,38 @@ class CostModelTests(TestCase):
         self.assertEqual(allocated_numbers, expected_numbers)
         self.assertEqual(
             set(InvoiceSequence.objects.filter(camp=self.camp).values_list(
-                'series',
+                'invoice_type',
                 'last_allocated',
             )),
-            {('K', 2), ('L', 1), ('P', 1), ('NP', 1)},
+            {
+                (Invoice.Type.KSEF, 2),
+                (Invoice.Type.OUTSIDE_KSEF, 1),
+                (Invoice.Type.RECEIPT_WITH_NIP, 1),
+                (Invoice.Type.NON_ACCOUNTING_RECEIPT, 1),
+            },
         )
 
     def test_allocate_invoice_number_recovers_from_a_concurrent_sequence_creation(self):
         camp = Camp.objects.create(year=2028)
-        InvoiceSequence.objects.create(camp=camp, last_allocated=1)
+        InvoiceSequence.objects.create(
+            camp=camp,
+            invoice_type=Invoice.Type.KSEF,
+            last_allocated=1,
+        )
 
         with patch.object(
             InvoiceSequence.objects,
             'get_or_create',
-            side_effect=lambda **kwargs: InvoiceSequence.objects.create(camp=kwargs['camp']),
+            side_effect=lambda **kwargs: InvoiceSequence.objects.create(**kwargs),
         ):
             allocated = allocate_invoice_number(camp=camp, invoice_type=Invoice.Type.KSEF)
 
         self.assertEqual(allocated, 'WWW_2028_K_0002')
         self.assertEqual(
-            InvoiceSequence.objects.get(camp=camp, series='K').last_allocated,
+            InvoiceSequence.objects.get(
+                camp=camp,
+                invoice_type=Invoice.Type.KSEF,
+            ).last_allocated,
             2,
         )
 
@@ -351,10 +349,15 @@ class CostModelTests(TestCase):
 
         self.assertEqual(
             set(InvoiceSequence.objects.filter(camp=camp).values_list(
-                'series',
+                'invoice_type',
                 'last_allocated',
             )),
-            {('K', 1), ('L', 1), ('P', 1), ('NP', 1)},
+            {
+                (Invoice.Type.KSEF, 1),
+                (Invoice.Type.OUTSIDE_KSEF, 1),
+                (Invoice.Type.RECEIPT_WITH_NIP, 1),
+                (Invoice.Type.NON_ACCOUNTING_RECEIPT, 1),
+            },
         )
 
     def test_transition_allows_only_the_defined_state_graph(self):

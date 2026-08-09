@@ -3,7 +3,7 @@
 from django.db import migrations, models
 
 
-INVOICE_TYPE_SERIES = {
+INVOICE_TYPE_PREFIXES = {
     'KSEF': 'K',
     'OUTSIDE_KSEF': 'L',
     'RECEIPT_WITH_NIP': 'P',
@@ -27,11 +27,11 @@ def renumber_invoices_by_type(apps, schema_editor):
             invoice.internal_number = None
             invoice.save(using=database, update_fields=['internal_number'])
             continue
-        series = INVOICE_TYPE_SERIES[invoice.invoice_type]
-        key = (invoice.camp_id, series)
+        prefix = INVOICE_TYPE_PREFIXES[invoice.invoice_type]
+        key = (invoice.camp_id, invoice.invoice_type)
         allocated[key] = allocated.get(key, 0) + 1
         invoice.internal_number = (
-            f'WWW_{invoice.camp_id}_{series}_{allocated[key]:04d}'
+            f'WWW_{invoice.camp_id}_{prefix}_{allocated[key]:04d}'
         )
         invoice.save(using=database, update_fields=['internal_number'])
 
@@ -41,11 +41,11 @@ def renumber_invoices_by_type(apps, schema_editor):
     )
     InvoiceSequence.objects.using(database).all().delete()
     for camp_id in camp_ids:
-        for series in INVOICE_TYPE_SERIES.values():
+        for invoice_type in INVOICE_TYPE_PREFIXES:
             InvoiceSequence.objects.using(database).create(
                 camp_id=camp_id,
-                series=series,
-                last_allocated=allocated.get((camp_id, series), 0),
+                series=invoice_type,
+                last_allocated=allocated.get((camp_id, invoice_type), 0),
             )
 
 
@@ -100,17 +100,37 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(
-            renumber_invoices_by_type,
-            restore_two_invoice_series,
-        ),
         migrations.AlterField(
             model_name='invoicesequence',
             name='series',
             field=models.CharField(
-                choices=[('K', 'K'), ('L', 'L'), ('P', 'P'), ('NP', 'NP')],
-                default='K',
-                max_length=2,
+                choices=[
+                    ('KSEF', 'KSeF'),
+                    ('OUTSIDE_KSEF', 'Poza KSeF'),
+                    ('RECEIPT_WITH_NIP', 'Paragon z NIP'),
+                    ('NON_ACCOUNTING_RECEIPT', 'Paragon nieksięgowy'),
+                ],
+                max_length=24,
+            ),
+        ),
+        migrations.RunPython(
+            renumber_invoices_by_type,
+            restore_two_invoice_series,
+        ),
+        migrations.RemoveConstraint(
+            model_name='invoicesequence',
+            name='unique_invoice_sequence_series_per_camp',
+        ),
+        migrations.RenameField(
+            model_name='invoicesequence',
+            old_name='series',
+            new_name='invoice_type',
+        ),
+        migrations.AddConstraint(
+            model_name='invoicesequence',
+            constraint=models.UniqueConstraint(
+                fields=('camp', 'invoice_type'),
+                name='unique_invoice_sequence_type_per_camp',
             ),
         ),
     ]

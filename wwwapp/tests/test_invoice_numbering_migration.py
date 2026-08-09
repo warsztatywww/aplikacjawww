@@ -120,10 +120,15 @@ class InvoiceTypeNumberingMigrationTests(TransactionTestCase):
         })
         self.assertEqual(
             set(InvoiceSequence.objects.filter(camp_id=2026).values_list(
-                'series',
+                'invoice_type',
                 'last_allocated',
             )),
-            {('K', 2), ('L', 1), ('P', 1), ('NP', 1)},
+            {
+                ('KSEF', 2),
+                ('OUTSIDE_KSEF', 1),
+                ('RECEIPT_WITH_NIP', 1),
+                ('NON_ACCOUNTING_RECEIPT', 1),
+            },
         )
 
     def _create_invoices(self, apps):

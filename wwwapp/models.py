@@ -581,30 +581,6 @@ class Workshop(models.Model):
         return self.status == 'Z' or self.status == 'X'
 
 
-class InvoiceSequence(models.Model):
-    class Series(models.TextChoices):
-        KSEF = 'K', 'K'
-        OUTSIDE_KSEF = 'L', 'L'
-        RECEIPT_WITH_NIP = 'P', 'P'
-        NON_ACCOUNTING_RECEIPT = 'NP', 'NP'
-
-    camp = models.ForeignKey(
-        Camp,
-        on_delete=models.PROTECT,
-        related_name='invoice_sequences',
-    )
-    series = models.CharField(max_length=2, choices=Series.choices, default=Series.KSEF)
-    last_allocated = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=('camp', 'series'),
-                name='unique_invoice_sequence_series_per_camp',
-            ),
-        )
-
-
 class Invoice(models.Model):
     class Status(models.TextChoices):
         RECEIVED = 'RECEIVED', 'Otrzymana'
@@ -660,6 +636,24 @@ class Invoice(models.Model):
     @property
     def can_user_edit(self):
         return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
+
+
+class InvoiceSequence(models.Model):
+    camp = models.ForeignKey(
+        Camp,
+        on_delete=models.PROTECT,
+        related_name='invoice_sequences',
+    )
+    invoice_type = models.CharField(max_length=24, choices=Invoice.Type.choices)
+    last_allocated = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('camp', 'invoice_type'),
+                name='unique_invoice_sequence_type_per_camp',
+            ),
+        )
 
 
 class CostItem(models.Model):
