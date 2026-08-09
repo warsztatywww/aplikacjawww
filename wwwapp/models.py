@@ -583,15 +583,17 @@ class Workshop(models.Model):
 
 class InvoiceSequence(models.Model):
     class Series(models.TextChoices):
-        FP = 'FP', 'FP'
-        FPZ = 'FPZ', 'FPZ'
+        KSEF = 'K', 'K'
+        OUTSIDE_KSEF = 'L', 'L'
+        RECEIPT_WITH_NIP = 'P', 'P'
+        NON_ACCOUNTING_RECEIPT = 'NP', 'NP'
 
     camp = models.ForeignKey(
         Camp,
         on_delete=models.PROTECT,
         related_name='invoice_sequences',
     )
-    series = models.CharField(max_length=3, choices=Series.choices, default=Series.FP)
+    series = models.CharField(max_length=2, choices=Series.choices, default=Series.KSEF)
     last_allocated = models.PositiveIntegerField(default=0)
 
     class Meta:

@@ -628,7 +628,7 @@ class Command(BaseCommand):
             internal_number = None
             if status in (Invoice.Status.APPROVED, Invoice.Status.PROCESSED):
                 last_allocated += 1
-                internal_number = f'WWW_{current_year}_FP_{last_allocated:04d}'
+                internal_number = f'WWW_{current_year}_K_{last_allocated:04d}'
             invoice = Invoice.objects.create(
                 user=user,
                 camp=current_camp,
@@ -648,6 +648,7 @@ class Command(BaseCommand):
             )
         InvoiceSequence.objects.create(
             camp=current_camp,
+            series=InvoiceSequence.Series.KSEF,
             last_allocated=last_allocated,
         )
 

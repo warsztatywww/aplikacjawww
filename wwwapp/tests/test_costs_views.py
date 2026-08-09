@@ -53,7 +53,7 @@ class InvoiceFormTests(TestCase):
             amount=Decimal('10.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
-            internal_number='WWW_2026_FP_0001',
+            internal_number='WWW_2026_K_0001',
         )
         workshop_type = WorkshopType.objects.create(year=self.camp, name='Type')
         self.workshop = Workshop.objects.create(
@@ -294,9 +294,13 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('10.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
-            internal_number='WWW_2026_FP_0001',
+            internal_number='WWW_2026_K_0001',
         )
-        InvoiceSequence.objects.create(camp=self.camp, last_allocated=1)
+        InvoiceSequence.objects.create(
+            camp=self.camp,
+            series=InvoiceSequence.Series.KSEF,
+            last_allocated=1,
+        )
 
     def invoice_post_data(self, **overrides):
         data = {
@@ -327,7 +331,7 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('4.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Pending invoice',
-            internal_number='WWW_2026_FP_0002',
+            internal_number='WWW_2026_K_0002',
         )
         Invoice.objects.create(
             user=self.other_user,
@@ -338,14 +342,14 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('99.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Other user invoice',
-            internal_number='WWW_2026_FP_0003',
+            internal_number='WWW_2026_K_0003',
         )
         self.client.force_login(self.user)
 
         response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 200)
-        pending_invoice = Invoice.objects.get(internal_number='WWW_2026_FP_0002')
+        pending_invoice = Invoice.objects.get(internal_number='WWW_2026_K_0002')
         self.assertEqual(list(response.context['invoices']), [pending_invoice, self.invoice])
         self.assertEqual(response.context['approved_total'], Decimal('10.00'))
         self.assertEqual(response.context['reimbursed_total'], Decimal('0.00'))
@@ -655,7 +659,7 @@ class OwnCostsViewsTests(TestCase):
         self.assertIsNone(invoice.internal_number)
         self.assertFalse(InvoiceSequence.objects.filter(
             camp=self.camp,
-            series=InvoiceSequence.Series.FPZ,
+            series=InvoiceSequence.Series.NON_ACCOUNTING_RECEIPT,
         ).exists())
 
     def test_rejected_invoice_edit_resets_it_to_received(self):
@@ -746,7 +750,7 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('10.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
-            internal_number='WWW_2027_FP_0001',
+            internal_number='WWW_2027_K_0001',
         )
         self.client.force_login(self.user)
 
@@ -802,7 +806,7 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertEqual(
             sendfile_mock.call_args.kwargs['attachment_filename'],
-            'WWW_2026_FP_0001.pdf',
+            'WWW_2026_K_0001.pdf',
         )
 
     @patch('wwwapp.views.sendfile', return_value=HttpResponse())
@@ -855,19 +859,19 @@ class CostAdministrationViewsTests(TestCase):
             account_number='PL61109010140000071219812874',
         )
         self.received_invoice = self.create_invoice(
-            document_number='FV/received', internal_number='WWW_2026_FP_0001',
+            document_number='FV/received', internal_number='WWW_2026_K_0001',
         )
         self.approved_invoice = self.create_invoice(
-            document_number='FV/approved', internal_number='WWW_2026_FP_0002',
+            document_number='FV/approved', internal_number='WWW_2026_K_0002',
             status=Invoice.Status.APPROVED,
         )
         self.split_invoice = self.create_invoice(
-            document_number='FV/split', internal_number='WWW_2026_FP_0003',
+            document_number='FV/split', internal_number='WWW_2026_K_0003',
             status=Invoice.Status.APPROVED,
             first_item_amount=Decimal('6.00'),
         )
         self.processed_invoice = self.create_invoice(
-            document_number='FV/processed', internal_number='WWW_2027_FP_0002',
+            document_number='FV/processed', internal_number='WWW_2027_K_0002',
             status=Invoice.Status.PROCESSED,
             camp=self.other_camp,
         )
@@ -931,7 +935,7 @@ class CostAdministrationViewsTests(TestCase):
         other_invoice = self.create_invoice(
             camp=self.other_camp,
             document_number='FV/other',
-            internal_number='WWW_2027_FP_0001',
+            internal_number='WWW_2027_K_0001',
             invoice_type=Invoice.Type.OUTSIDE_KSEF,
             user=other_owner,
         )
@@ -1081,7 +1085,7 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.approved_invoice.refresh_from_db()
         self.assertEqual(self.approved_invoice.status, Invoice.Status.APPROVED)
-        self.assertEqual(self.approved_invoice.internal_number, 'WWW_2026_FP_0002')
+        self.assertEqual(self.approved_invoice.internal_number, 'WWW_2026_K_0002')
 
     def test_processed_transition_requires_processing_permission(self):
         self.client.force_login(self.admin)
@@ -1219,7 +1223,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             amount=amount,
             invoice_type=Invoice.Type.KSEF,
             description='Statistics test',
-            internal_number=f'WWW_2026_FP_{Invoice.objects.count() + 1:04d}',
+            internal_number=f'WWW_2026_K_{Invoice.objects.count() + 1:04d}',
             status=status,
         )
         CostItem.objects.create(invoice=invoice, amount=amount, category=category)

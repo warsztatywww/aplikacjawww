@@ -29,11 +29,12 @@ CSV_FIELDS = (
 @transaction.atomic
 def allocate_invoice_number(*, camp, invoice_type):
     """Allocate the next internal invoice number for a workshop edition."""
-    series = (
-        InvoiceSequence.Series.FPZ
-        if invoice_type == Invoice.Type.NON_ACCOUNTING_RECEIPT
-        else InvoiceSequence.Series.FP
-    )
+    series = {
+        Invoice.Type.KSEF: InvoiceSequence.Series.KSEF,
+        Invoice.Type.OUTSIDE_KSEF: InvoiceSequence.Series.OUTSIDE_KSEF,
+        Invoice.Type.RECEIPT_WITH_NIP: InvoiceSequence.Series.RECEIPT_WITH_NIP,
+        Invoice.Type.NON_ACCOUNTING_RECEIPT: InvoiceSequence.Series.NON_ACCOUNTING_RECEIPT,
+    }[invoice_type]
     try:
         with transaction.atomic():
             sequence, created = InvoiceSequence.objects.get_or_create(camp=camp, series=series)

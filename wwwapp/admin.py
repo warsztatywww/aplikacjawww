@@ -235,6 +235,7 @@ admin.site.register(ResourceYearPermission)
 class InvoiceAdmin(admin.ModelAdmin):
     model = Invoice
     list_display = ('internal_number', 'document_number', 'user', 'camp', 'amount', 'status')
+    list_display_links = ('document_number',)
     list_filter = ('camp', 'status', 'invoice_type')
 
     def has_add_permission(self, request):
