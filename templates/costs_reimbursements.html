@@ -1,46 +1,55 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
   <article>
     <h1 class="mt-3">{{ title }}</h1>
     <h2 class="mt-4">Podsumowanie zwrotów</h2>
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Użytkownik</th>
-          <th scope="col">Rachunek</th>
-          <th scope="col">Suma zatwierdzona</th>
-          <th scope="col">Suma zwrócona</th>
-          <th scope="col">Pozostało do zwrotu</th>
-          <th scope="col"><span class="sr-only">Działania</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in reimbursement_summary %}
-          <tr{% if selected_user == row.user %} class="table-primary"{% endif %}>
-            <td>{{ row.user.get_full_name }}</td>
-            <td>
-              {% if row.has_account_number %}
-                {{ row.account_number }}
-              {% else %}
-                <span class="text-danger">Brak numeru rachunku</span>
-              {% endif %}
-            </td>
-            <td>{{ row.approved_total|floatformat:2 }} zł</td>
-            <td>{{ row.reimbursed_total|floatformat:2 }} zł</td>
-            <td>{{ row.remaining_total|floatformat:2 }} zł</td>
-            <td>
-              <a class="btn btn-sm btn-outline-primary"
-                 href="{% url 'costs_reimbursements' selected_year.pk %}?user={{ row.user.pk }}"
-                 aria-label="Dodaj zwrot dla {{ row.user.get_full_name }}">+</a>
-            </td>
+    <div class="table-responsive">
+      <table id="reimbursement-summary-table" class="table" style="width:100%!important;">
+        <thead>
+          <tr>
+            <th scope="col" data-searchable="false" data-orderable="false">
+              <span class="sr-only">Wiersz</span>
+            </th>
+            <th scope="col">Użytkownik</th>
+            <th scope="col">Rachunek</th>
+            <th scope="col">Suma zatwierdzona</th>
+            <th scope="col">Suma zwrócona</th>
+            <th scope="col">Pozostało do zwrotu</th>
+            <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
+              <span class="sr-only">Działania</span>
+            </th>
           </tr>
-        {% empty %}
-          <tr><td colspan="6">Brak osób oczekujących na zwrot.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in reimbursement_summary %}
+            <tr{% if selected_user == row.user %} class="table-primary"{% endif %}>
+              <td></td>
+              <td>{{ row.user.get_full_name }}</td>
+              <td>
+                {% if row.has_account_number %}
+                  {{ row.account_number }}
+                {% else %}
+                  <span class="text-danger">Brak numeru rachunku</span>
+                {% endif %}
+              </td>
+              <td>{{ row.approved_total|floatformat:2 }} zł</td>
+              <td>{{ row.reimbursed_total|floatformat:2 }} zł</td>
+              <td>{{ row.remaining_total|floatformat:2 }} zł</td>
+              <td>
+                <a class="btn btn-sm btn-outline-primary"
+                   href="{% url 'costs_reimbursements' selected_year.pk %}?user={{ row.user.pk }}"
+                   aria-label="Dodaj zwrot dla {{ row.user.get_full_name }}">+</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
 
     {% if selected_user %}
       <h2>Nowy zwrot dla {{ selected_user.get_full_name }}</h2>
@@ -52,29 +61,61 @@
     {% endif %}
 
     <h2 class="mt-4">Historia zwrotów</h2>
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Data wykonania</th>
-          <th scope="col">Użytkownik</th>
-          <th scope="col">Kwota</th>
-          <th scope="col">Typ</th>
-          <th scope="col">Zarejestrował(a)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for reimbursement in reimbursements %}
+    <div class="table-responsive">
+      <table id="reimbursement-history-table" class="table" style="width:100%!important;">
+        <thead>
           <tr>
-            <td>{{ reimbursement.execution_date }}</td>
-            <td>{{ reimbursement.user.get_full_name }}</td>
-            <td>{{ reimbursement.amount|floatformat:2 }} zł</td>
-            <td>{{ reimbursement.get_type_display }}</td>
-            <td>{{ reimbursement.registered_by.get_full_name }}</td>
+            <th scope="col" data-searchable="false" data-orderable="false">
+              <span class="sr-only">Wiersz</span>
+            </th>
+            <th scope="col">Data wykonania</th>
+            <th scope="col">Użytkownik</th>
+            <th scope="col">Kwota</th>
+            <th scope="col">Typ</th>
+            <th scope="col">Zarejestrował(a)</th>
           </tr>
-        {% empty %}
-          <tr><td colspan="5">Brak zarejestrowanych zwrotów.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {% for reimbursement in reimbursements %}
+            <tr>
+              <td></td>
+              <td>{{ reimbursement.execution_date }}</td>
+              <td>{{ reimbursement.user.get_full_name }}</td>
+              <td>{{ reimbursement.amount|floatformat:2 }} zł</td>
+              <td>{{ reimbursement.get_type_display }}</td>
+              <td>{{ reimbursement.registered_by.get_full_name }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </article>
+{% endblock %}
+
+{% block styles %}
+  {{ block.super }}
+  <link href="{% static 'dist/datatables.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script src="{% static 'dist/datatables.js' %}"></script>
+  <script>
+    $(document).ready(() => {
+      $('#reimbursement-summary-table').DataTable(gen_datatables_config({
+        stateSave: false,
+        language: {
+          zeroRecords: 'Brak osób oczekujących na zwrot.',
+          emptyTable: 'Brak osób oczekujących na zwrot.',
+        },
+      }));
+      $('#reimbursement-history-table').DataTable(gen_datatables_config({
+        stateSave: false,
+        language: {
+          zeroRecords: 'Brak zarejestrowanych zwrotów.',
+          emptyTable: 'Brak zarejestrowanych zwrotów.',
+        },
+      }));
+    });
+  </script>
 {% endblock %}

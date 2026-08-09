@@ -637,6 +637,18 @@ class Invoice(models.Model):
     def can_user_edit(self):
         return self.status in (self.Status.RECEIVED, self.Status.REJECTED)
 
+    @property
+    def workshops_summary(self):
+        return ', '.join(
+            sorted({item.workshop.title for item in self.cost_items.all() if item.workshop_id})
+        )
+
+    @property
+    def categories_summary(self):
+        return ', '.join(
+            sorted({item.get_category_display() for item in self.cost_items.all()})
+        )
+
 
 class InvoiceSequence(models.Model):
     camp = models.ForeignKey(
