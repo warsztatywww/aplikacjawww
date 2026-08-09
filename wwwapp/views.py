@@ -224,10 +224,9 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
                 invoice.admin_modified_by = None
         uploaded_attachment = invoice_form.cleaned_data['attachment']
         if isinstance(uploaded_attachment, UploadedFile):
-            invoice.attachment.name = _invoice_attachment_name(
-                camp=camp,
-                original_name=uploaded_attachment.name,
-            )
+            _, extension = os.path.splitext(uploaded_attachment.name)
+            timestamp = timezone.now().strftime('%Y%m%d%H%M%S%f')
+            invoice.attachment.name = f'WWW_{camp.year}_{timestamp}{extension.lower()}'
         stored_attachment_name = ''
         try:
             with transaction.atomic():
@@ -281,13 +280,6 @@ def costs_invoice_attachment_view(request, year, invoice_id):
         invoice.attachment.path,
         attachment_filename=attachment_filename,
     )
-
-
-def _invoice_attachment_name(*, camp, original_name):
-    _, extension = os.path.splitext(original_name)
-    timestamp = timezone.now().strftime('%Y%m%d%H%M%S%f')
-    return f'WWW_{camp.year}_{timestamp}{extension.lower()}'
-
 
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
