@@ -240,14 +240,6 @@ class InvoiceAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj and obj.internal_number:
-            return ('camp', 'invoice_type')
-        return ()
-
     @transaction.atomic
     def save_model(self, request, obj, form, change):
         if obj.status == Invoice.Status.APPROVED and not obj.internal_number:
