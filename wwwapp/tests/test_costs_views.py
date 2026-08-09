@@ -9,6 +9,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from freezegun import freeze_time
 
 from wwwapp.forms import (
     CostItemForm,
@@ -52,7 +53,7 @@ class InvoiceFormTests(TestCase):
             amount=Decimal('10.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
-            internal_number='WWW_2026_FP_0001',
+            internal_number='WWW_2026_K_0001',
         )
         workshop_type = WorkshopType.objects.create(year=self.camp, name='Type')
         self.workshop = Workshop.objects.create(
@@ -103,10 +104,11 @@ class InvoiceFormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('attachment', form.errors)
 
-    def test_attachment_accepts_pdf_and_jpeg_signatures(self):
+    def test_attachment_accepts_pdf_jpeg_and_png_signatures(self):
         for name, content, content_type in (
             ('invoice.pdf', b'%PDF-1.7', 'application/pdf'),
             ('invoice.jpeg', b'\xff\xd8\xff\xe0', 'image/jpeg'),
+            ('invoice.png', b'\x89PNG\r\n\x1a\n', 'image/png'),
         ):
             with self.subTest(name=name):
                 form = InvoiceForm(
@@ -138,6 +140,18 @@ class InvoiceFormTests(TestCase):
 
                 self.assertFalse(form.is_valid())
                 self.assertIn('attachment', form.errors)
+
+    def test_numbered_invoice_type_cannot_be_changed(self):
+        form = InvoiceForm(
+            data={**self.data, 'invoice_type': Invoice.Type.NON_ACCOUNTING_RECEIPT},
+            instance=self.invoice,
+            user=self.user,
+            camp=self.camp,
+        )
+
+        self.assertTrue(form.is_valid())
+        invoice = form.save()
+        self.assertEqual(invoice.invoice_type, Invoice.Type.KSEF)
 
     def test_cost_item_formset_rejects_unequal_total(self):
         formset = CostItemFormSet(
@@ -280,9 +294,13 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('10.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
-            internal_number='WWW_2026_FP_0001',
+            internal_number='WWW_2026_K_0001',
         )
-        InvoiceSequence.objects.create(camp=self.camp, last_allocated=1)
+        InvoiceSequence.objects.create(
+            camp=self.camp,
+            invoice_type=Invoice.Type.KSEF,
+            last_allocated=1,
+        )
 
     def invoice_post_data(self, **overrides):
         data = {
@@ -313,7 +331,7 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('4.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Pending invoice',
-            internal_number='WWW_2026_FP_0002',
+            internal_number='WWW_2026_K_0002',
         )
         Invoice.objects.create(
             user=self.other_user,
@@ -324,14 +342,14 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('99.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Other user invoice',
-            internal_number='WWW_2026_FP_0003',
+            internal_number='WWW_2026_K_0003',
         )
         self.client.force_login(self.user)
 
         response = self.client.get(reverse('costs_mine', args=[self.camp.pk]))
 
         self.assertEqual(response.status_code, 200)
-        pending_invoice = Invoice.objects.get(internal_number='WWW_2026_FP_0002')
+        pending_invoice = Invoice.objects.get(internal_number='WWW_2026_K_0002')
         self.assertEqual(list(response.context['invoices']), [pending_invoice, self.invoice])
         self.assertEqual(response.context['approved_total'], Decimal('10.00'))
         self.assertEqual(response.context['reimbursed_total'], Decimal('0.00'))
@@ -556,6 +574,31 @@ class OwnCostsViewsTests(TestCase):
 
         self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
 
+    def test_invoice_add_displays_attachment_error_without_allocation_error(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('costs_invoice_add', args=[self.camp.pk]),
+            {
+                **self.invoice_post_data(),
+                'attachment': SimpleUploadedFile(
+                    'invoice.gif', b'GIF89a', content_type='image/gif',
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Załącznik musi być plikiem PDF, JPG, JPEG lub PNG.')
+        self.assertNotContains(
+            response,
+            'Suma pozycji kosztowych musi być równa kwocie faktury.',
+        )
+
     def test_invoice_edit_displays_allocation_error_and_remaining_amount_action(self):
         cost_item = CostItem.objects.create(
             invoice=self.invoice,
@@ -577,7 +620,44 @@ class OwnCostsViewsTests(TestCase):
         self.assertContains(response, 'Suma pozycji kosztowych musi być równa kwocie faktury.')
         self.assertContains(response, 'data-fill-remaining-cost-item')
 
-    def test_invoice_add_creates_invoice_with_a_cost_item(self):
+    @freeze_time('2026-08-09 12:34:56.123456')
+    def test_invoice_add_creates_unnumbered_invoice_with_internal_attachment_name(self):
+        SettlementDetails.objects.create(
+            user=self.user,
+            camp=self.camp,
+            account_number='PL61109010140000071219812874',
+        )
+        self.client.force_login(self.user)
+        field = Invoice._meta.get_field('attachment')
+        original_storage = field.storage
+
+        with TemporaryDirectory() as sendfile_root:
+            with override_settings(SENDFILE_ROOT=sendfile_root):
+                field.storage = UploadStorage()
+                try:
+                    response = self.client.post(
+                        reverse('costs_invoice_add', args=[self.camp.pk]),
+                        {
+                            **self.invoice_post_data(),
+                            'attachment': SimpleUploadedFile(
+                                'invoice.pdf', b'%PDF-1.7', content_type='application/pdf'
+                            ),
+                        },
+                    )
+                finally:
+                    field.storage = original_storage
+
+                self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
+                invoice = Invoice.objects.get(document_number='FV/2/2026')
+                self.assertEqual(invoice.user, self.user)
+                self.assertIsNone(invoice.internal_number)
+                self.assertEqual(
+                    invoice.attachment.name,
+                    'invoices/WWW_2026_20260809123456123456.pdf',
+                )
+                self.assertEqual(invoice.cost_items.get().amount, Decimal('10.00'))
+
+    def test_invoice_add_does_not_allocate_non_accounting_receipt_number(self):
         SettlementDetails.objects.create(
             user=self.user,
             camp=self.camp,
@@ -586,16 +666,19 @@ class OwnCostsViewsTests(TestCase):
         self.client.force_login(self.user)
 
         response = self.client.post(reverse('costs_invoice_add', args=[self.camp.pk]), {
-            **self.invoice_post_data(),
+            **self.invoice_post_data(invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT),
             'attachment': SimpleUploadedFile(
-                'invoice.pdf', b'%PDF-1.7', content_type='application/pdf'
+                'receipt.pdf', b'%PDF-1.7', content_type='application/pdf'
             ),
         })
 
         self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
-        invoice = Invoice.objects.get(internal_number='WWW_2026_FP_0002')
-        self.assertEqual(invoice.user, self.user)
-        self.assertEqual(invoice.cost_items.get().amount, Decimal('10.00'))
+        invoice = Invoice.objects.get(document_number='FV/2/2026')
+        self.assertIsNone(invoice.internal_number)
+        self.assertFalse(InvoiceSequence.objects.filter(
+            camp=self.camp,
+            invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT,
+        ).exists())
 
     def test_rejected_invoice_edit_resets_it_to_received(self):
         SettlementDetails.objects.create(
@@ -685,7 +768,7 @@ class OwnCostsViewsTests(TestCase):
             amount=Decimal('10.00'),
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
-            internal_number='WWW_2027_FP_0001',
+            internal_number='WWW_2027_K_0001',
         )
         self.client.force_login(self.user)
 
@@ -729,6 +812,39 @@ class OwnCostsViewsTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @patch('wwwapp.views.sendfile', return_value=HttpResponse())
+    def test_approved_invoice_download_uses_invoice_number(self, sendfile_mock):
+        self.invoice.status = Invoice.Status.APPROVED
+        self.invoice.save(update_fields=['status'])
+        self.client.force_login(self.user)
+
+        self.client.get(reverse(
+            'costs_invoice_attachment',
+            args=[self.camp.pk, self.invoice.pk],
+        ))
+
+        self.assertEqual(
+            sendfile_mock.call_args.kwargs['attachment_filename'],
+            'WWW_2026_K_0001.pdf',
+        )
+
+    @patch('wwwapp.views.sendfile', return_value=HttpResponse())
+    def test_unnumbered_invoice_download_uses_internal_filename(self, sendfile_mock):
+        self.invoice.internal_number = None
+        self.invoice.attachment = 'invoices/WWW_2026_20260809123456123456.pdf'
+        self.invoice.save(update_fields=['internal_number', 'attachment'])
+        self.client.force_login(self.user)
+
+        self.client.get(reverse(
+            'costs_invoice_attachment',
+            args=[self.camp.pk, self.invoice.pk],
+        ))
+
+        self.assertEqual(
+            sendfile_mock.call_args.kwargs['attachment_filename'],
+            'WWW_2026_20260809123456123456.pdf',
+        )
+
+    @patch('wwwapp.views.sendfile', return_value=HttpResponse())
     def test_only_all_costs_permission_can_get_another_users_attachment(self, _sendfile_response):
         self.client.force_login(self.other_user)
 
@@ -761,19 +877,19 @@ class CostAdministrationViewsTests(TestCase):
             account_number='PL61109010140000071219812874',
         )
         self.received_invoice = self.create_invoice(
-            document_number='FV/received', internal_number='WWW_2026_FP_0001',
+            document_number='FV/received', internal_number='WWW_2026_K_0001',
         )
         self.approved_invoice = self.create_invoice(
-            document_number='FV/approved', internal_number='WWW_2026_FP_0002',
+            document_number='FV/approved', internal_number='WWW_2026_K_0002',
             status=Invoice.Status.APPROVED,
         )
         self.split_invoice = self.create_invoice(
-            document_number='FV/split', internal_number='WWW_2026_FP_0003',
+            document_number='FV/split', internal_number='WWW_2026_K_0003',
             status=Invoice.Status.APPROVED,
             first_item_amount=Decimal('6.00'),
         )
         self.processed_invoice = self.create_invoice(
-            document_number='FV/processed', internal_number='WWW_2027_FP_0002',
+            document_number='FV/processed', internal_number='WWW_2027_K_0002',
             status=Invoice.Status.PROCESSED,
             camp=self.other_camp,
         )
@@ -891,6 +1007,24 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(self.received_invoice.admin_modified_by, self.admin)
         self.assertIsNotNone(self.received_invoice.admin_modified_at)
 
+    def test_admin_cost_list_links_unnumbered_invoice_document_number_to_edit_form(self):
+        self.received_invoice.internal_number = None
+        self.received_invoice.save(update_fields=['internal_number'])
+        self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))
+        self.client.force_login(self.admin)
+
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
+
+        change_url = reverse(
+            'costs_admin_invoice_edit',
+            args=[self.camp.pk, self.received_invoice.pk],
+        )
+        self.assertContains(
+            response,
+            f'<a href="{change_url}">{self.received_invoice.document_number}</a>',
+            html=True,
+        )
+
     def test_admin_invoice_edit_does_not_render_year_switches_without_an_invoice_id(self):
         self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))
         self.client.force_login(self.admin)
@@ -941,6 +1075,22 @@ class CostAdministrationViewsTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.received_invoice.refresh_from_db()
         self.assertEqual(self.received_invoice.status, Invoice.Status.RECEIVED)
+
+    def test_approved_invoice_cannot_be_rejected(self):
+        self.client.force_login(self.admin)
+
+        response = self.client.post(
+            reverse('costs_admin_transition', args=[self.camp.pk]),
+            {
+                'invoice_ids': [self.approved_invoice.pk],
+                'status': Invoice.Status.REJECTED,
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.approved_invoice.refresh_from_db()
+        self.assertEqual(self.approved_invoice.status, Invoice.Status.APPROVED)
+        self.assertEqual(self.approved_invoice.internal_number, 'WWW_2026_K_0002')
 
     def test_processed_transition_requires_processing_permission(self):
         self.client.force_login(self.admin)
@@ -1078,7 +1228,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             amount=amount,
             invoice_type=Invoice.Type.KSEF,
             description='Statistics test',
-            internal_number=f'WWW_2026_FP_{Invoice.objects.count() + 1:04d}',
+            internal_number=f'WWW_2026_K_{Invoice.objects.count() + 1:04d}',
             status=status,
         )
         CostItem.objects.create(invoice=invoice, amount=amount, category=category)
@@ -1202,6 +1352,68 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
             response.context['category_totals'][CostItem.Category.OUTINGS],
             Decimal('0.00'),
         )
+
+    def test_statistics_filter_applies_to_summary_and_workshop_costs(self):
+        workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')
+        expensive_workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='expensive-workshop',
+            title='Expensive workshop',
+        )
+        inexpensive_workshop = Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='inexpensive-workshop',
+            title='Inexpensive workshop',
+        )
+        Workshop.objects.create(
+            year=self.camp,
+            type=workshop_type,
+            name='workshop-without-costs',
+            title='Workshop without costs',
+        )
+        non_accounting_invoice = self.create_invoice(
+            amount=Decimal('40.00'),
+            status=Invoice.Status.RECEIVED,
+        )
+        non_accounting_invoice.invoice_type = Invoice.Type.NON_ACCOUNTING_RECEIPT
+        non_accounting_invoice.save(update_fields=['invoice_type'])
+        non_accounting_invoice.cost_items.update(workshop=expensive_workshop)
+        accounting_invoice = self.create_invoice(
+            amount=Decimal('15.00'),
+            status=Invoice.Status.RECEIVED,
+        )
+        accounting_invoice.cost_items.update(workshop=inexpensive_workshop)
+        self.client.force_login(self.statistics_user)
+
+        response = self.client.get(
+            reverse('costs_statistics', args=[self.camp.pk]),
+            {'status': Invoice.Status.RECEIVED},
+        )
+
+        self.assertEqual(response.context['total'], Decimal('55.00'))
+        self.assertEqual(response.context.get('non_accounting_total'), Decimal('40.00'))
+        self.assertEqual(response.context.get('accounting_total'), Decimal('15.00'))
+        self.assertEqual(
+            response.context.get('workshop_rows'),
+            [
+                {
+                    'workshop_id': expensive_workshop.pk,
+                    'workshop__title': expensive_workshop.title,
+                    'total': Decimal('40.00'),
+                },
+                {
+                    'workshop_id': inexpensive_workshop.pk,
+                    'workshop__title': inexpensive_workshop.title,
+                    'total': Decimal('15.00'),
+                },
+            ],
+        )
+        self.assertContains(response, 'Podsumowanie kosztów')
+        self.assertContains(response, 'Paragony nieksięgowe')
+        self.assertContains(response, 'Pozostałe koszty')
+        self.assertNotContains(response, 'Workshop without costs')
 
     def test_statistics_ignores_removed_context_filter(self):
         workshop_type = WorkshopType.objects.create(year=self.camp, name='Statistics type')

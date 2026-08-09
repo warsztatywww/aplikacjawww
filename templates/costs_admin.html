@@ -15,7 +15,7 @@
         <table id="cost-admin-table" class="table" style="width:100%!important;">
           <thead>
             <tr>
-              <th scope="col" data-searchable="false" data-orderable="false">
+<th scope="col" data-searchable="false" data-orderable="false">
                 <span class="sr-only">Wiersz</span>
               </th>
               <th class="noVis" scope="col" data-searchable="false" data-orderable="false">
@@ -50,7 +50,13 @@
                        aria-label="Edytuj"><i class="fas fa-pencil-alt"></i></a>
                   {% endif %}
                 </td>
-                <td>{{ invoice.document_number }}</td>
+                <td>
+                  {% if can_change_invoices %}
+                    <a href="{% url 'costs_admin_invoice_edit' selected_year.pk invoice.pk %}">{{ invoice.document_number }}</a>
+                  {% else %}
+                    {{ invoice.document_number }}
+                  {% endif %}
+                </td>
                 <td data-order="{{ invoice.issue_date|date:'U' }}">{{ invoice.issue_date|date:"d.m.Y" }}</td>
                 <td>
                   <a href="{% url 'profile' invoice.user.pk %}">{{ invoice.user.get_full_name }}</a>

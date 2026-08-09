@@ -581,15 +581,6 @@ class Workshop(models.Model):
         return self.status == 'Z' or self.status == 'X'
 
 
-class InvoiceSequence(models.Model):
-    camp = models.OneToOneField(
-        Camp,
-        on_delete=models.PROTECT,
-        related_name='invoice_sequence',
-    )
-    last_allocated = models.PositiveIntegerField(default=0)
-
-
 class Invoice(models.Model):
     class Status(models.TextChoices):
         RECEIVED = 'RECEIVED', 'Otrzymana'
@@ -616,7 +607,13 @@ class Invoice(models.Model):
     invoice_type = models.CharField(max_length=24, choices=Type.choices)
     description = models.TextField()
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.RECEIVED)
-    internal_number = models.CharField(max_length=30, unique=True, editable=False)
+    internal_number = models.CharField(
+        max_length=30,
+        unique=True,
+        editable=False,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     admin_modified_at = models.DateTimeField(null=True, blank=True)
@@ -650,6 +647,24 @@ class Invoice(models.Model):
     def categories_summary(self):
         return ', '.join(
             sorted({item.get_category_display() for item in self.cost_items.all()})
+        )
+
+
+class InvoiceSequence(models.Model):
+    camp = models.ForeignKey(
+        Camp,
+        on_delete=models.PROTECT,
+        related_name='invoice_sequences',
+    )
+    invoice_type = models.CharField(max_length=24, choices=Invoice.Type.choices)
+    last_allocated = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('camp', 'invoice_type'),
+                name='unique_invoice_sequence_type_per_camp',
+            ),
         )
 
 

@@ -8,7 +8,32 @@
       {% crispy filter_form %}
     </form>
 
-    <p>Łącznie: {{ total|floatformat:2 }} zł</p>
+    <section class="card mb-4" aria-labelledby="cost-summary-heading">
+      <div class="card-body">
+        <h2 class="h4" id="cost-summary-heading">Podsumowanie kosztów</h2>
+        <div class="row">
+          <div class="col-md-4 mb-3 mb-md-0">
+            <div class="border rounded h-100 p-3">
+              <div class="small text-muted">Wszystkie koszty</div>
+              <div class="h4 mb-0">{{ total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3 mb-md-0">
+            <div class="border rounded h-100 p-3">
+              <div class="small text-muted">Paragony nieksięgowe</div>
+              <div class="h4 mb-0">{{ non_accounting_total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded h-100 p-3">
+              <div class="small text-muted">Pozostałe koszty</div>
+              <div class="h4 mb-0">{{ accounting_total|floatformat:2 }} zł</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <h2>Wydatki według kategorii</h2>
     <div class="row align-items-center">
       <div class="col-md-auto">
@@ -54,5 +79,26 @@
         </table>
       </div>
     </div>
+
+    <h2>Wydatki według warsztatu</h2>
+    {% if workshop_rows %}
+      <div class="table-responsive">
+        <table class="table mt-3">
+          <thead>
+            <tr><th scope="col">Warsztat</th><th scope="col">Kwota</th></tr>
+          </thead>
+          <tbody>
+            {% for row in workshop_rows %}
+              <tr>
+                <td>{{ row.workshop__title }}</td>
+                <td>{{ row.total|floatformat:2 }} zł</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted">Brak kosztów przypisanych do warsztatów.</p>
+    {% endif %}
   </article>
 {% endblock %}
