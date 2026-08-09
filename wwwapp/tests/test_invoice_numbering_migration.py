@@ -83,7 +83,7 @@ class InvoiceNumberingMigrationTests(TransactionTestCase):
 
 class InvoiceTypeNumberingMigrationTests(TransactionTestCase):
     migrate_from = [('wwwapp', '0092_separate_invoice_numbering_series')]
-    migrate_to = [('wwwapp', '0093_alter_invoicesequence_series')]
+    migrate_to = [('wwwapp', '0094_renumber_invoices_by_type')]
 
     def setUp(self):
         super().setUp()
