@@ -27,27 +27,39 @@ CSV_FIELDS = (
 
 
 @transaction.atomic
-def allocate_invoice_number(*, camp):
+def allocate_invoice_number(*, camp, invoice_type):
     """Allocate the next internal invoice number for a workshop edition."""
+    series = (
+        InvoiceSequence.Series.FPZ
+        if invoice_type == Invoice.Type.NON_ACCOUNTING_RECEIPT
+        else InvoiceSequence.Series.FP
+    )
     try:
         with transaction.atomic():
-            sequence, created = InvoiceSequence.objects.get_or_create(camp=camp)
+            sequence, created = InvoiceSequence.objects.get_or_create(camp=camp, series=series)
     except IntegrityError:
         created = False
     if not created:
-        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp)
+        sequence = InvoiceSequence.objects.select_for_update().get(camp=camp, series=series)
     sequence.last_allocated += 1
     sequence.save(update_fields=['last_allocated'])
-    return f'WWW_{camp.year}_FP_{sequence.last_allocated:04d}'
+    return f'WWW_{camp.year}_{series}_{sequence.last_allocated:04d}'
 
 
 @transaction.atomic
 def transition_invoices(*, invoices, target_status, changed_by):
     """Move all selected invoices to one valid next status, or none of them."""
-    invoices = list(invoices.select_related('user', 'camp').prefetch_related('cost_items'))
+    invoices = list(
+        invoices.select_related('user', 'camp').prefetch_related('cost_items')
+    )
     if any(not _can_transition(invoice.status, target_status) for invoice in invoices):
         raise ValidationError('Co najmniej jedna faktura nie może przejść do wybranego stanu.')
     for invoice in invoices:
+        if target_status == Invoice.Status.APPROVED and not invoice.internal_number:
+            invoice.internal_number = allocate_invoice_number(
+                camp=invoice.camp,
+                invoice_type=invoice.invoice_type,
+            )
         invoice.status = target_status
         invoice.admin_modified_by = changed_by
         invoice.admin_modified_at = timezone.now()
@@ -118,7 +130,7 @@ def _escape_csv_formula(value):
 def _can_transition(current_status, target_status):
     transitions = {
         Invoice.Status.RECEIVED: (Invoice.Status.APPROVED, Invoice.Status.REJECTED),
-        Invoice.Status.APPROVED: (Invoice.Status.PROCESSED, Invoice.Status.REJECTED),
+        Invoice.Status.APPROVED: (Invoice.Status.PROCESSED,),
         Invoice.Status.REJECTED: (Invoice.Status.APPROVED,),
     }
     return target_status in transitions.get(current_status, ())

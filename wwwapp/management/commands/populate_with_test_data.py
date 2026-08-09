@@ -614,6 +614,7 @@ class Command(BaseCommand):
                 f"Completed camp for year {year_number} with {len(workshops)} workshops")
 
         current_camp = Camp.objects.get(year=current_year)
+        last_allocated = 0
         for sequence, (user, status) in enumerate(
             zip(users, Invoice.Status.values),
             start=1,
@@ -624,6 +625,10 @@ class Command(BaseCommand):
                 account_number='PL61109010140000071219812874',
             )
             amount = Decimal(f'{sequence * 10}.00')
+            internal_number = None
+            if status in (Invoice.Status.APPROVED, Invoice.Status.PROCESSED):
+                last_allocated += 1
+                internal_number = f'WWW_{current_year}_FP_{last_allocated:04d}'
             invoice = Invoice.objects.create(
                 user=user,
                 camp=current_camp,
@@ -634,7 +639,7 @@ class Command(BaseCommand):
                 invoice_type=Invoice.Type.KSEF,
                 description='Testowy koszt do sprawdzenia widoków rozliczeń.',
                 status=status,
-                internal_number=f'WWW_{current_year}_FP_{sequence:04d}',
+                internal_number=internal_number,
             )
             CostItem.objects.create(
                 invoice=invoice,
@@ -643,7 +648,7 @@ class Command(BaseCommand):
             )
         InvoiceSequence.objects.create(
             camp=current_camp,
-            last_allocated=len(Invoice.Status.values),
+            last_allocated=last_allocated,
         )
 
         self.debug_print(

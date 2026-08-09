@@ -582,12 +582,25 @@ class Workshop(models.Model):
 
 
 class InvoiceSequence(models.Model):
-    camp = models.OneToOneField(
+    class Series(models.TextChoices):
+        FP = 'FP', 'FP'
+        FPZ = 'FPZ', 'FPZ'
+
+    camp = models.ForeignKey(
         Camp,
         on_delete=models.PROTECT,
-        related_name='invoice_sequence',
+        related_name='invoice_sequences',
     )
+    series = models.CharField(max_length=3, choices=Series.choices, default=Series.FP)
     last_allocated = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=('camp', 'series'),
+                name='unique_invoice_sequence_series_per_camp',
+            ),
+        )
 
 
 class Invoice(models.Model):
@@ -616,7 +629,13 @@ class Invoice(models.Model):
     invoice_type = models.CharField(max_length=24, choices=Type.choices)
     description = models.TextField()
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.RECEIVED)
-    internal_number = models.CharField(max_length=30, unique=True, editable=False)
+    internal_number = models.CharField(
+        max_length=30,
+        unique=True,
+        editable=False,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     admin_modified_at = models.DateTimeField(null=True, blank=True)

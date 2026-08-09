@@ -37,7 +37,6 @@ from django_sendfile import sendfile
 
 from wwwforms.models import Form, FormQuestionAnswer, FormQuestion
 from wwwapp.costs import (
-    allocate_invoice_number,
     approved_total_for,
     balance_for,
     invoice_csv_response,
@@ -214,9 +213,7 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
     if request.method == 'POST' and invoice_form_is_valid and formset.is_valid():
         old_attachment_name = invoice.attachment.name if invoice else ''
         invoice = invoice_form.save(commit=False)
-        if invoice_id is None:
-            invoice.internal_number = allocate_invoice_number(camp=camp)
-        else:
+        if invoice_id is not None:
             if admin_edit:
                 invoice.admin_modified_at = timezone.now()
                 invoice.admin_modified_by = request.user
@@ -228,7 +225,8 @@ def _invoice_form_view(request, *, year, invoice_id=None, admin_edit=False):
         uploaded_attachment = invoice_form.cleaned_data['attachment']
         if isinstance(uploaded_attachment, UploadedFile):
             _, extension = os.path.splitext(uploaded_attachment.name)
-            invoice.attachment.name = f'{invoice.internal_number}{extension.lower()}'
+            timestamp = timezone.now().strftime('%Y%m%d%H%M%S%f')
+            invoice.attachment.name = f'WWW_{camp.year}_{timestamp}{extension.lower()}'
         stored_attachment_name = ''
         try:
             with transaction.atomic():
@@ -270,8 +268,18 @@ def costs_invoice_attachment_view(request, year, invoice_id):
     if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
         raise Http404
 
-    return sendfile(request, invoice.attachment.path)
-
+    internal_filename = os.path.basename(invoice.attachment.name)
+    _, extension = os.path.splitext(internal_filename)
+    attachment_filename = (
+        f'{invoice.internal_number}{extension}'
+        if invoice.internal_number
+        else internal_filename
+    )
+    return sendfile(
+        request,
+        invoice.attachment.path,
+        attachment_filename=attachment_filename,
+    )
 
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
