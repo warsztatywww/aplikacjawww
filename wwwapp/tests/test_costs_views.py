@@ -1293,6 +1293,7 @@ class ReimbursementAndStatisticsViewsTests(TestCase):
         self.assertContains(response, '/static/dist/datatables.js')
         self.assertContains(response, 'Brak osób oczekujących na zwrot.')
         self.assertContains(response, 'Brak zarejestrowanych zwrotów.')
+        self.assertNotContains(response, 'stateSave: false')
 
     def test_selected_reimbursement_recipient_is_highlighted(self):
         self.client.force_login(self.reimbursement_user)

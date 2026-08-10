@@ -1,6 +1,10 @@
 import datatables_Polish from 'datatables.net-plugins/i18n/pl.json';
-import { Base64 } from 'js-base64';
 import { vcard_export } from './datatables_vcard_export.ts';
+import {
+  DATATABLES_STATE_CONFIG,
+  createDataTablesStateResetButton,
+  registerDataTablesStateClearOnLogout,
+} from './datatables_state.mjs';
 
 // Remove once my i18n contributions at https://datatables.net/plug-ins/i18n/ make it into the release
 datatables_Polish.searchPanes.emptyPanes = 'Brak filtrów';
@@ -13,11 +17,14 @@ datatables_Polish.searchPanes.collapse = {
   "_": "Filtry (%d)"
 };
 
+$(document).ready(() => {
+  registerDataTablesStateClearOnLogout(document, window.localStorage);
+});
+
 window.gen_datatables_config = (myConfig_) => {
   const myConfig = Object.assign({
     paging: true,
     filters: true,
-    stateSave: true,
     vcardEnable: false,
     vcardName: null,
     language: {},
@@ -115,14 +122,7 @@ window.gen_datatables_config = (myConfig_) => {
     },
     "pageLength": 50,
     "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-    "stateSave": myConfig.stateSave,
-    "stateSaveCallback": function(settings, data) {
-      window.location.hash = '#' + Base64.encode(JSON.stringify(data));
-    },
-    "stateLoadCallback": function(settings) {
-      const data = Base64.decode(window.location.hash.substring(1));
-      return data ? JSON.parse(data) : null;
-    },
+    ...DATATABLES_STATE_CONFIG,
     "searchPanes": {
       "show": false,
       "initCollapsed": true,
@@ -131,6 +131,8 @@ window.gen_datatables_config = (myConfig_) => {
       "layout": "columns-3",
     }
   };
+
+  config.buttons.buttons.push(createDataTablesStateResetButton());
 
   if (myConfig.vcardEnable) {
     config.buttons.buttons.push({
