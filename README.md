@@ -21,6 +21,14 @@ Django-based application to manage registration of people for [scientific summer
 - `pip install -r requirements.txt`
 - `./manage.py runserver`
 
+### Costs administration
+
+Users with the `view_all_costs` permission can open the costs administration page for a selected
+year. The **Pobierz wszystkie dokumenty** button downloads every invoice attachment for that year in
+one ZIP file. The archive has no subdirectories. Numbered invoices use their internal invoice number
+and original extension; unnumbered invoices keep their stored filename. If names collide, later files
+receive a numbered suffix so extraction does not overwrite a document.
+
 #### INTERNETy
 
 For the INTERNETy resources authentication a /resource\_auth endpoint is provided. An example nginx config is in `nginx.conf.example` file.

@@ -1,10 +1,13 @@
 import csv
+import io
 import os
+import zipfile
 from decimal import Decimal
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.contrib.auth.models import Permission, User
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.http import HttpResponse
 from django.test import TestCase, override_settings
@@ -976,6 +979,91 @@ class CostAdministrationViewsTests(TestCase):
             response,
             reverse('costs_invoice_attachment', args=[self.camp.pk, self.received_invoice.pk]),
         )
+
+    def test_administration_links_to_the_invoice_archive(self):
+        self.client.force_login(self.csv_user)
+
+        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
+
+        self.assertContains(response, reverse('costs_invoice_archive', args=[self.camp.pk]))
+        self.assertContains(response, 'Pobierz wszystkie dokumenty')
+
+    def test_invoice_archive_contains_all_documents_for_the_selected_camp(self):
+        field = Invoice._meta.get_field('attachment')
+        original_storage = field.storage
+        duplicate_name_invoice = self.create_invoice(
+            document_number='FV/duplicate-name',
+            internal_number=None,
+        )
+
+        with TemporaryDirectory() as sendfile_root:
+            with override_settings(SENDFILE_ROOT=sendfile_root):
+                field.storage = UploadStorage()
+                try:
+                    for invoice in (
+                        self.received_invoice,
+                        self.approved_invoice,
+                        self.split_invoice,
+                        self.processed_invoice,
+                        duplicate_name_invoice,
+                    ):
+                        invoice.attachment.storage = field.storage
+                    self.received_invoice.attachment.save(
+                        'received.pdf', ContentFile(b'received document'), save=True,
+                    )
+                    self.approved_invoice.attachment.save(
+                        'approved.jpg', ContentFile(b'approved document'), save=True,
+                    )
+                    self.split_invoice.internal_number = None
+                    self.split_invoice.attachment.save(
+                        'pending.png', ContentFile(b'pending document'), save=True,
+                    )
+                    self.split_invoice.save(update_fields=['internal_number'])
+                    duplicate_name_invoice.attachment.save(
+                        'nested/pending.png',
+                        ContentFile(b'duplicate name document'),
+                        save=True,
+                    )
+                    self.processed_invoice.attachment.save(
+                        'other-year.pdf', ContentFile(b'other year document'), save=True,
+                    )
+                    self.client.force_login(self.csv_user)
+
+                    response = self.client.get(
+                        reverse('costs_invoice_archive', args=[self.camp.pk]),
+                    )
+                finally:
+                    field.storage = original_storage
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/zip')
+        self.assertEqual(
+            response['Content-Disposition'],
+            'attachment; filename="faktury-2026.zip"',
+        )
+        archive_content = b''.join(response.streaming_content)
+        response.close()
+        with zipfile.ZipFile(io.BytesIO(archive_content)) as archive:
+            self.assertEqual(
+                set(archive.namelist()),
+                {
+                    'WWW_2026_K_0001.pdf',
+                    'WWW_2026_K_0002.jpg',
+                    'pending.png',
+                    'pending (2).png',
+                },
+            )
+            self.assertEqual(archive.read('WWW_2026_K_0001.pdf'), b'received document')
+            self.assertEqual(archive.read('WWW_2026_K_0002.jpg'), b'approved document')
+            self.assertEqual(archive.read('pending.png'), b'pending document')
+            self.assertEqual(archive.read('pending (2).png'), b'duplicate name document')
+
+    def test_invoice_archive_requires_view_all_costs_permission(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse('costs_invoice_archive', args=[self.camp.pk]))
+
+        self.assertEqual(response.status_code, 403)
 
     def test_admin_with_change_invoice_permission_can_edit_another_users_invoice(self):
         self.admin.user_permissions.add(Permission.objects.get(codename='change_invoice'))

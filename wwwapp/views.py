@@ -4,7 +4,10 @@ import json
 import math
 import mimetypes
 import os
+import shutil
 import sys
+import tempfile
+import zipfile
 import random # Used for shuffling the workshops on the program page
 from decimal import Decimal
 from typing import Dict, Any, Optional
@@ -22,7 +25,14 @@ from django.db import OperationalError, ProgrammingError, transaction
 from django.db.models import Q, QuerySet, Exists, OuterRef, Sum
 from django.db.models.query import Prefetch
 from django.core.files.uploadedfile import UploadedFile
-from django.http import Http404, JsonResponse, HttpResponse, HttpRequest, HttpResponseForbidden
+from django.http import (
+    FileResponse,
+    Http404,
+    HttpRequest,
+    HttpResponse,
+    HttpResponseForbidden,
+    JsonResponse,
+)
 from django.http.response import HttpResponseBadRequest, HttpResponseNotFound
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template import Template, Context
@@ -269,18 +279,53 @@ def costs_invoice_attachment_view(request, year, invoice_id):
     if invoice.user_id != request.user.id and not request.user.has_perm('wwwapp.view_all_costs'):
         raise Http404
 
-    internal_filename = os.path.basename(invoice.attachment.name)
-    _, extension = os.path.splitext(internal_filename)
-    attachment_filename = (
-        f'{invoice.internal_number}{extension}'
-        if invoice.internal_number
-        else internal_filename
-    )
     return sendfile(
         request,
         invoice.attachment.path,
-        attachment_filename=attachment_filename,
+        attachment_filename=_invoice_attachment_filename(invoice),
     )
+
+
+def _invoice_attachment_filename(invoice):
+    internal_filename = os.path.basename(invoice.attachment.name)
+    _, extension = os.path.splitext(internal_filename)
+    if invoice.internal_number:
+        return f'{invoice.internal_number}{extension}'
+    return internal_filename
+
+
+@login_required
+@permission_required('wwwapp.view_all_costs', raise_exception=True)
+def costs_invoice_archive_view(request, year):
+    """Return every invoice attachment for one camp in a flat ZIP archive."""
+    camp = get_object_or_404(Camp, pk=year)
+    archive_file = tempfile.TemporaryFile()
+    try:
+        archive_names = set()
+        with zipfile.ZipFile(archive_file, mode='w', compression=zipfile.ZIP_STORED) as archive:
+            for invoice in Invoice.objects.filter(camp=camp).order_by('pk'):
+                archive_name = _invoice_attachment_filename(invoice)
+                if archive_name in archive_names:
+                    stem, extension = os.path.splitext(archive_name)
+                    suffix = 2
+                    while f'{stem} ({suffix}){extension}' in archive_names:
+                        suffix += 1
+                    archive_name = f'{stem} ({suffix}){extension}'
+                archive_names.add(archive_name)
+                with invoice.attachment.open('rb') as attachment:
+                    with archive.open(archive_name, mode='w') as member:
+                        shutil.copyfileobj(attachment, member)
+        archive_file.seek(0)
+        return FileResponse(
+            archive_file,
+            as_attachment=True,
+            filename=f'faktury-{camp.year}.zip',
+            content_type='application/zip',
+        )
+    except Exception:
+        archive_file.close()
+        raise
+
 
 @login_required
 @permission_required('wwwapp.view_all_costs', raise_exception=True)
