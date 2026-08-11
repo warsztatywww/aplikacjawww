@@ -52,7 +52,6 @@
     "datatables.net-select-bs4": "^1.3.4",
     "eonasdan-bootstrap-datetimepicker": "^4.17.49",
     "jquery": "^3.6.0",
-    "js-base64": "^3.7.2",
     "jszip": "^3.7.1",
     "konami": "^1.6.3",
     "moment": "^2.29.2",

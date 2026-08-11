@@ -1,5 +1,4 @@
 import datatables_Polish from 'datatables.net-plugins/i18n/pl.json';
-import { Base64 } from 'js-base64';
 import { vcard_export } from './datatables_vcard_export.ts';
 
 // Remove once my i18n contributions at https://datatables.net/plug-ins/i18n/ make it into the release
@@ -17,7 +16,6 @@ window.gen_datatables_config = (myConfig_) => {
   const myConfig = Object.assign({
     paging: true,
     filters: true,
-    stateSave: true,
     vcardEnable: false,
     vcardName: null,
     language: {},
@@ -69,6 +67,14 @@ window.gen_datatables_config = (myConfig_) => {
           columns: ':gt(0)'
         },
         {
+          text: '<i class="fas fa-history"></i> Resetuj ustawienia tabeli',
+          className: 'btn-outline-dark btn-sm px-2 px-md-4',
+          action: function(e, dt) {
+            dt.state.clear();
+            window.location.reload();
+          },
+        },
+        {
           extend: 'copy',
           text: '<i class="fas fa-copy"></i> <span class="d-none d-md-inline">Kopiuj</span>',
           className: 'btn-outline-dark btn-sm px-2 px-md-4',
@@ -115,14 +121,8 @@ window.gen_datatables_config = (myConfig_) => {
     },
     "pageLength": 50,
     "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-    "stateSave": myConfig.stateSave,
-    "stateSaveCallback": function(settings, data) {
-      window.location.hash = '#' + Base64.encode(JSON.stringify(data));
-    },
-    "stateLoadCallback": function(settings) {
-      const data = Base64.decode(window.location.hash.substring(1));
-      return data ? JSON.parse(data) : null;
-    },
+    "stateSave": true,
+    "stateDuration": 0,
     "searchPanes": {
       "show": false,
       "initCollapsed": true,

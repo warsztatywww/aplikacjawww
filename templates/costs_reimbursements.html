@@ -103,14 +103,12 @@
   <script>
     $(document).ready(() => {
       $('#reimbursement-summary-table').DataTable(gen_datatables_config({
-        stateSave: false,
         language: {
           zeroRecords: 'Brak osób oczekujących na zwrot.',
           emptyTable: 'Brak osób oczekujących na zwrot.',
         },
       }));
       $('#reimbursement-history-table').DataTable(gen_datatables_config({
-        stateSave: false,
         language: {
           zeroRecords: 'Brak zarejestrowanych zwrotów.',
           emptyTable: 'Brak zarejestrowanych zwrotów.',

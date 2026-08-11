@@ -94,6 +94,5 @@ import "eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.css
 // Main website JS
 import "./js/ajax.requests.js";
 import "./js/warsztatywww.js";
-import "./js/datatables_config.js";
 import "./js/thing.js"; // ¯\_(ツ)_/¯
 import "./js/program_filters.js"
