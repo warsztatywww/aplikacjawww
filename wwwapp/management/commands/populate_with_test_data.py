@@ -2,6 +2,7 @@ import django.db.utils
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.utils.text import slugify
 
 from wwwapp.models import (
@@ -629,10 +630,9 @@ class Command(BaseCommand):
             if status in (Invoice.Status.APPROVED, Invoice.Status.PROCESSED):
                 last_allocated += 1
                 internal_number = f'WWW_{current_year}_K_{last_allocated:04d}'
-            invoice = Invoice.objects.create(
+            invoice = Invoice(
                 user=user,
                 camp=current_camp,
-                attachment=f'invoices/test-{sequence}.pdf',
                 document_number=f'TEST/{sequence}/{current_year}',
                 issue_date=current_date,
                 amount=amount,
@@ -641,6 +641,12 @@ class Command(BaseCommand):
                 status=status,
                 internal_number=internal_number,
             )
+            invoice.attachment.save(
+                f'test-{sequence}.pdf',
+                ContentFile(f'%PDF-1.7\n% Test invoice {sequence}\n'.encode()),
+                save=False,
+            )
+            invoice.save()
             CostItem.objects.create(
                 invoice=invoice,
                 amount=amount,

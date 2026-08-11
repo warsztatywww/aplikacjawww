@@ -7,6 +7,9 @@
     <p>
       <a class="btn btn-outline-secondary" href="{% url 'costs_reimbursements' selected_year.pk %}">Zwroty kosztów</a>
       <a class="btn btn-outline-secondary" href="{% url 'costs_statistics' selected_year.pk %}">Statystyki</a>
+      <a class="btn btn-outline-primary" href="{% url 'costs_invoice_archive' selected_year.pk %}">
+        Pobierz wszystkie dokumenty
+      </a>
     </p>
 
     <form id="cost-admin-form" method="post">

@@ -36,6 +36,11 @@ urlpatterns = [
     path('<int:year>/costs/statistics/', views.costs_statistics_view, name='costs_statistics'),
     path('<int:year>/costs/admin/', views.costs_admin_view, name='costs_admin'),
     path(
+        '<int:year>/costs/admin/invoices/archive/',
+        views.costs_invoice_archive_view,
+        name='costs_invoice_archive',
+    ),
+    path(
         '<int:year>/costs/admin/invoices/<int:invoice_id>/edit/',
         views.costs_admin_invoice_edit_view,
         name='costs_admin_invoice_edit',
