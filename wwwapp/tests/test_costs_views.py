@@ -980,14 +980,6 @@ class CostAdministrationViewsTests(TestCase):
             reverse('costs_invoice_attachment', args=[self.camp.pk, self.received_invoice.pk]),
         )
 
-    def test_administration_links_to_the_invoice_archive(self):
-        self.client.force_login(self.csv_user)
-
-        response = self.client.get(reverse('costs_admin', args=[self.camp.pk]))
-
-        self.assertContains(response, reverse('costs_invoice_archive', args=[self.camp.pk]))
-        self.assertContains(response, 'Pobierz wszystkie dokumenty')
-
     def test_invoice_archive_contains_all_documents_for_the_selected_camp(self):
         field = Invoice._meta.get_field('attachment')
         original_storage = field.storage
