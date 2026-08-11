@@ -1,6 +1,4 @@
 from decimal import Decimal
-from unittest.mock import patch
-
 from django.contrib.auth.models import User
 from django.contrib.admin.sites import AdminSite
 from django.core.exceptions import ValidationError
@@ -12,7 +10,6 @@ from wwwapp.models import (
     Camp,
     CostItem,
     Invoice,
-    InvoiceSequence,
     Reimbursement,
     SettlementDetails,
     Workshop,
@@ -56,11 +53,6 @@ class CostModelTests(TestCase):
             attachment='invoices/fv-1.pdf',
             description='Materiały do warsztatów',
             internal_number='WWW_2026_K_0001',
-        )
-        InvoiceSequence.objects.create(
-            camp=self.camp,
-            invoice_type=Invoice.Type.KSEF,
-            last_allocated=1,
         )
         workshop_type = WorkshopType.objects.create(year=self.other_camp, name='Type')
         self.other_workshop = Workshop.objects.create(
@@ -220,8 +212,8 @@ class CostModelTests(TestCase):
         self.assertEqual(self.invoice.workshops_summary, '')
         self.assertEqual(self.invoice.categories_summary, '')
 
-    def test_invoice_numbers_start_from_one_when_the_sequence_is_created(self):
-        other_invoice = Invoice.objects.create(
+    def test_invoice_numbers_follow_the_highest_stored_number(self):
+        Invoice.objects.create(
             user=self.user,
             camp=self.other_camp,
             document_number='FV/1/2027',
@@ -232,15 +224,9 @@ class CostModelTests(TestCase):
             description='Other edition',
             internal_number='WWW_2027_K_0041',
         )
-        InvoiceSequence.objects.create(
-            camp=self.other_camp,
-            invoice_type=Invoice.Type.KSEF,
-            last_allocated=41,
-        )
         empty_camp = Camp.objects.create(year=2028)
 
         first_number = allocate_invoice_number(camp=self.camp, invoice_type=Invoice.Type.KSEF)
-        second_number = allocate_invoice_number(camp=self.camp, invoice_type=Invoice.Type.KSEF)
         other_number = allocate_invoice_number(
             camp=self.other_camp,
             invoice_type=Invoice.Type.KSEF,
@@ -251,77 +237,38 @@ class CostModelTests(TestCase):
         )
 
         self.assertEqual(first_number, 'WWW_2026_K_0002')
-        self.assertEqual(second_number, 'WWW_2026_K_0003')
         self.assertEqual(other_number, 'WWW_2027_K_0042')
         self.assertEqual(empty_camp_number, 'WWW_2028_K_0001')
-        self.assertEqual(
-            InvoiceSequence.objects.get(
-                camp=self.camp,
-                invoice_type=Invoice.Type.KSEF,
-            ).last_allocated,
-            3,
-        )
-        self.assertEqual(
-            InvoiceSequence.objects.get(
-                camp=other_invoice.camp,
-                invoice_type=Invoice.Type.KSEF,
-            ).last_allocated,
-            42,
-        )
 
-    def test_invoice_types_use_separate_numbering_series(self):
+    def test_outside_ksef_and_nip_receipts_share_the_fvp_series(self):
         expected_numbers = {
             Invoice.Type.KSEF: 'WWW_2026_K_0002',
-            Invoice.Type.OUTSIDE_KSEF: 'WWW_2026_L_0001',
-            Invoice.Type.RECEIPT_WITH_NIP: 'WWW_2026_P_0001',
+            Invoice.Type.OUTSIDE_KSEF: 'WWW_2026_FVP_0001',
+            Invoice.Type.RECEIPT_WITH_NIP: 'WWW_2026_FVP_0002',
             Invoice.Type.NON_ACCOUNTING_RECEIPT: 'WWW_2026_NP_0001',
         }
 
-        allocated_numbers = {
-            invoice_type: allocate_invoice_number(
+        allocated_numbers = {}
+        for index, invoice_type in enumerate(expected_numbers):
+            allocated_number = allocate_invoice_number(
                 camp=self.camp,
                 invoice_type=invoice_type,
             )
-            for invoice_type in expected_numbers
-        }
+            allocated_numbers[invoice_type] = allocated_number
+            Invoice.objects.create(
+                user=self.user,
+                camp=self.camp,
+                attachment=f'invoices/allocated-{index}.pdf',
+                document_number=f'ALLOCATED/{index}/2026',
+                issue_date='2026-07-24',
+                amount=Decimal('1.00'),
+                invoice_type=invoice_type,
+                description='Allocated number test',
+                status=Invoice.Status.APPROVED,
+                internal_number=allocated_number,
+            )
 
         self.assertEqual(allocated_numbers, expected_numbers)
-        self.assertEqual(
-            set(InvoiceSequence.objects.filter(camp=self.camp).values_list(
-                'invoice_type',
-                'last_allocated',
-            )),
-            {
-                (Invoice.Type.KSEF, 2),
-                (Invoice.Type.OUTSIDE_KSEF, 1),
-                (Invoice.Type.RECEIPT_WITH_NIP, 1),
-                (Invoice.Type.NON_ACCOUNTING_RECEIPT, 1),
-            },
-        )
-
-    def test_allocate_invoice_number_recovers_from_a_concurrent_sequence_creation(self):
-        camp = Camp.objects.create(year=2028)
-        InvoiceSequence.objects.create(
-            camp=camp,
-            invoice_type=Invoice.Type.KSEF,
-            last_allocated=1,
-        )
-
-        with patch.object(
-            InvoiceSequence.objects,
-            'get_or_create',
-            side_effect=lambda **kwargs: InvoiceSequence.objects.create(**kwargs),
-        ):
-            allocated = allocate_invoice_number(camp=camp, invoice_type=Invoice.Type.KSEF)
-
-        self.assertEqual(allocated, 'WWW_2028_K_0002')
-        self.assertEqual(
-            InvoiceSequence.objects.get(
-                camp=camp,
-                invoice_type=Invoice.Type.KSEF,
-            ).last_allocated,
-            2,
-        )
 
     def test_batch_transition_rolls_back_when_one_invoice_is_ineligible(self):
         received = self.create_invoice(
@@ -353,8 +300,8 @@ class CostModelTests(TestCase):
         camp = Camp.objects.create(year=2028)
         expected_numbers = (
             (Invoice.Type.KSEF, 'WWW_2028_K_0001'),
-            (Invoice.Type.OUTSIDE_KSEF, 'WWW_2028_L_0001'),
-            (Invoice.Type.RECEIPT_WITH_NIP, 'WWW_2028_P_0001'),
+            (Invoice.Type.OUTSIDE_KSEF, 'WWW_2028_FVP_0001'),
+            (Invoice.Type.RECEIPT_WITH_NIP, 'WWW_2028_FVP_0002'),
             (Invoice.Type.NON_ACCOUNTING_RECEIPT, 'WWW_2028_NP_0001'),
         )
 
@@ -379,19 +326,6 @@ class CostModelTests(TestCase):
 
             invoice.refresh_from_db()
             self.assertEqual(invoice.internal_number, expected_number)
-
-        self.assertEqual(
-            set(InvoiceSequence.objects.filter(camp=camp).values_list(
-                'invoice_type',
-                'last_allocated',
-            )),
-            {
-                (Invoice.Type.KSEF, 1),
-                (Invoice.Type.OUTSIDE_KSEF, 1),
-                (Invoice.Type.RECEIPT_WITH_NIP, 1),
-                (Invoice.Type.NON_ACCOUNTING_RECEIPT, 1),
-            },
-        )
 
     def test_transition_allows_only_the_defined_state_graph(self):
         allowed = {

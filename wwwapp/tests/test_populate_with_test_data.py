@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.test.utils import override_settings
 
 from wwwapp.management.commands.populate_with_test_data import Command
-from wwwapp.models import Invoice, InvoiceSequence, UploadStorage, UserProfile, Workshop
+from wwwapp.models import Invoice, UploadStorage, UserProfile, Workshop
 
 
 @override_settings(DEBUG=True, PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
@@ -40,11 +40,17 @@ class PopulateWithTestData(TestCase):
                         invoices.values('user_id').distinct().count(),
                         len(Invoice.Status.values),
                     )
-                    sequence = InvoiceSequence.objects.get(
-                        camp=invoices.first().camp,
-                        invoice_type=Invoice.Type.KSEF,
+                    camp_year = invoices.first().camp_id
+                    self.assertEqual(
+                        set(invoices.exclude(internal_number=None).values_list(
+                            'internal_number',
+                            flat=True,
+                        )),
+                        {
+                            f'WWW_{camp_year}_K_0001',
+                            f'WWW_{camp_year}_K_0002',
+                        },
                     )
-                    self.assertEqual(sequence.last_allocated, 2)
                     self.assertEqual(
                         invoices.filter(internal_number__isnull=False)
                         .values('status')
