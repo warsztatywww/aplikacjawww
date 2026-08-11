@@ -1,10 +1,5 @@
 import datatables_Polish from 'datatables.net-plugins/i18n/pl.json';
 import { vcard_export } from './datatables_vcard_export.ts';
-import {
-  DATATABLES_STATE_CONFIG,
-  createDataTablesStateResetButton,
-  registerDataTablesStateClearOnLogout,
-} from './datatables_state.mjs';
 
 // Remove once my i18n contributions at https://datatables.net/plug-ins/i18n/ make it into the release
 datatables_Polish.searchPanes.emptyPanes = 'Brak filtrów';
@@ -16,10 +11,6 @@ datatables_Polish.searchPanes.collapse = {
   "0": "Filtry",
   "_": "Filtry (%d)"
 };
-
-$(document).ready(() => {
-  registerDataTablesStateClearOnLogout(document, window.localStorage);
-});
 
 window.gen_datatables_config = (myConfig_) => {
   const myConfig = Object.assign({
@@ -76,6 +67,14 @@ window.gen_datatables_config = (myConfig_) => {
           columns: ':gt(0)'
         },
         {
+          text: '<i class="fas fa-history"></i> Resetuj ustawienia tabeli',
+          className: 'btn-outline-dark btn-sm px-2 px-md-4',
+          action: function(e, dt) {
+            dt.state.clear();
+            window.location.reload();
+          },
+        },
+        {
           extend: 'copy',
           text: '<i class="fas fa-copy"></i> <span class="d-none d-md-inline">Kopiuj</span>',
           className: 'btn-outline-dark btn-sm px-2 px-md-4',
@@ -122,7 +121,8 @@ window.gen_datatables_config = (myConfig_) => {
     },
     "pageLength": 50,
     "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-    ...DATATABLES_STATE_CONFIG,
+    "stateSave": true,
+    "stateDuration": 0,
     "searchPanes": {
       "show": false,
       "initCollapsed": true,

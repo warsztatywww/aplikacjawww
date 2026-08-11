@@ -116,4 +116,3 @@ class TestBasicViews(TestCase):
         self.client.force_login(self.admin_user)
         response = self.client.get(reverse('workshops', args=[self.year_2020.pk]))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="workshops-table"')

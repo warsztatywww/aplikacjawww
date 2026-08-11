@@ -27,3 +27,17 @@
     {% endblock %}
   </article>
 {% endblock %}
+
+{% block script %}
+  {{ block.super }}
+  <script>
+    $('[data-clear-datatables-state]').on('click', () => {
+      for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+        const key = localStorage.key(index);
+        if (key && key.startsWith('DataTables_')) {
+          localStorage.removeItem(key);
+        }
+      }
+    });
+  </script>
+{% endblock %}

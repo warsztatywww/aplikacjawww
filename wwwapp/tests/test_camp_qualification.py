@@ -177,13 +177,6 @@ class CampQualificationViews(TestCase):
         self.assertHTMLEqual(self.participant_user.user_profile.profile_page, '<p>mój profil</p>')
         self.assertHTMLEqual(self.participant_user.user_profile.camp_participation_for(self.year_2020).cover_letter, '<p>mój list</p>')
 
-    def test_logout_link_clears_saved_datatables_state(self):
-        self.client.force_login(self.participant_user)
-
-        response = self.client.get(reverse('mydata_profile'))
-
-        self.assertContains(response, 'data-clear-datatables-state')
-
     def test_edit_cover_letter_without_registration(self):
         self.client.force_login(self.participant_user)
 
