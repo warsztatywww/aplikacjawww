@@ -650,24 +650,6 @@ class Invoice(models.Model):
         )
 
 
-class InvoiceSequence(models.Model):
-    camp = models.ForeignKey(
-        Camp,
-        on_delete=models.PROTECT,
-        related_name='invoice_sequences',
-    )
-    invoice_type = models.CharField(max_length=24, choices=Invoice.Type.choices)
-    last_allocated = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        constraints = (
-            models.UniqueConstraint(
-                fields=('camp', 'invoice_type'),
-                name='unique_invoice_sequence_type_per_camp',
-            ),
-        )
-
-
 class CostItem(models.Model):
     class Category(models.TextChoices):
         WORKSHOPS = 'WORKSHOPS', 'Warsztaty'

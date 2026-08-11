@@ -168,3 +168,94 @@ class InvoiceTypeNumberingMigrationTests(TransactionTestCase):
             )
         InvoiceSequence.objects.create(camp=camp, series='FP', last_allocated=5)
         InvoiceSequence.objects.create(camp=camp, series='FPZ', last_allocated=1)
+
+
+class InvoiceFvpNumberingMigrationTests(TransactionTestCase):
+    migrate_from = [('wwwapp', '0094_renumber_invoices_by_type')]
+    migrate_to = [(
+        'wwwapp',
+        '0095_renumber_invoices_to_fvp_and_remove_invoicesequence',
+    )]
+
+    def setUp(self):
+        super().setUp()
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_from)
+        old_apps = executor.loader.project_state(self.migrate_from).apps
+        self._create_invoices(old_apps)
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(self.migrate_to)
+        self.apps = executor.loader.project_state(self.migrate_to).apps
+
+    def tearDown(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())
+        super().tearDown()
+
+    def test_existing_invoices_use_k_fvp_and_np_series(self):
+        Invoice = self.apps.get_model('wwwapp', 'Invoice')
+
+        numbers_by_document = dict(Invoice.objects.values_list(
+            'document_number',
+            'internal_number',
+        ))
+
+        self.assertEqual(numbers_by_document, {
+            'TEST/K/1': 'WWW_2026_K_0001',
+            'TEST/L/1': 'WWW_2026_FVP_0001',
+            'TEST/P/1': 'WWW_2026_FVP_0002',
+            'TEST/NP/1': 'WWW_2026_NP_0001',
+            'TEST/K/2': 'WWW_2026_K_0002',
+            'TEST/RECEIVED': None,
+        })
+
+    def test_invoice_sequence_model_is_removed(self):
+        with self.assertRaises(LookupError):
+            self.apps.get_model('wwwapp', 'InvoiceSequence')
+
+    def _create_invoices(self, apps):
+        User = apps.get_model('auth', 'User')
+        Camp = apps.get_model('wwwapp', 'Camp')
+        Invoice = apps.get_model('wwwapp', 'Invoice')
+        InvoiceSequence = apps.get_model('wwwapp', 'InvoiceSequence')
+        user = User.objects.create(username='fvp-migration-user')
+        camp, _ = Camp.objects.get_or_create(year=2026)
+        invoice_data = (
+            ('KSEF', 'APPROVED', 'TEST/K/1', 'WWW_2026_K_0001'),
+            ('OUTSIDE_KSEF', 'APPROVED', 'TEST/L/1', 'WWW_2026_L_0001'),
+            ('RECEIPT_WITH_NIP', 'PROCESSED', 'TEST/P/1', 'WWW_2026_P_0001'),
+            (
+                'NON_ACCOUNTING_RECEIPT',
+                'APPROVED',
+                'TEST/NP/1',
+                'WWW_2026_NP_0001',
+            ),
+            ('KSEF', 'PROCESSED', 'TEST/K/2', 'WWW_2026_K_0002'),
+            ('OUTSIDE_KSEF', 'RECEIVED', 'TEST/RECEIVED', None),
+        )
+        for sequence, data in enumerate(invoice_data, start=1):
+            invoice_type, status, document_number, internal_number = data
+            Invoice.objects.create(
+                user=user,
+                camp=camp,
+                attachment=f'invoices/fvp-{sequence}.pdf',
+                document_number=document_number,
+                issue_date='2026-07-24',
+                amount='10.00',
+                invoice_type=invoice_type,
+                status=status,
+                description='FVP migration test',
+                internal_number=internal_number,
+            )
+        for invoice_type, last_allocated in (
+            ('KSEF', 2),
+            ('OUTSIDE_KSEF', 1),
+            ('RECEIPT_WITH_NIP', 1),
+            ('NON_ACCOUNTING_RECEIPT', 1),
+        ):
+            InvoiceSequence.objects.create(
+                camp=camp,
+                invoice_type=invoice_type,
+                last_allocated=last_allocated,
+            )

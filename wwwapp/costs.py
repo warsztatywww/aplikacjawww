@@ -3,12 +3,13 @@
 import csv
 from decimal import Decimal
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
-from django.db.models import Sum
+from django.db import transaction
+from django.db.models import IntegerField, Max, Sum
+from django.db.models.functions import Cast, Substr
 from django.http import HttpResponse
 from django.utils import timezone
 
-from wwwapp.models import Invoice, InvoiceSequence, Reimbursement
+from wwwapp.models import Camp, Invoice, Reimbursement
 
 
 CSV_FIELDS = (
@@ -25,32 +26,27 @@ CSV_FIELDS = (
     'description',
 )
 
+INVOICE_SERIES = {
+    Invoice.Type.KSEF: 'K',
+    Invoice.Type.OUTSIDE_KSEF: 'FVP',
+    Invoice.Type.RECEIPT_WITH_NIP: 'FVP',
+    Invoice.Type.NON_ACCOUNTING_RECEIPT: 'NP',
+}
+
 
 @transaction.atomic
 def allocate_invoice_number(*, camp, invoice_type):
     """Allocate the next internal invoice number for a workshop edition."""
-    prefix = {
-        Invoice.Type.KSEF: 'K',
-        Invoice.Type.OUTSIDE_KSEF: 'L',
-        Invoice.Type.RECEIPT_WITH_NIP: 'P',
-        Invoice.Type.NON_ACCOUNTING_RECEIPT: 'NP',
-    }[invoice_type]
-    try:
-        with transaction.atomic():
-            sequence, created = InvoiceSequence.objects.get_or_create(
-                camp=camp,
-                invoice_type=invoice_type,
-            )
-    except IntegrityError:
-        created = False
-    if not created:
-        sequence = InvoiceSequence.objects.select_for_update().get(
-            camp=camp,
-            invoice_type=invoice_type,
-        )
-    sequence.last_allocated += 1
-    sequence.save(update_fields=['last_allocated'])
-    return f'WWW_{camp.year}_{prefix}_{sequence.last_allocated:04d}'
+    Camp.objects.select_for_update().get(pk=camp.pk)
+    series = INVOICE_SERIES[invoice_type]
+    prefix = f'WWW_{camp.year}_{series}_'
+    last_allocated = Invoice.objects.filter(
+        camp=camp,
+        internal_number__startswith=prefix,
+    ).aggregate(
+        value=Max(Cast(Substr('internal_number', len(prefix) + 1), IntegerField())),
+    )['value']
+    return f'{prefix}{(last_allocated or 0) + 1:04d}'
 
 
 @transaction.atomic

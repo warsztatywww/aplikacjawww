@@ -25,7 +25,6 @@ from wwwapp.models import (
     Camp,
     CostItem,
     Invoice,
-    InvoiceSequence,
     Reimbursement,
     SettlementDetails,
     UploadStorage,
@@ -298,11 +297,6 @@ class OwnCostsViewsTests(TestCase):
             invoice_type=Invoice.Type.KSEF,
             description='Workshop materials',
             internal_number='WWW_2026_K_0001',
-        )
-        InvoiceSequence.objects.create(
-            camp=self.camp,
-            invoice_type=Invoice.Type.KSEF,
-            last_allocated=1,
         )
 
     def invoice_post_data(self, **overrides):
@@ -678,10 +672,6 @@ class OwnCostsViewsTests(TestCase):
         self.assertRedirects(response, reverse('costs_mine', args=[self.camp.pk]))
         invoice = Invoice.objects.get(document_number='FV/2/2026')
         self.assertIsNone(invoice.internal_number)
-        self.assertFalse(InvoiceSequence.objects.filter(
-            camp=self.camp,
-            invoice_type=Invoice.Type.NON_ACCOUNTING_RECEIPT,
-        ).exists())
 
     def test_rejected_invoice_edit_resets_it_to_received(self):
         SettlementDetails.objects.create(
