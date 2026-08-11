@@ -132,8 +132,6 @@ window.gen_datatables_config = (myConfig_) => {
     }
   };
 
-  config.buttons.buttons.push(createDataTablesStateResetButton());
-
   if (myConfig.vcardEnable) {
     config.buttons.buttons.push({
       text: '<i class="fas fa-address-book"></i> <span class="d-none d-md-inline">vCard</span>',
