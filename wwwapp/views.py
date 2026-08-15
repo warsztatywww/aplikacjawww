@@ -398,10 +398,14 @@ def costs_csv_export_view(request, year):
 def costs_reimbursements_view(request, year):
     """Show reimbursement history and register a payment for a participant."""
     camp = get_object_or_404(Camp, pk=year)
+    approved_statuses = (Invoice.Status.APPROVED, Invoice.Status.PROCESSED)
+    receipt_type = Invoice.Type.NON_ACCOUNTING_RECEIPT
+    non_rejected_invoices = Invoice.objects.filter(camp=camp).exclude(
+        status=Invoice.Status.REJECTED,
+    )
     users = User.objects.filter(
-        invoices__camp=camp,
-        invoices__status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
-    ).distinct().order_by('first_name', 'last_name', 'pk')
+        pk__in=non_rejected_invoices.values('user_id'),
+    ).order_by('first_name', 'last_name', 'pk')
     selected_user_id = request.POST.get('user_id') or request.GET.get('user')
     selected_user = (
         get_object_or_404(users, pk=selected_user_id) if selected_user_id else None
@@ -432,30 +436,56 @@ def costs_reimbursements_view(request, year):
     account_numbers = dict(
         SettlementDetails.objects.filter(camp=camp).values_list('user_id', 'account_number'),
     )
-    approved_totals = dict(
-        Invoice.objects.filter(
-            camp=camp,
-            status__in=(Invoice.Status.APPROVED, Invoice.Status.PROCESSED),
-        ).values('user_id').annotate(total=Sum('amount')).values_list('user_id', 'total'),
-    )
+    invoice_totals = {
+        row['user_id']: row
+        for row in non_rejected_invoices.values('user_id')
+        .annotate(
+            approved_receipts_total=Sum(
+                'amount',
+                filter=Q(status__in=approved_statuses, invoice_type=receipt_type),
+            ),
+            unapproved_receipts_total=Sum(
+                'amount',
+                filter=~Q(status__in=approved_statuses) & Q(invoice_type=receipt_type),
+            ),
+            approved_other_total=Sum(
+                'amount',
+                filter=Q(status__in=approved_statuses) & ~Q(invoice_type=receipt_type),
+            ),
+            unapproved_other_total=Sum(
+                'amount',
+                filter=~Q(status__in=approved_statuses) & ~Q(invoice_type=receipt_type),
+            ),
+        )
+    }
     reimbursed_totals = dict(
         Reimbursement.objects.filter(camp=camp)
         .values('user_id').annotate(total=Sum('amount')).values_list('user_id', 'total'),
     )
-    reimbursement_summary = [
-        {
+    reimbursement_summary = []
+    selected_approved_total = None
+    for user in users:
+        totals = invoice_totals[user.pk]
+        approved_receipts_total = totals['approved_receipts_total'] or Decimal('0.00')
+        approved_other_total = totals['approved_other_total'] or Decimal('0.00')
+        approved_total = approved_receipts_total + approved_other_total
+        reimbursed_total = reimbursed_totals.get(user.pk, Decimal('0.00'))
+        if user == selected_user:
+            selected_approved_total = approved_total
+        reimbursement_summary.append({
             'user': user,
             'account_number': account_numbers.get(user.pk, ''),
             'has_account_number': user.pk in account_numbers,
-            'approved_total': approved_totals.get(user.pk, Decimal('0.00')),
-            'reimbursed_total': reimbursed_totals.get(user.pk, Decimal('0.00')),
-            'remaining_total': (
-                approved_totals.get(user.pk, Decimal('0.00'))
-                - reimbursed_totals.get(user.pk, Decimal('0.00'))
+            'approved_receipts_total': approved_receipts_total,
+            'unapproved_receipts_total': (
+                totals['unapproved_receipts_total'] or Decimal('0.00')
             ),
-        }
-        for user in users
-    ]
+            'approved_other_total': approved_other_total,
+            'unapproved_other_total': totals['unapproved_other_total'] or Decimal('0.00'),
+            'approved_total': approved_total,
+            'reimbursed_total': reimbursed_total,
+            'remaining_total': approved_total - reimbursed_total,
+        })
     context = {
         'title': 'Zwroty kosztów',
         'selected_year': camp,
@@ -466,8 +496,12 @@ def costs_reimbursements_view(request, year):
         'reimbursements': reimbursements.order_by('-execution_date', '-created_at'),
         'balance_before': balance_before,
         'balance_after': balance_after,
-        'approved_total': approved_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
-        'reimbursed_total': reimbursed_totals.get(selected_user.pk, Decimal('0.00')) if selected_user else None,
+        'approved_total': selected_approved_total,
+        'reimbursed_total': (
+            reimbursed_totals.get(selected_user.pk, Decimal('0.00'))
+            if selected_user
+            else None
+        ),
     }
     return render(request, 'costs_reimbursements.html', context)
 

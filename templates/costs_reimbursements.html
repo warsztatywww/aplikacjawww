@@ -15,6 +15,10 @@
             </th>
             <th scope="col">Użytkownik</th>
             <th scope="col">Rachunek</th>
+            <th scope="col">Suma zatwierdzonych paragonów</th>
+            <th scope="col">Suma niezatwierdzonych paragonów</th>
+            <th scope="col">Suma pozostałych zatwierdzonych</th>
+            <th scope="col">Suma pozostałych niezatwierdzonych</th>
             <th scope="col">Suma zatwierdzona</th>
             <th scope="col">Suma zwrócona</th>
             <th scope="col">Pozostało do zwrotu</th>
@@ -37,6 +41,10 @@
                   <span class="text-danger">Brak numeru rachunku</span>
                 {% endif %}
               </td>
+              <td>{{ row.approved_receipts_total|floatformat:2 }} zł</td>
+              <td>{{ row.unapproved_receipts_total|floatformat:2 }} zł</td>
+              <td>{{ row.approved_other_total|floatformat:2 }} zł</td>
+              <td>{{ row.unapproved_other_total|floatformat:2 }} zł</td>
               <td>{{ row.approved_total|floatformat:2 }} zł</td>
               <td>{{ row.reimbursed_total|floatformat:2 }} zł</td>
               <td>{{ row.remaining_total|floatformat:2 }} zł</td>
