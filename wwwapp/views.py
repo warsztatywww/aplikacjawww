@@ -399,10 +399,7 @@ def costs_reimbursements_view(request, year):
     """Show reimbursement history and register a payment for a participant."""
     camp = get_object_or_404(Camp, pk=year)
     approved_statuses = (Invoice.Status.APPROVED, Invoice.Status.PROCESSED)
-    receipt_types = (
-        Invoice.Type.RECEIPT_WITH_NIP,
-        Invoice.Type.NON_ACCOUNTING_RECEIPT,
-    )
+    receipt_type = Invoice.Type.NON_ACCOUNTING_RECEIPT
     non_rejected_invoices = Invoice.objects.filter(camp=camp).exclude(
         status=Invoice.Status.REJECTED,
     )
@@ -445,19 +442,19 @@ def costs_reimbursements_view(request, year):
         .annotate(
             approved_receipts_total=Sum(
                 'amount',
-                filter=Q(status__in=approved_statuses, invoice_type__in=receipt_types),
+                filter=Q(status__in=approved_statuses, invoice_type=receipt_type),
             ),
             unapproved_receipts_total=Sum(
                 'amount',
-                filter=~Q(status__in=approved_statuses) & Q(invoice_type__in=receipt_types),
+                filter=~Q(status__in=approved_statuses) & Q(invoice_type=receipt_type),
             ),
             approved_other_total=Sum(
                 'amount',
-                filter=Q(status__in=approved_statuses) & ~Q(invoice_type__in=receipt_types),
+                filter=Q(status__in=approved_statuses) & ~Q(invoice_type=receipt_type),
             ),
             unapproved_other_total=Sum(
                 'amount',
-                filter=~Q(status__in=approved_statuses) & ~Q(invoice_type__in=receipt_types),
+                filter=~Q(status__in=approved_statuses) & ~Q(invoice_type=receipt_type),
             ),
         )
     }
