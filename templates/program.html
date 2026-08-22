@@ -93,7 +93,7 @@
 
         <!-- Workshops list -->
         <div>
-        {% for workshop, registered in workshops %}
+        {% for workshop, registered, rating in workshops %}
           <div 
           id="{{workshop.name}}-workshop-card"
           class="mb-3 workshop-card {% if active_workshop_type and workshop.type != active_workshop_type %}d-none{% endif %}"
@@ -101,7 +101,7 @@
           data-workshop-type="{{ workshop.type.name }}"
           data-registered="{{ registered }}"
           data-status="{{ workshop.status }}"
-          >{% include "_programworkshop.html" %}</div>
+          >{% include "_programworkshop.html" with rating=rating %}</div>
         {% endfor %}
         </div>
       {% else %}

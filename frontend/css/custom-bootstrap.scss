@@ -309,3 +309,14 @@ nav.year-navigation .page-item {
   color: #fff;
   border-color: $primary;
 }
+
+.workshop-rating .rating-star {
+  cursor: pointer;
+  color: #ccc;
+  font-size: 1.2rem;
+  user-select: none;
+}
+
+.workshop-rating .rating-star.active {
+  color: $primary;
+}
