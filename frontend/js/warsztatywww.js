@@ -192,4 +192,33 @@ $(function () {
     }
     yearSelectorToCurrent();
     $(window).resize(yearSelectorToCurrent);
+
+    // Workshop rating stars (set "how much you want to go")
+    // Delegated so stars work even after the card is re-rendered on register/unregister
+    // Updates all copies of the stars for this workshop (mobile + desktop table) so they stay in sync
+    $(document).on('click', '.workshop-rating .rating-star', function () {
+        var star = $(this);
+        var rating = star.data('value');
+        var container = star.closest('.workshop-rating');
+        var url = container.data('rate-url');
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {rating: rating},
+            success: function (json) {
+                if (json.error) {
+                    alert(json.error);
+                    return;
+                }
+                $('.workshop-rating[data-rate-url="' + url + '"]').each(function () {
+                    $(this).find('.rating-star').each(function () {
+                        $(this).toggleClass('active', $(this).data('value') <= json.rating);
+                    });
+                });
+            },
+            error: function (xhr, errmsg, errcode) {
+                alert('Wystąpił problem przy zapisywaniu oceny (' + xhr.status + ': ' + errcode + ').');
+            }
+        });
+    });
 });

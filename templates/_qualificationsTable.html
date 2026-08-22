@@ -15,6 +15,11 @@
           <a href="{% url 'workshop_page' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}">
             {{ workshop_participant.workshop.title }}
           </a>
+          {% if is_my_profile and workshop_participant.workshop.year.pk == current_year.pk %}
+            <div class="mt-1 workshop-rating" data-rate-url="{% url 'rate_workshop' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}">
+              {% for i in "12345" %}<span class="rating-star{% if forloop.counter <= workshop_participant.rating|default:0 %} active{% endif %}" data-value="{{ forloop.counter }}">★</span>{% endfor %}
+            </div>
+          {% endif %}
         </th>
         {% if not workshop_participant.solution and workshop_participant.workshop.can_access_solution_upload and workshop_participant.workshop.are_solutions_editable %}
           {% if is_my_profile %}
@@ -85,6 +90,11 @@
             </a>
           {% else %}
             {{ workshop_participant.workshop.title }}
+          {% endif %}
+          {% if is_my_profile and workshop_participant.workshop.year.pk == current_year.pk %}
+            <div class="mt-1 workshop-rating" data-rate-url="{% url 'rate_workshop' workshop_participant.workshop.year.pk workshop_participant.workshop.name %}">
+              {% for i in "12345" %}<span class="rating-star{% if forloop.counter <= workshop_participant.rating|default:0 %} active{% endif %}" data-value="{{ forloop.counter }}">★</span>{% endfor %}
+            </div>
           {% endif %}
         </th>
         {% if not workshop_participant.solution and workshop_participant.workshop.can_access_solution_upload and workshop_participant.workshop.are_solutions_editable %}

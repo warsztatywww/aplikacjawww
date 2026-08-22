@@ -618,16 +618,18 @@ def program_view(request, year):
     if camp_participation:
         workshop_participation = camp_participation.workshop_participation.all()
         workshops_participating_in = set(wp.workshop for wp in workshop_participation)
+        ratings = {wp.workshop_id: wp.rating for wp in workshop_participation}
         has_results = any(wp.qualification_result is not None for wp in workshop_participation)
     else:
         workshops_participating_in = set()
+        ratings = {}
         has_results = False
 
     
     workshops = year.workshops.filter(Q(status='Z') | Q(status='X')).order_by('title').prefetch_related('lecturer', 'lecturer__user', 'type', 'category')
     include_workshop_types(context, year, workshops)
 
-    context['workshops'] = [(workshop, (workshop in workshops_participating_in)) for workshop in workshops]
+    context['workshops'] = [(workshop, (workshop in workshops_participating_in), ratings.get(workshop.pk)) for workshop in workshops]
     # Shuffle the workshops to make the page more dynamic and encourage people to look through all of them, not just the first ones
     random.shuffle(context['workshops']) 
 
@@ -928,14 +930,18 @@ def workshop_page_view(request, year, name):
         return HttpResponseForbidden("Warsztaty nie zostały zaakceptowane")
 
     if request.user.is_authenticated:
-        registered = workshop.participants.filter(camp_participation__user_profile__user=request.user).exists()
+        wp = workshop.participants.filter(camp_participation__user_profile__user=request.user).first()
+        registered = wp is not None
+        rating = wp.rating if wp else None
     else:
         registered = False
+        rating = None
 
     context = {}
     context['title'] = workshop.title
     context['workshop'] = workshop
     context['registered'] = registered
+    context['rating'] = rating
     context['is_lecturer'] = is_lecturer
     context['has_perm_to_edit'] = has_perm_to_edit
     context['has_perm_to_view_details'] = \
@@ -1383,6 +1389,30 @@ def unregister_from_workshop_view(request, year, name):
         return JsonResponse({'content': content, 'error': u'Nie jesteś zapisany na te warsztaty'})
 
 
+@require_POST
+def rate_workshop_view(request, year, name):
+    if not request.user.is_authenticated:
+        return JsonResponse({'redirect': reverse('login'), 'error': u'Jesteś niezalogowany'})
+
+    workshop = get_object_or_404(Workshop, year__pk=year, name=name)
+    workshop_participant = workshop.participants.filter(camp_participation__user_profile=request.user.user_profile).first()
+
+    if not workshop_participant:
+        return JsonResponse({'error': u'Nie jesteś zapisany na te warsztaty'})
+
+    try:
+        rating = int(request.POST.get('rating'))
+    except (TypeError, ValueError):
+        return JsonResponse({'error': u'Nieprawidłowa ocena'})
+
+    if rating < 1 or rating > 5:
+        return JsonResponse({'error': u'Ocena musi być w zakresie 1-5'})
+
+    workshop_participant.rating = rating
+    workshop_participant.save(update_fields=['rating'])
+    return JsonResponse({'rating': rating})
+
+
 @login_required()
 def workshop_solution(request, year, name, solution_id=None):
     workshop = get_object_or_404(Workshop, year__pk=year, name=name)
@@ -1564,6 +1594,7 @@ def data_for_plan_view(request, year: int) -> HttpResponse:
         participation.append({
             'wid': wp.workshop.id,
             'uid': wp.camp_participation.user_profile.id,
+            'rating': wp.rating,
         })
     data['participation'] = participation
 

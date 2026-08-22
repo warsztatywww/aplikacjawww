@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, SuspiciousOperation
 from django.core.files.storage import FileSystemStorage
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import QuerySet, Count, F, When, Case, Max, DecimalField
 from django.db.models.functions import Greatest, Least
@@ -784,6 +784,7 @@ class WorkshopParticipant(models.Model):
 
     qualification_result = models.DecimalField(null=True, blank=True, decimal_places=2, max_digits=6, validators=[MinValueValidator(0)], verbose_name='Liczba punktów')
     comment = models.TextField(max_length=10000, null=True, default=None, blank=True, verbose_name='Komentarz')
+    rating = models.PositiveSmallIntegerField(null=True, blank=True, default=None, validators=[MinValueValidator(1), MaxValueValidator(5)], verbose_name='Ocena')
 
     objects = WorkshopParticipantManager()
 

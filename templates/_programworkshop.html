@@ -32,6 +32,12 @@
     </div>
   {% endif %}
   <div class="card-body d-flex flex-column pt-2">
+    {% if registered %}
+    <!-- Rating -->
+    <div class="mb-1 workshop-rating" data-rate-url="{% url 'rate_workshop' workshop.year.pk workshop.name %}">
+      {% for i in "12345" %}<span class="rating-star{% if forloop.counter <= rating|default:0 %} active{% endif %}" data-value="{{ forloop.counter }}">★</span>{% endfor %}
+    </div>
+    {% endif %}
     <!-- Categories -->
     <div class="mb-1">
       {% for category in workshop.category.all %}

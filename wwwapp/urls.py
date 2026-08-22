@@ -79,6 +79,7 @@ urlpatterns = [
     path('<int:year>/workshop/<slug:name>/qualProblems/', views.qualification_problems_view, name='qualification_problems'),
     path('<int:year>/workshop/<slug:name>/register/', views.register_to_workshop_view, name='register_to_workshop'),
     path('<int:year>/workshop/<slug:name>/unregister/', views.unregister_from_workshop_view, name='unregister_from_workshop'),
+    path('<int:year>/workshop/<slug:name>/rate/', views.rate_workshop_view, name='rate_workshop'),
     path('<int:year>/workshop/<slug:name>/solution/', views.workshop_solution, name='workshop_my_solution'),
     path('<int:year>/workshop/<slug:name>/solution/file/<int:file_pk>/', views.workshop_solution_file, name='workshop_my_solution_file'),
     path('<int:year>/workshop/<slug:name>/solution/<int:solution_id>/', views.workshop_solution, name='workshop_solution'),
