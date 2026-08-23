@@ -138,13 +138,13 @@
                 </td>
                 {% for question, answer in person.form_answers %}
                   <td title="Ostatnia modyfikacja: {% if answer %}{{ answer.last_changed }}{% else %}Nigdy{% endif %}"
-                      {% if answer.question.data_type == 'd' %}data-order="{{ answer.value_date | date:"U" }}"{% endif %}>
+                      {% if question.data_type == 'd' %}{% if answer %}data-order="{{ answer.value_date | date:"U" }}"{% endif %}{% endif %}>
                     {{ answer.value }}
                   </td>
                   {% if question.data_type == 'P' %}
                   <td title="Ostatnia modyfikacja: {% if answer %}{{ answer.last_changed }}{% else %}Nigdy{% endif %}"
-                      data-order="{{ answer.pesel_extract_date | date:"U" }}">
-                    {{ answer.pesel_extract_date | question_mark_on_none_value }}
+                      {% if answer %}data-order="{{ answer.pesel_extract_date | date:"U" }}"{% endif %}>
+                    {% if answer %}{{ answer.pesel_extract_date | question_mark_on_none_value }}{% endif %}
                   </td>
                   {% endif %}
                 {% endfor %}
