@@ -25,5 +25,11 @@ Django-based application to manage registration of people for [scientific summer
 
 For the INTERNETy resources authentication a /resource\_auth endpoint is provided. An example nginx config is in `nginx.conf.example` file.
 
+#### Image upload
+
+Since uploading images with django gallery is cumbersome there is a script `upload_images_to_gallery.py`.
+
+To run it install dependencies `pip install requests bs4` and configure the variables (`ALBUM_ID` and `SESSION_COOKIE`) in the file, then execute `./upload_images_to_gallery.py {DIRECTORY_WITH_IMAGES}`. The script will then traverse the file tree and upload all images (without videos).
+
 ### Online version:
 App currently available at https://warsztatywww.pl/
